@@ -1,0 +1,19 @@
+*.pyc
+*~
+*.sw[a-p]
+*.lock
+# ...but keep Bazel's lockfile: it pins the exact resolved module graph and
+# must be committed for reproducible builds.
+!MODULE.bazel.lock
+.venv
+.vscode
+
+bazel-*
+user.bazelrc
+user.location.bazelrc
+valgrind.suppressions.bazelrc
+buildbuddy.bazelrc
+resolved.bzl
+
+node_modules
+.envrc

@@ -1,0 +1,12 @@
+FROM ubuntu:20.04
+
+# Install dependencies
+RUN apt update && apt install -y python3 python3-pip ros-noetic-desktop-full
+
+# Copy all binaries and code
+COPY ./flight_controller /usr/local/bin/
+COPY ./object_detection /usr/local/bin/
+COPY ./navigation /usr/local/bin/
+
+# Entrypoint runs all processes
+ENTRYPOINT ["bash", "-c", "/usr/local/bin/flight_controller & /usr/local/bin/navigation & python3 /usr/local/bin/object_detection"]

@@ -1,0 +1,34 @@
+# Bazel module for the Drone control stack.
+#
+# All heavyweight C++ libraries are resolved hermetically through Bazel's
+# central registry (https://registry.bazel.build) -- they are NOT system
+# packages. The only external library that comes from the OS is libcurl
+# (see ci/install-packages.sh), because a hermetic curl+TLS build is more
+# trouble than it's worth here.
+#
+# Direct-dep versions are pinned to what the resolved graph selects, so MVS
+# resolution has no version skew. To re-derive them after bumping gRPC:
+#   curl -s https://raw.githubusercontent.com/bazelbuild/bazel-central-registry/main/modules/grpc/<VERSION>/MODULE.bazel
+module(
+    name = "drone",
+    version = "0.1.0",
+)
+
+# gRPC C++ -- provides grpc++/grpc++.h and the cc_grpc_library rule. Brings in
+# protobuf, abseil, boringssl, c-ares, re2, upb and zlib transitively, so none
+# of those need separate system packages.
+#
+# Pinned to the ".bcr.1" rebuild: the Bazel Central Registry maintainers
+# re-released 1.76.0 specifically to fix module packaging, so it is the most
+# vetted recent version. (1.81.0 has an unresolved internal target reference,
+# @grpc//third_party/address_sorting, that breaks analysis.)
+bazel_dep(name = "grpc", version = "1.76.0.bcr.1", repo_name = "com_github_grpc_grpc")
+
+# Declared directly because our own BUILD files reference them:
+#  - protobuf: proto_library / cc_proto_library for drone/api/.../*.proto
+#  - abseil:   @com_google_absl//... in C++ targets
+# Versions match the resolved graph to avoid --check_direct_dependencies warnings.
+# rules_cc / rules_proto / platforms are intentionally NOT declared here -- they
+# arrive transitively via grpc/protobuf and our BUILD files don't load them directly.
+bazel_dep(name = "protobuf", version = "33.4", repo_name = "com_google_protobuf")
+bazel_dep(name = "abseil-cpp", version = "20250814.1", repo_name = "com_google_absl")

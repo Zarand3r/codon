@@ -1,0 +1,14 @@
+{
+  "//": "Team auto-install for the eng-skills plugin (claude-skills marketplace). When a teammate or agent trusts this repo folder, Claude Code prompts to install the marketplace + plugin. See docs/agent-harness-setup.md.",
+  "extraKnownMarketplaces": {
+    "claude-skills": {
+      "source": {
+        "source": "github",
+        "repo": "Zarand3r/claude-skills"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "eng-skills@claude-skills": true
+  }
+}

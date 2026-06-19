@@ -1,0 +1,24 @@
+
+BasedOnStyle: LLVM
+IndentWidth: 4
+TabWidth: 4
+BreakBeforeBraces: Custom
+NamespaceIndentation: All
+AlwaysBreakTemplateDeclarations: Yes
+AccessModifierOffset: -4
+BraceWrapping:
+  AfterClass: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterControlStatement: true
+  AfterNamespace: true
+  BeforeElse: true
+  BeforeCatch: true
+  SplitEmptyRecord: false
+  SplitEmptyFunction: false
+  SplitEmptyNamespace: false
+  SplitEmptyStruct: false
+  SplitEmptyClass: false
+  SplitEmptyBlock: false
