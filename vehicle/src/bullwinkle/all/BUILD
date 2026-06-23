@@ -40,3 +40,20 @@ _L0_TESTS = {
     )
     for name, src in _L0_TESTS.items()
 ]
+
+# AlignedBuffer — per-shard heap storage (has a .cc; depends on :core for util/fsw).
+cc_library(
+    name = "aligned_buffer",
+    srcs = ["AlignedBuffer.cc"],
+    hdrs = ["core/AlignedBuffer.h"],
+    strip_include_prefix = "/vehicle",
+    copts = ["-std=c++17"],
+    deps = [":core"],
+)
+
+cc_test(
+    name = "aligned_buffer_test",
+    srcs = ["aligned_buffer_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":aligned_buffer"],
+)
