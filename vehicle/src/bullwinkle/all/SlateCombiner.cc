@@ -70,11 +70,11 @@ namespace Drone
                              const bool bind_outputs,
                              const std::string &combiner_name)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
 
         sharer_config_v config_list;
         config_list.push_back(sharer_config_t(config_key, ""));
-        SacAbortIfNot(init(configs,
+        FswAbortIfNot(init(configs,
                            fresh,
                            builders_in,
                            builder_out,
@@ -132,15 +132,15 @@ namespace Drone
                              const bool bind_metrics,
                              const UINT8 _stale_threshold)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIf(builders_in.empty(), false);
+        FswAbortIf(is_init, false);
+        FswAbortIf(builders_in.empty(), false);
 
         /*
          * Check size.
          */
-        if (SacOutsideRange(builders_in.size(), 1U, num_sources_max + 1))
+        if (FswOutsideRange(builders_in.size(), 1U, num_sources_max + 1))
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(200,
                       ": The number of combiner input source is limited "
                       "to %zu.\n",
@@ -167,7 +167,7 @@ namespace Drone
             const sharer_config_t &entry = config_list[i];
 
             str_v_v lines;
-            SacAbortIfNot(entry.read_config_str_v_v(configs, lines), false);
+            FswAbortIfNot(entry.read_config_str_v_v(configs, lines), false);
 
             for (size_t j = 0; j < lines.size(); j++)
             {
@@ -177,9 +177,9 @@ namespace Drone
                  * Make sure there are at least two fields. More than two can be
                  * present if we're using scaling or enum information.
                  */
-                if (SacIfNot(line.size() >= 2))
+                if (FswIfNot(line.size() >= 2))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(200,
                               ": Error parsing line (need path, type):\n%s\n",
                               join(line).c_str());
@@ -338,20 +338,20 @@ namespace Drone
                 }
                 else
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(200, ": Unsupported type '%s'\n", type.c_str());
                     initialization_ok = false;
                 }
             }
         }
 
-        SacAbortIfNot(initialization_ok, false);
+        FswAbortIfNot(initialization_ok, false);
 
         /*
          * A stale threshold of zero is nonsensical: if a source could be marked
          * stale after zero cycles without an update, it could never be fresh.
          */
-        SacAbortIf(_stale_threshold == 0U, false);
+        FswAbortIf(_stale_threshold == 0U, false);
         stale_threshold = _stale_threshold;
 
         /*
@@ -359,7 +359,7 @@ namespace Drone
          */
         for (size_t i = 0; i < builders_in.size(); ++i)
         {
-            SacAbortIfNot(builders_in[i].builder.is_peer(builder_out), false);
+            FswAbortIfNot(builders_in[i].builder.is_peer(builder_out), false);
         }
 
         slate = builder_out.slate(slate_no_validation);
@@ -374,7 +374,7 @@ namespace Drone
             const slate_combiner_in_t &in = builders_in[i];
 
             source_t source;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 source.init(in.builder, in.name, fresh, stale_threshold, sub),
                 false);
             sources.push_back(source);
@@ -386,11 +386,11 @@ namespace Drone
          */
         if (bind_metrics)
         {
-            SacAbortIfNot(sub.bind("connected", combined_connected_tok), false);
+            FswAbortIfNot(sub.bind("connected", combined_connected_tok), false);
         }
         else
         {
-            SacAbortIfNot(sub.create("connected",
+            FswAbortIfNot(sub.create("connected",
                                      false,
                                      shard_sync,
                                      slate_read_only,
@@ -415,8 +415,8 @@ namespace Drone
      */
     bool SlateCombiner::combine() RUNTIME
     {
-        SacAbortIfNot(is_init, false);
-        SacAbortIfNot(validate_and_combine(sharer_invalid_sequence_number),
+        FswAbortIfNot(is_init, false);
+        FswAbortIfNot(validate_and_combine(sharer_invalid_sequence_number),
                       false);
         return true;
     }
@@ -433,14 +433,14 @@ namespace Drone
     bool SlateCombiner::validate_and_combine(
         const nano_t accepted_sequence_number) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
 
         /*
          * Run through all the sources, compute connectedness and build the
          * freshness indices.
          */
         const size_t sources_size = sources.size();
-        SacAssert(sources_size <= num_sources_max);
+        FswAssert(sources_size <= num_sources_max);
         size_t indices[num_sources_max];
         size_t indices_len = 0;
 
@@ -552,8 +552,8 @@ namespace Drone
                 bool b_eq_c = true;
                 for (const auto &bin : bins)
                 {
-                    SacAssert(bin.eq_fn);
-                    SacAssert((this->*bin.eq_fn)(b_idx, c_idx, bin, b_eq_c));
+                    FswAssert(bin.eq_fn);
+                    FswAssert((this->*bin.eq_fn)(b_idx, c_idx, bin, b_eq_c));
                 }
 
                 indices[0] = b_eq_c ? b_idx : a_idx;
@@ -582,8 +582,8 @@ namespace Drone
             for (size_t i = 0; i < bins.size(); ++i)
             {
                 const element_bin_t &bin = bins[i];
-                SacAssert(bin.copy_fn);
-                SacAssert((this->*bin.copy_fn)(indices[0], bin));
+                FswAssert(bin.copy_fn);
+                FswAssert((this->*bin.copy_fn)(indices[0], bin));
             }
             break;
         }
@@ -593,8 +593,8 @@ namespace Drone
             for (size_t i = 0; i < bins.size(); ++i)
             {
                 const element_bin_t &bin = bins[i];
-                SacAssert(bin.max_fn);
-                SacAssert((this->*bin.max_fn)(indices[0], indices[1], bin));
+                FswAssert(bin.max_fn);
+                FswAssert((this->*bin.max_fn)(indices[0], indices[1], bin));
             }
             break;
         }
@@ -604,8 +604,8 @@ namespace Drone
             for (size_t i = 0; i < bins.size(); ++i)
             {
                 const element_bin_t &bin = bins[i];
-                SacAssert(bin.median_fn);
-                SacAssert((this->*bin.median_fn)(bin));
+                FswAssert(bin.median_fn);
+                FswAssert((this->*bin.median_fn)(bin));
             }
             break;
         }
@@ -643,18 +643,18 @@ namespace Drone
     {
         const INT64 seq_default = std::numeric_limits<INT64>::min();
 
-        SacAbortIfNot(source_builder.bind(fresh, fresh_tok), false);
-        SacAbortIfNot(combiner_builder.create(source_name + ".fresh_last",
+        FswAbortIfNot(source_builder.bind(fresh, fresh_tok), false);
+        FswAbortIfNot(combiner_builder.create(source_name + ".fresh_last",
                                               seq_default,
                                               shard_sync,
                                               fresh_last_tok),
                       false);
-        SacAbortIfNot(combiner_builder.create(source_name + ".fresh_age",
+        FswAbortIfNot(combiner_builder.create(source_name + ".fresh_age",
                                               _stale_threshold,
                                               shard_sync,
                                               fresh_age_tok),
                       false);
-        SacAbortIfNot(combiner_builder.create(source_name + ".connected",
+        FswAbortIfNot(combiner_builder.create(source_name + ".connected",
                                               false,
                                               shard_sync,
                                               slate_read_only,
@@ -686,7 +686,7 @@ namespace Drone
          * Get the first input slate builder, and use it as the comparison
          * reference for consistency checks and output enum registration.
          */
-        SacAbortIfNotOpUint(builders_in.size(), >=, 1, false);
+        FswAbortIfNotOpUint(builders_in.size(), >=, 1, false);
         const slate_combiner_in_t &slate_combiner_in_first = builders_in[0];
         const SlateBuilder &builder_first = slate_combiner_in_first.builder;
         const std::string input_path_first =
@@ -702,7 +702,7 @@ namespace Drone
         SymbolTable symbol_table_first;
         if (has_enum_registry_first)
         {
-            SacAbortIfNot(builder_first.get_element_enum(path,
+            FswAbortIfNot(builder_first.get_element_enum(path,
                                                          enum_exists_first,
                                                          enum_name_first,
                                                          symbol_table_first),
@@ -725,7 +725,7 @@ namespace Drone
 
             if (has_enum_registry_first != has_enum_registry)
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(
                     512,
                     ": Either all input slate builders must be associated with "
@@ -745,13 +745,13 @@ namespace Drone
                 std::string enum_name;
                 SymbolTable symbol_table;
 
-                SacAbortIfNot(builder.get_element_enum(
+                FswAbortIfNot(builder.get_element_enum(
                                   path, enum_exists, enum_name, symbol_table),
                               false);
 
                 if (enum_exists_first != enum_exists)
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(
                         512,
                         ": Input '%s' %s an enumerated value, but '%s' %s.\n",
@@ -765,7 +765,7 @@ namespace Drone
 
                 if (symbol_table_first != symbol_table)
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(512,
                               ": Inputs '%s' and '%s' have "
                               "inconsistent symbol tables:\n",
@@ -779,7 +779,7 @@ namespace Drone
             }
         }
 
-        SacAbortIfNot(input_builders_ok, false);
+        FswAbortIfNot(input_builders_ok, false);
 
         const std::string builder_path_out = builder_out.get_subtree_path();
         const std::string output_path = slate_join_path(builder_path_out, path);
@@ -790,7 +790,7 @@ namespace Drone
             /*
              * Check output builder has an enum registry if inputs do.
              */
-            SacMsgAbortIfNot(has_enum_registry_first == has_enum_registry_out,
+            FswMsgAbortIfNot(has_enum_registry_first == has_enum_registry_out,
                              false,
                              512,
                              "Cannot check consistency: input '%s' %s a "
@@ -809,13 +809,13 @@ namespace Drone
                 std::string enum_name_out;
                 SymbolTable symbol_table_out;
 
-                SacAbortIfNot(builder_out.get_element_enum(path,
+                FswAbortIfNot(builder_out.get_element_enum(path,
                                                            enum_exists_out,
                                                            enum_name_out,
                                                            symbol_table_out),
                               false);
 
-                SacMsgAbortIfNot(
+                FswMsgAbortIfNot(
                     enum_exists_first == enum_exists_out,
                     false,
                     512,
@@ -827,7 +827,7 @@ namespace Drone
 
                 if (symbol_table_first != symbol_table_out)
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(512,
                               ": Input '%s' and ouput '%s' have "
                               "inconsistent symbol tables:\n",
@@ -847,13 +847,13 @@ namespace Drone
              */
             if (enum_exists_first)
             {
-                SacMsgAbortIfNot(has_enum_registry_out,
+                FswMsgAbortIfNot(has_enum_registry_out,
                                  false,
                                  256,
                                  "Cannot create enumerated element '%s': "
                                  "builder doesn't have enum registry.",
                                  output_path.c_str());
-                SacAbortIfNot(builder_out.register_enum(path,
+                FswAbortIfNot(builder_out.register_enum(path,
                                                         enum_name_first,
                                                         symbol_table_first),
                               false);
@@ -884,7 +884,7 @@ namespace Drone
                                      element_bin_t &bin,
                                      const slate_elem_access_t access)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
 
         const std::string output_path =
             slate_join_path(builder_out.get_subtree_path(), path);
@@ -892,7 +892,7 @@ namespace Drone
         slate_element_t id_out;
         if (bind_outputs)
         {
-            SacMsgAbortIfNot(builder_out.get_element_id<T>(path, id_out),
+            FswMsgAbortIfNot(builder_out.get_element_id<T>(path, id_out),
                              false,
                              200,
                              "Cannot bind to element '%s'",
@@ -901,7 +901,7 @@ namespace Drone
             /*
              * Verify that the slate element is writable.
              */
-            SacMsgAbortIfNot(slate_id_can_write(id_out),
+            FswMsgAbortIfNot(slate_id_can_write(id_out),
                              false,
                              200,
                              "Element '%s' is read only",
@@ -909,7 +909,7 @@ namespace Drone
         }
         else
         {
-            SacMsgAbortIfNot(builder_out.create_element<T>(
+            FswMsgAbortIfNot(builder_out.create_element<T>(
                                  path, T(), shard_sync, access, id_out),
                              false,
                              200,
@@ -919,7 +919,7 @@ namespace Drone
 
         bin.ids.push_back(id_out);
 
-        SacAbortIfNot(
+        FswAbortIfNot(
             register_output_enum(builders_in, builder_out, path, bind_outputs),
             false);
 
@@ -930,7 +930,7 @@ namespace Drone
                 slate_join_path(builder.get_subtree_path(), path);
 
             slate_element_t id = slate_element_default;
-            SacMsgAbortIfNot(builder.get_element_id<T>(path, id),
+            FswMsgAbortIfNot(builder.get_element_id<T>(path, id),
                              false,
                              200,
                              "Cannot bind to element '%s'",
@@ -973,7 +973,7 @@ namespace Drone
                                const element_bin_t &bin,
                                bool &result) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
 
         const size_t ids_size = bin.ids.size();
         const size_t stride = num_sources + 1;
@@ -1001,7 +1001,7 @@ namespace Drone
     template <typename T>
     bool SlateCombiner::bin_copy(size_t src, const element_bin_t &bin) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
 
         const size_t ids_size = bin.ids.size();
         const size_t stride = num_sources + 1;
@@ -1042,7 +1042,7 @@ namespace Drone
                                 size_t src2,
                                 const element_bin_t &bin) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
 
         const size_t ids_size = bin.ids.size();
         const size_t stride = num_sources + 1;
@@ -1081,9 +1081,9 @@ namespace Drone
     template <typename T>
     bool SlateCombiner::bin_median(const element_bin_t &bin) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         static_assert(num_sources_max == 3);
-        SacAbortIfNot(num_sources == 3, false);
+        FswAbortIfNot(num_sources == 3, false);
 
         const size_t ids_size = bin.ids.size();
         const size_t stride = num_sources_max + 1;

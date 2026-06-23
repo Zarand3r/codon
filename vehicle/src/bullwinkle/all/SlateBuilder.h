@@ -440,13 +440,13 @@ bool SlateBuilder::register_token(slate_element_t element_id,
                                   const std::string &element_path,
                                   const slate_validator_t &validator,
                                   SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(slate_id_is_valid(element_id), false);
+  FswAbortIfNot(slate_id_is_valid(element_id), false);
 
   using Token = SlateAccessToken<T, Access>;
 
   if (Token::can_write) {
     if (!layout.can_write(element_id)) {
-      SacPrefix();
+      FswPrefix();
       dbnprintf(200, ": New element '%s' is not write-accessible.\n",
                 element_path.c_str());
       return false;
@@ -459,7 +459,7 @@ bool SlateBuilder::register_token(slate_element_t element_id,
      * WriteToken which is more efficient.
      */
     if (Token::can_validate == validator.is_noop()) {
-      SacPrefix();
+      FswPrefix();
       dbnprintf(500, ": Creating '%s' element requires a %s.\n",
                 element_path.c_str(),
                 Token::can_validate ? "WriteToken" : "WriteValidatorToken");
@@ -467,11 +467,11 @@ bool SlateBuilder::register_token(slate_element_t element_id,
     }
   } else {
     element_id = slate_id_ro(element_id);
-    SacAbortIf(layout.can_write(element_id), false);
+    FswAbortIf(layout.can_write(element_id), false);
   }
 
   const std::string full_path = slate_join_path(subtree_path, element_path);
-  SacAbortIfNot(slate_token_accountant().register_id(token.id, full_path),
+  FswAbortIfNot(slate_token_accountant().register_id(token.id, full_path),
                 false);
 
   token.id = element_id;
@@ -500,7 +500,7 @@ bool SlateBuilder::create_read_only_element(
     const std::string &element_path, typename slate_info<T>::R initial_value,
     const slate_shard_t shard) {
   slate_element_t element_id = slate_element_default;
-  SacAbortIfNot(create_element<T>(element_path, initial_value, shard,
+  FswAbortIfNot(create_element<T>(element_path, initial_value, shard,
                                   slate_read_only, slate_validator_t(),
                                   element_id),
                 false);
@@ -525,7 +525,7 @@ result_t SlateBuilder::create(const std::string &element_path,
                               SlateAccessToken<T, Access> &token) {
   const T initial_value = T();
 
-  SacAbortIfNot(create(element_path, initial_value, shard, slate_private,
+  FswAbortIfNot(create(element_path, initial_value, shard, slate_private,
                        slate_validator_t(), token),
                 false);
 
@@ -550,7 +550,7 @@ result_t SlateBuilder::create(const std::string &element_path,
                               typename slate_info<T>::R initial_value,
                               const slate_shard_t shard,
                               SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(create(element_path, initial_value, shard, slate_private,
+  FswAbortIfNot(create(element_path, initial_value, shard, slate_private,
                        slate_validator_t(), token),
                 false);
 
@@ -577,7 +577,7 @@ result_t SlateBuilder::create(const std::string &element_path,
                               SlateAccessToken<T, Access> &token) {
   const T initial_value = T();
 
-  SacAbortIfNot(create(element_path, initial_value, shard, access,
+  FswAbortIfNot(create(element_path, initial_value, shard, access,
                        slate_validator_t(), token),
                 false);
 
@@ -604,7 +604,7 @@ result_t SlateBuilder::create(const std::string &element_path,
                               const slate_shard_t shard,
                               const slate_elem_access_t access,
                               SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(create(element_path, initial_value, shard, access,
+  FswAbortIfNot(create(element_path, initial_value, shard, access,
                        slate_validator_t(), token),
                 false);
   return true;
@@ -637,16 +637,16 @@ result_t SlateBuilder::create(const std::string &element_path,
   static_assert(SlateAccessToken<T, Access>::can_read,
                 "We only support tokens that have read access.");
 
-  SacMsgAbortIf(slate_id_is_valid(token.id), false, 100,
+  FswMsgAbortIf(slate_id_is_valid(token.id), false, 100,
                 "Cannot create element with provided token! Token is "
                 "already bound to an element!");
 
   slate_element_t element_id = slate_element_default;
-  SacAbortIfNot(create_element<T>(element_path, initial_value, shard, access,
+  FswAbortIfNot(create_element<T>(element_path, initial_value, shard, access,
                                   validator, element_id),
                 false);
 
-  SacAbortIfNot(register_token(element_id, element_path, validator, token),
+  FswAbortIfNot(register_token(element_id, element_path, validator, token),
                 false);
 
   return true;
@@ -658,7 +658,7 @@ result_t SlateBuilder::create_with_enum(const std::string &element_path,
                                         SlateAccessToken<T, Access> &token) {
   const T initial_value = T();
 
-  SacAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
+  FswAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
                                          slate_private, slate_validator_t(),
                                          token),
                 false);
@@ -671,7 +671,7 @@ result_t SlateBuilder::create_with_enum(const std::string &element_path,
                                         typename slate_info<T>::R initial_value,
                                         const slate_shard_t shard,
                                         SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
+  FswAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
                                          slate_private, slate_validator_t(),
                                          token),
                 false);
@@ -686,7 +686,7 @@ result_t SlateBuilder::create_with_enum(const std::string &element_path,
                                         SlateAccessToken<T, Access> &token) {
   const T initial_value = T();
 
-  SacAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
+  FswAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
                                          access, slate_validator_t(), token),
                 false);
 
@@ -699,7 +699,7 @@ result_t SlateBuilder::create_with_enum(const std::string &element_path,
                                         const slate_shard_t shard,
                                         const slate_elem_access_t access,
                                         SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
+  FswAbortIfNot(create_with_enum<Enum_T>(element_path, initial_value, shard,
                                          access, slate_validator_t(), token),
                 false);
 
@@ -713,19 +713,19 @@ result_t SlateBuilder::create_with_enum(const std::string &element_path,
                                         const slate_elem_access_t access,
                                         const slate_validator_t &validator,
                                         SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(enum_registry, false);
+  FswAbortIfNot(enum_registry, false);
 
   /*
    * Create the element.
    */
-  SacAbortIfNot(
+  FswAbortIfNot(
       create(element_path, initial_value, shard, access, validator, token),
       false);
 
   /*
    * Register the enum.
    */
-  SacAbortIfNot(enum_registry->register_auto_enum<Enum_T>(
+  FswAbortIfNot(enum_registry->register_auto_enum<Enum_T>(
                     slate_join_path(subtree_path, element_path)),
                 false);
 
@@ -753,11 +753,11 @@ result_t SlateBuilder::bind(const std::string &element_path,
   /*
    * You should not be looking up elements at run time.
    */
-  SacAbortIf(store->is_built(), false);
+  FswAbortIf(store->is_built(), false);
   const slate_permission_t permission = store->get_permission();
 
-  if (SacIf(Token::can_read && !slate_can_read(permission))) {
-    SacPrefix();
+  if (FswIf(Token::can_read && !slate_can_read(permission))) {
+    FswPrefix();
     dbnprintf(500,
               ": Cannot bind to '%s'; reading of existing "
               "elements is not allowed in this Slate.\n",
@@ -765,8 +765,8 @@ result_t SlateBuilder::bind(const std::string &element_path,
     return false;
   }
 
-  if (SacIf(Token::can_write && !slate_can_write(permission))) {
-    SacPrefix();
+  if (FswIf(Token::can_write && !slate_can_write(permission))) {
+    FswPrefix();
     dbnprintf(500,
               ": Cannot bind to '%s'; writing to existing "
               "elements is not allowed in this Slate.\n",
@@ -774,17 +774,17 @@ result_t SlateBuilder::bind(const std::string &element_path,
     return false;
   }
 
-  SacMsgAbortIf(slate_id_is_valid(token.id), false, 100,
+  FswMsgAbortIf(slate_id_is_valid(token.id), false, 100,
                 "Cannot bind element with provided token! Token is "
                 "already bound to an element!");
 
   const std::string full_path = slate_join_path(subtree_path, element_path);
-  SacAbortIfNot(require_permitted_path(full_path), false);
+  FswAbortIfNot(require_permitted_path(full_path), false);
 
   slate_element_t element_id = slate_element_default;
 
   if (Token::can_write) {
-    SacAbortIfNot(store->bind_write(full_path, slate_type_id<T>(), element_id),
+    FswAbortIfNot(store->bind_write(full_path, slate_type_id<T>(), element_id),
                   false);
 
     /*
@@ -793,8 +793,8 @@ result_t SlateBuilder::bind(const std::string &element_path,
      * validation function, we also fail to force callers to use a
      * WriteToken which is more efficient.
      */
-    if (SacIf(Token::can_validate != slate_id_has_validator(element_id))) {
-      SacPrefix();
+    if (FswIf(Token::can_validate != slate_id_has_validator(element_id))) {
+      FswPrefix();
       dbnprintf(500,
                 ": Cannot bind to '%s'; writing to this element "
                 "requires a %s.\n",
@@ -803,11 +803,11 @@ result_t SlateBuilder::bind(const std::string &element_path,
       return false;
     }
   } else {
-    SacAbortIfNot(store->bind_read(full_path, slate_type_id<T>(), element_id),
+    FswAbortIfNot(store->bind_read(full_path, slate_type_id<T>(), element_id),
                   false);
   }
 
-  SacAbortIfNot(slate_token_accountant().register_id(token.id, full_path),
+  FswAbortIfNot(slate_token_accountant().register_id(token.id, full_path),
                 false);
   token.id = element_id;
 
@@ -830,18 +830,18 @@ result_t SlateBuilder::bind(const std::string &element_path,
 template <class Enum_T, typename T, int Access>
 result_t SlateBuilder::bind_with_enum(const std::string &element_path,
                                       SlateAccessToken<T, Access> &token) {
-  SacAbortIfNot(enum_registry, false);
+  FswAbortIfNot(enum_registry, false);
 
   /*
    * Bind the token to the element.
    */
-  SacAbortIfNot(bind(element_path, token), false);
+  FswAbortIfNot(bind(element_path, token), false);
 
   /*
    * Register the enum.
    */
   const std::string full_path = slate_join_path(subtree_path, element_path);
-  SacAbortIfNot(enum_registry->register_auto_enum<Enum_T>(full_path), false);
+  FswAbortIfNot(enum_registry->register_auto_enum<Enum_T>(full_path), false);
 
   return true;
 }
@@ -869,8 +869,8 @@ bool SlateBuilder::create_view(const std::string &parent_element,
                                const std::string &element,
                                size_t element_offset) {
   ReadToken<T> temp_tok;
-  SacAbortIfNot(parent_path.bind(parent_element, temp_tok), false);
-  SacAbortIfNot(create_view<T>(temp_tok, element, element_offset), false);
+  FswAbortIfNot(parent_path.bind(parent_element, temp_tok), false);
+  FswAbortIfNot(create_view<T>(temp_tok, element, element_offset), false);
   return true;
 }
 
@@ -898,7 +898,7 @@ bool SlateBuilder::create_view(
     SlateAccessToken<ParentT, ParentAccess> &parent_token,
     const std::string &element_path, const size_t element_offset) {
   SlateAccessToken<T, ParentAccess> tok;
-  SacAbortIfNot((create_view<T, ParentT, ParentAccess>(
+  FswAbortIfNot((create_view<T, ParentT, ParentAccess>(
                     parent_token, element_path, element_offset, tok)),
                 false);
 
@@ -931,11 +931,11 @@ bool SlateBuilder::create_view(
     const std::string &element_path, const size_t element_offset,
     SlateAccessToken<T, ParentAccess> &token) {
   slate_element_t view_element_id = slate_element_default;
-  SacAbortIfNot(create_view<T>(parent_token.id, slate_type_id<ParentT>(),
+  FswAbortIfNot(create_view<T>(parent_token.id, slate_type_id<ParentT>(),
                                element_path, element_offset, view_element_id),
                 false);
 
-  SacAbortIfNot(
+  FswAbortIfNot(
       register_token(view_element_id, element_path, slate_validator_t(), token),
       false);
 
@@ -965,7 +965,7 @@ bool SlateBuilder::create_view(const slate_element_t parent_element_id,
                                const std::string &element_path,
                                const size_t element_offset) {
   slate_element_t view_element_id = slate_element_default;
-  SacAbortIfNot(create_view<T>(parent_element_id, parent_type_id, element_path,
+  FswAbortIfNot(create_view<T>(parent_element_id, parent_type_id, element_path,
                                element_offset, view_element_id),
                 false);
 
@@ -999,17 +999,17 @@ bool SlateBuilder::create_view(const slate_element_t parent_element_id,
   /*
    * Verify valid IDs.
    */
-  SacAbortIfNot(slate_id_is_valid(parent_element_id), false);
+  FswAbortIfNot(slate_id_is_valid(parent_element_id), false);
 
-  SacAbortIf(store->is_built(), false);
+  FswAbortIf(store->is_built(), false);
 
   const std::string full_path = slate_join_path(subtree_path, element_path);
-  SacAbortIfNot(require_permitted_path(full_path), false);
+  FswAbortIfNot(require_permitted_path(full_path), false);
 
   /*
    * Fail if this is a non-supported slate type.
    */
-  SacAbortIfNot(slate_info<T>::is_valid(), false);
+  FswAbortIfNot(slate_info<T>::is_valid(), false);
 
   const slate_subsystem_id_t subsystem_id = store->get_subsystem_id();
 
@@ -1020,7 +1020,7 @@ bool SlateBuilder::create_view(const slate_element_t parent_element_id,
   const T sizing_value{};
   const size_t value_size = slate_info<T>::size(sizing_value);
   const size_t alignment = slate_info<T>::alignment();
-  SacAbortIfNot(store->create_view_element(parent_element_id, parent_type_id,
+  FswAbortIfNot(store->create_view_element(parent_element_id, parent_type_id,
                                            element_offset, full_path, type_id,
                                            value_size, alignment, subsystem_id,
                                            view_element_id),
@@ -1048,7 +1048,7 @@ bool SlateBuilder::create_element(const std::string &element_path,
                                   const slate_shard_t shard,
                                   const slate_elem_access_t access,
                                   slate_element_t &element_id) {
-  SacAbortIfNot(create_element<T>(element_path, initial_value, shard, access,
+  FswAbortIfNot(create_element<T>(element_path, initial_value, shard, access,
                                   slate_validator_t(), element_id),
                 false);
 
@@ -1078,11 +1078,11 @@ bool SlateBuilder::create_element(const std::string &element_path,
                                   const slate_elem_access_t access,
                                   const slate_validator_t &validator,
                                   slate_element_t &element_id) {
-  SacAbortIf(store->is_built(), false);
+  FswAbortIf(store->is_built(), false);
   const slate_permission_t permission = store->get_permission();
 
-  if (SacIfNot(slate_can_create(permission, shard))) {
-    SacPrefix();
+  if (FswIfNot(slate_can_create(permission, shard))) {
+    FswPrefix();
     dbnprintf(500,
               ": Cannot create '%s'; creation of new elements is "
               "not allowed in this slate or shard (%s).\n",
@@ -1091,12 +1091,12 @@ bool SlateBuilder::create_element(const std::string &element_path,
   }
 
   const std::string full_path = slate_join_path(subtree_path, element_path);
-  SacAbortIfNot(require_permitted_path(full_path), false);
+  FswAbortIfNot(require_permitted_path(full_path), false);
 
   /*
    * Fail if we try to store a non-supported slate type.
    */
-  SacAbortIfNot(slate_info<T>::is_valid(), false);
+  FswAbortIfNot(slate_info<T>::is_valid(), false);
 
   const slate_subsystem_id_t subsystem_id = store->get_subsystem_id();
 
@@ -1108,17 +1108,17 @@ bool SlateBuilder::create_element(const std::string &element_path,
   const size_t value_size = slate_info<T>::size(initial_value);
   const size_t alignment = slate_info<T>::alignment();
   void *mem = NULL;
-  SacAbortIfNot(store->allocate_element(full_path, type_id, value_size,
+  FswAbortIfNot(store->allocate_element(full_path, type_id, value_size,
                                         alignment, shard, access, validator,
                                         subsystem_id, element_id, mem),
                 false);
-  SacAbortIfNot(mem, false);
-  SacAbortIfNot(slate_id_is_valid(element_id), false);
+  FswAbortIfNot(mem, false);
+  FswAbortIfNot(slate_id_is_valid(element_id), false);
 
   /*
    * Copy construct the object from the value provided.
    */
-  SacAbortIfNot(slate_info<T>::construct(mem, initial_value), false);
+  FswAbortIfNot(slate_info<T>::construct(mem, initial_value), false);
 
   /*
    * If a validator is provided, and it is not a "no-op" validator, check
@@ -1129,7 +1129,7 @@ bool SlateBuilder::create_element(const std::string &element_path,
      * The validator must be usable. This will be checked again when
      * Slate is built.
      */
-    SacAbortIfNot(validator.is_usable(), false);
+    FswAbortIfNot(validator.is_usable(), false);
 
     /*
      * Check that the validator implementation can be cast to a type
@@ -1140,7 +1140,7 @@ bool SlateBuilder::create_element(const std::string &element_path,
     Handle<SlateValidator> validator_impl(validator.internal);
 
     Handle<SlateTypedValidator<T>> typed_validator;
-    SacMsgAbortIfNot(typed_validator.assign_casted(validator_impl), false, 200,
+    FswMsgAbortIfNot(typed_validator.assign_casted(validator_impl), false, 200,
                      "A validator of an incompatible type was attached "
                      "to element \"%s\".",
                      full_path.c_str());
@@ -1151,7 +1151,7 @@ bool SlateBuilder::create_element(const std::string &element_path,
      */
     typename slate_info<T>::W value = slate_info<T>::from_mem(mem);
 
-    SacAbortIfNot(typed_validator->validate(initial_value, value), false);
+    FswAbortIfNot(typed_validator->validate(initial_value, value), false);
   }
 
   return true;
@@ -1171,7 +1171,7 @@ template <typename T>
 bool SlateBuilder::get_element_id(const std::string_view element_path,
                                   slate_element_t &element_id) const {
   const slate_type_t type_id = slate_type_id<T>();
-  SacAbortIfNot(get_element_id(element_path, type_id, element_id), false);
+  FswAbortIfNot(get_element_id(element_path, type_id, element_id), false);
 
   return true;
 }
@@ -1207,7 +1207,7 @@ bool SlateBuilder::element_exists(const std::string &element_path) const {
 template <typename T>
 bool SlateBuilder::get_initial_value(const SlateToken<T> &token,
                                      typename slate_info<T>::O value) const {
-  SacAbortIfNot(get_element_initial_value<T>(token.id, value), false);
+  FswAbortIfNot(get_element_initial_value<T>(token.id, value), false);
   return true;
 }
 
@@ -1228,14 +1228,14 @@ bool SlateBuilder::get_initial_value(const SlateToken<T> &token,
 template <typename T>
 bool SlateBuilder::get_element_initial_value(
     const slate_element_t elem_id, typename slate_info<T>::O value) const {
-  SacAbortIf(store->is_built(), false);
+  FswAbortIf(store->is_built(), false);
 
   const slate_type_t type_id = slate_info<T>::type_id();
   B2c data;
-  SacAbortIfNot(layout.get_element_initial_memory(elem_id, type_id, data),
+  FswAbortIfNot(layout.get_element_initial_memory(elem_id, type_id, data),
                 false);
-  SacAbortIfNot(data.buf(), false);
-  SacAbortIfNot(data.len(), false);
+  FswAbortIfNot(data.buf(), false);
+  FswAbortIfNot(data.len(), false);
 
   value = slate_info<T>::from_mem(data.buf());
 
@@ -1280,10 +1280,10 @@ bool SlateBuilder::register_enum(const SlateToken<T> &token,
                                  const SymbolTable &symbol_table,
                                  const std::string &strip_prefix) {
   std::string path;
-  SacAbortIfNot(get_path(token, path), false);
+  FswAbortIfNot(get_path(token, path), false);
   std::string relative_path;
-  SacAbortIfNot(get_relative_path(path, relative_path), false);
-  SacAbortIfNot(
+  FswAbortIfNot(get_relative_path(path, relative_path), false);
+  FswAbortIfNot(
       register_enum(relative_path, enum_name, symbol_table, strip_prefix),
       false);
   return true;

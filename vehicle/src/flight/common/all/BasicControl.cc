@@ -63,15 +63,15 @@ namespace Drone
                                            SlateBuilder _slate_control,
                                            FtNodeConfigList &node_configs)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         control_period = _control_period;
         configs = _configs;
         ident = _ident;
         slate_control = _slate_control;
-        SacAbortIfNot(slate_sharer_manager.assume_ownership(
+        FswAbortIfNot(slate_sharer_manager.assume_ownership(
                           new SlateSharerManagerTripleString(clock)),
                       false);
-        SacAbortIfNot(slate_sharer_manager->init(
+        FswAbortIfNot(slate_sharer_manager->init(
                           control_period, configs, process_name,
                           get_slate_sharing_identity(), slate_control,
                           node_configs, slate_sharer_scaling),
@@ -97,39 +97,39 @@ namespace Drone
         Handle<EnumRegistry> _enum_registry,
         cycle_timer_name_s &cycle_timer_requests)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         keychain = _keychain;
         channel_manager = _channel_manager;
         adc_boards_info = _adc_boards_info;
         enum_registry = _enum_registry;
-        SacAbortIfNot(channel_manager, false);
-        SacAbortIfNot(enum_registry, false);
+        FswAbortIfNot(channel_manager, false);
+        FswAbortIfNot(enum_registry, false);
         /*
          * Dispatch all initialization phases.
          */
-        SacAbortIfNot(create_basic_initial_platform(), false);
-        SacAbortIfNot(create_initial_systems(), false);
-        SacAbortIfNot(create_basic_platform(), false);
-        SacAbortIfNot(create_basic_shared_receiver_platform(), false);
-        SacAbortIfNot(create_shared_receiver_systems(), false);
-        SacAbortIfNot(create_slate_sender_creators(), false);
-        SacAbortIfNot(create_basic_control_platform(), false);
-        SacAbortIfNot(create_alert_system(), false);
-        SacAbortIfNot(create_control_systems(cycle_timer_requests), false);
-        SacAbortIfNot(create_basic_synced_command_platform(), false);
-        SacAbortIfNot(populate_enums(), false);
-        SacAbortIfNot(finalize_enums(), false);
-        SacAbortIfNot(create_alarm_system(), false);
+        FswAbortIfNot(create_basic_initial_platform(), false);
+        FswAbortIfNot(create_initial_systems(), false);
+        FswAbortIfNot(create_basic_platform(), false);
+        FswAbortIfNot(create_basic_shared_receiver_platform(), false);
+        FswAbortIfNot(create_shared_receiver_systems(), false);
+        FswAbortIfNot(create_slate_sender_creators(), false);
+        FswAbortIfNot(create_basic_control_platform(), false);
+        FswAbortIfNot(create_alert_system(), false);
+        FswAbortIfNot(create_control_systems(cycle_timer_requests), false);
+        FswAbortIfNot(create_basic_synced_command_platform(), false);
+        FswAbortIfNot(populate_enums(), false);
+        FswAbortIfNot(finalize_enums(), false);
+        FswAbortIfNot(create_alarm_system(), false);
         /*
          * Initialize ControlCode after all control systems are initialized,
          * so that it may bind to their outputs, but prior to slate sender
          * initialization. This enables us to share outputs of ControlCode to
          * other nodes or processes.
          */
-        SacAbortIfNot(create_ravenscript(cycle_timer_requests), false);
-        SacAbortIfNot(create_shared_sender_systems(), false);
-        SacAbortIfNot(pre_finalize_slate(), false);
-        SacAbortIfNot(adc_unscale_timer.init(cycle_timer_requests), false);
+        FswAbortIfNot(create_ravenscript(cycle_timer_requests), false);
+        FswAbortIfNot(create_shared_sender_systems(), false);
+        FswAbortIfNot(pre_finalize_slate(), false);
+        FswAbortIfNot(adc_unscale_timer.init(cycle_timer_requests), false);
         return true;
     }
     /**
@@ -143,18 +143,18 @@ namespace Drone
     bool BasicControl::init_post_slate_build(SlateBuilder sudo_slate_control,
                                              const cycle_timer_m &cycle_timers)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(adc_unscale_timer.finalize(cycle_timers), false);
-        SacAbortIfNot(post_finalize_slate(sudo_slate_control), false);
-        SacAbortIfNot(finalize_alarm_system(), false);
-        SacAbortIfNot(create_legacy_systems(), false);
-        SacAbortIfNot(build_state_machine(), false);
-        SacAbortIfNot(finalize_legacy_systems(sudo_slate_control), false);
-        SacAbortIfNot(finalize_basic_command_platform(sudo_slate_control),
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(adc_unscale_timer.finalize(cycle_timers), false);
+        FswAbortIfNot(post_finalize_slate(sudo_slate_control), false);
+        FswAbortIfNot(finalize_alarm_system(), false);
+        FswAbortIfNot(create_legacy_systems(), false);
+        FswAbortIfNot(build_state_machine(), false);
+        FswAbortIfNot(finalize_legacy_systems(sudo_slate_control), false);
+        FswAbortIfNot(finalize_basic_command_platform(sudo_slate_control),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             finalize_control_systems(sudo_slate_control, cycle_timers), false);
-        SacAbortIfNot(basic_runtime_checks(), false);
+        FswAbortIfNot(basic_runtime_checks(), false);
         is_init = true;
         return true;
     }
@@ -175,8 +175,8 @@ namespace Drone
         /*
          * Append scaling information from SlateSharerManager.
          */
-        SacAbortIfNot(slate_sharer_manager, false);
-        SacAbortIfNot(slate_sharer_manager->validate_initialized(), false);
+        FswAbortIfNot(slate_sharer_manager, false);
+        FswAbortIfNot(slate_sharer_manager->validate_initialized(), false);
         scaling.insert(scaling.end(), slate_sharer_scaling.begin(),
                        slate_sharer_scaling.end());
         return true;
@@ -200,7 +200,7 @@ namespace Drone
      * Dispatch the synchronized portion of the control cycle.
      *
      * @note This function has no return value to help avoid
-     * accidentally SacAborting in the middle - we should not let
+     * accidentally FswAborting in the middle - we should not let
      * failures from a single task cancel all of vehicle control.
      */
     void BasicControl::dispatch_synced() RUNTIME
@@ -250,7 +250,7 @@ namespace Drone
      */
     void BasicControl::execute_send_slate_sharing() RUNTIME
     {
-        SacIfNot(is_init);
+        FswIfNot(is_init);
     }
     /**
      * Return the identity that should be used when claiming Slate sharers in
@@ -277,11 +277,11 @@ namespace Drone
      */
     bool BasicControl::create_basic_initial_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Get the list of state machine commands.
          */
-        SacAbortIfNot(cmd_table.init(configs), false);
+        FswAbortIfNot(cmd_table.init(configs), false);
         /*
          * Create our slates.
          */
@@ -292,7 +292,7 @@ namespace Drone
          * Trigger element to reset counters. It is in the cyclic shard so it
          * is automatically reset.
          */
-        SacAbortIfNot(slate_control.create("reset_counters", false,
+        FswAbortIfNot(slate_control.create("reset_counters", false,
                                            shard_cyclic, slate_read_write,
                                            reset_counters_tok),
                       false);
@@ -305,14 +305,14 @@ namespace Drone
      */
     bool BasicControl::create_basic_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the raw slates.
          */
         SlateBuilder slate_control_raw = slate_control.sub_slate("raw");
-        SacAbortIfNot(adc_powersaver.assume_ownership(new AdcPowersaver(clock)),
+        FswAbortIfNot(adc_powersaver.assume_ownership(new AdcPowersaver(clock)),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             adc_powersaver->init(slate_control_raw,
                                  slate_control.sub_slate("adc_powersaver"),
                                  control_period, adc_boards_info, configs),
@@ -327,7 +327,7 @@ namespace Drone
      */
     bool BasicControl::create_basic_shared_receiver_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Sharing messages are processed on the same cycle on which they are
          * generated.
@@ -336,17 +336,17 @@ namespace Drone
         /*
          * Create a slate receiver for each peer.
          */
-        SacAbortIfNot(create_slate_receiver(
+        FswAbortIfNot(create_slate_receiver(
                           slate_shared.a,
                           sharer_get_default_local_config_list(),
                           ident.role_inst + 'a', cycle_delay, slate_receiver_a),
                       false);
-        SacAbortIfNot(create_slate_receiver(
+        FswAbortIfNot(create_slate_receiver(
                           slate_shared.b,
                           sharer_get_default_local_config_list(),
                           ident.role_inst + 'b', cycle_delay, slate_receiver_b),
                       false);
-        SacAbortIfNot(create_slate_receiver(
+        FswAbortIfNot(create_slate_receiver(
                           slate_shared.c,
                           sharer_get_default_local_config_list(),
                           ident.role_inst + 'c', cycle_delay, slate_receiver_c),
@@ -354,17 +354,17 @@ namespace Drone
         /*
          * Scale sensors for each peer data set.
          */
-        SacAbortIfNot(create_adc_scaler(slate_shared.a.sub_slate("raw"),
+        FswAbortIfNot(create_adc_scaler(slate_shared.a.sub_slate("raw"),
                                         slate_shared.a, slate_control,
                                         bank_select_always,
                                         adc_scaler_shared_a),
                       false);
-        SacAbortIfNot(create_adc_scaler(slate_shared.b.sub_slate("raw"),
+        FswAbortIfNot(create_adc_scaler(slate_shared.b.sub_slate("raw"),
                                         slate_shared.b, slate_control,
                                         bank_select_always,
                                         adc_scaler_shared_b),
                       false);
-        SacAbortIfNot(create_adc_scaler(slate_shared.c.sub_slate("raw"),
+        FswAbortIfNot(create_adc_scaler(slate_shared.c.sub_slate("raw"),
                                         slate_shared.c, slate_control,
                                         bank_select_always,
                                         adc_scaler_shared_c),
@@ -379,7 +379,7 @@ namespace Drone
      */
     bool BasicControl::create_basic_control_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Combine all peer shared data.
          */
@@ -387,9 +387,9 @@ namespace Drone
         combiner_in.push_back(slate_combiner_in_t(slate_shared.a, "a"));
         combiner_in.push_back(slate_combiner_in_t(slate_shared.b, "b"));
         combiner_in.push_back(slate_combiner_in_t(slate_shared.c, "c"));
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_combiner_control.assume_ownership(new SlateCombiner), false);
-        SacAbortIfNot(slate_combiner_control->init(
+        FswAbortIfNot(slate_combiner_control->init(
                           configs, "sharer.sequence_number", combiner_in,
                           slate_control,
                           sharer_get_default_local_config_list()),
@@ -397,33 +397,33 @@ namespace Drone
         /*
          * Scale up combined sensors.
          */
-        SacAbortIfNot(create_adc_scaler(slate_control.sub_slate("raw"),
+        FswAbortIfNot(create_adc_scaler(slate_control.sub_slate("raw"),
                                         slate_control, slate_control,
                                         bank_select_always, adc_scaler_control),
                       false);
         /*
          * Scale down controlled outputs to the raw space.
          */
-        SacAbortIfNot(create_adc_unscaler(slate_control,
+        FswAbortIfNot(create_adc_unscaler(slate_control,
                                           slate_control.sub_slate("raw"),
                                           adc_unscaler_control),
                       false);
         /*
          * Create the state machine.
          */
-        SacAbortIfNot(state_machine.assume_ownership(
+        FswAbortIfNot(state_machine.assume_ownership(
                           new SyncStateMachine(cmd_table, control_period)),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             state_machine->init_storage(configs, slate_control, ident.role),
             false);
         /*
          * Initialize ftrace slate tokens.
          */
-        SacAbortIfNot(FtraceTrap::init_device(slate_control), false);
+        FswAbortIfNot(FtraceTrap::init_device(slate_control), false);
         for (const auto &string_letter : {"a", "b", "c"})
         {
-            SacAbortIfNot(FtraceTrap::init_device(
+            FswAbortIfNot(FtraceTrap::init_device(
                               slate_control, ident.role_inst + string_letter),
                           false);
         }
@@ -431,10 +431,10 @@ namespace Drone
          * Instantiate the enumerated bitmaps. This part creates all the
          * enum Slate elements.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             enumerated_bitmaps.assume_ownership(new EnumeratedBitmapManager),
             false);
-        SacAbortIfNot(enumerated_bitmaps->init_enums(slate_control, configs,
+        FswAbortIfNot(enumerated_bitmaps->init_enums(slate_control, configs,
                                                      *enum_registry),
                       false);
         /*
@@ -443,22 +443,22 @@ namespace Drone
          * event sequences.
          */
         WriteToken<bool> autosequence_begin;
-        SacAbortIfNot(slate_control.create("autosequence_begin", false,
+        FswAbortIfNot(slate_control.create("autosequence_begin", false,
                                            shard_cyclic, slate_read_write,
                                            autosequence_begin),
                       false);
         WriteToken<bool> autosequence_end;
-        SacAbortIfNot(slate_control.create("autosequence_end", false,
+        FswAbortIfNot(slate_control.create("autosequence_end", false,
                                            shard_cyclic, slate_read_write,
                                            autosequence_end),
                       false);
         /*
          * Create the control elements for the telemetry system.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             telem_relay_control.assume_ownership(new TelemetryRelayControl()),
             false);
-        SacAbortIfNot(telem_relay_control->init("telem", slate_control, configs,
+        FswAbortIfNot(telem_relay_control->init("telem", slate_control, configs,
                                                 telem_config_key),
                       false);
         return true;
@@ -470,13 +470,13 @@ namespace Drone
      */
     bool BasicControl::create_basic_synced_command_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const std::string dispatcher_name = "gnd_cmd";
         /*
          * Get the input channels.
          */
         std::vector<Handle<DgramChannel>> inputs;
-        SacAbortIfNot(
+        FswAbortIfNot(
             external_command_get_default_synced_inputs(channel_manager, inputs),
             false);
         /*
@@ -487,41 +487,41 @@ namespace Drone
          * Create the deframer.
          */
         Handle<ExternalCommandDeframer> deframer;
-        SacAbortIfNot(create_synced_command_deframer(deframer), false);
+        FswAbortIfNot(create_synced_command_deframer(deframer), false);
         /*
          * Create the time filter.
          */
         Handle<ExternalCommandTimeFilter> time_filter(
             new ExternalCommandTimeFilterNull());
-        SacAbortIfNot(time_filter, false);
+        FswAbortIfNot(time_filter, false);
         Handle<ExternalCommandFilter> cmd_filter;
-        SacAbortIfNot(create_synced_command_filter(cmd_filter), false);
+        FswAbortIfNot(create_synced_command_filter(cmd_filter), false);
         /*
          * We don't use a command armer.
          */
         Handle<ExternalCommandArmer> armer(new ExternalCommandArmerNull());
-        SacAbortIfNot(armer, false);
+        FswAbortIfNot(armer, false);
         /*
          * Create the command handlers.
          */
         ext_cmd_handler_v handlers;
-        SacAbortIfNot(create_synced_command_handlers(dispatcher_name, handlers),
+        FswAbortIfNot(create_synced_command_handlers(dispatcher_name, handlers),
                       false);
         /*
          * Create the output channels.
          */
         std::map<std::string, Handle<Channel>> outputs;
-        SacAbortIfNot(external_command_get_default_synced_outputs(
+        FswAbortIfNot(external_command_get_default_synced_outputs(
                           channel_manager, outputs),
                       false);
         /*
          * Create and initialize the command dispatcher.
          */
-        SacAbortIfNot(ground_cmd_dispatcher_synced.assume_ownership(
+        FswAbortIfNot(ground_cmd_dispatcher_synced.assume_ownership(
                           new ExternalCommandDispatcher(dispatcher_name, clock,
                                                         ext_cmd_params)),
                       false);
-        SacAbortIfNot(ground_cmd_dispatcher_synced->init(
+        FswAbortIfNot(ground_cmd_dispatcher_synced->init(
                           slate_control, ident.role_inst, shard, inputs,
                           deframer, time_filter, cmd_filter, armer, handlers,
                           outputs),
@@ -530,15 +530,15 @@ namespace Drone
          * Look up the disconnect command for the spammer below.
          */
         vehicle_cmd_t disconnect_cmd;
-        SacAbortIfNot(cmd_table.lookup("disconnect", disconnect_cmd), false);
+        FswAbortIfNot(cmd_table.lookup("disconnect", disconnect_cmd), false);
         /*
          * Create the disconnect command spammer.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             disconnect_command_spammer.assume_ownership(
                 new CommandSpammer(clock, state_machine, "disconnect_spammer")),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             disconnect_command_spammer->init(slate_control, control_period),
             false);
         /*
@@ -547,7 +547,7 @@ namespace Drone
          */
         NodeWatchdog::all_disconnect_sig_t &all_disconnect_sig =
             ground_cmd_dispatcher_synced->get_watchdog_all_disconnect_sig();
-        SacAbortIfNot(all_disconnect_sig.connect(
+        FswAbortIfNot(all_disconnect_sig.connect(
                           RUNTIME_BIND(make_slot(*disconnect_command_spammer,
                                                  &CommandSpammer::handle_cmd),
                                        disconnect_cmd)),
@@ -556,10 +556,10 @@ namespace Drone
          * Create some devices that can be used to test commanding.
          */
         slate_element_t element_id = 0;
-        SacAbortIfNot(slate_control.create_element<INT64>(
+        FswAbortIfNot(slate_control.create_element<INT64>(
                           "null_int", 0, shard, slate_read_only, element_id),
                       false);
-        SacAbortIfNot(slate_control.create_element<double>(
+        FswAbortIfNot(slate_control.create_element<double>(
                           "null_fp", 0.0, shard, slate_private, element_id),
                       false);
         return true;
@@ -572,7 +572,7 @@ namespace Drone
      */
     bool BasicControl::finalize_enums()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Register any enums that can be used in telemetry or event files.
          */
@@ -581,7 +581,7 @@ namespace Drone
         state_machine_channels.push_back(sm_prefix + ".current_state");
         state_machine_channels.push_back(sm_prefix + ".old_state");
         state_machine_channels.push_back(sm_prefix + ".older_state");
-        SacAbortIfNot(enum_registry->register_enum(
+        FswAbortIfNot(enum_registry->register_enum(
                           "state_machine", state_machine->get_state_sym_table(),
                           state_machine_channels),
                       false);
@@ -594,19 +594,19 @@ namespace Drone
      */
     bool BasicControl::pre_finalize_slate()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Finalize the SlateSharerManager, which will attach node I/O channels
          * and resolve any outstanding Slate element binds.
          */
-        SacAbortIfNot(alert_provider, false);
-        SacAbortIfNot(
+        FswAbortIfNot(alert_provider, false);
+        FswAbortIfNot(
             slate_sharer_manager->finalize(alert_provider, channel_manager),
             false);
         /*
          * Bind enumerated bitmaps to their output Slate elements.
          */
-        SacAbortIfNot(enumerated_bitmaps->init_outputs(slate_control), false);
+        FswAbortIfNot(enumerated_bitmaps->init_outputs(slate_control), false);
         /*
          * Get the runtime.
          */
@@ -636,7 +636,7 @@ namespace Drone
         /*
          * Initialize the state machine.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             state_machine->init(sudo_slate_control, configs, *enum_registry),
             false);
         return true;
@@ -651,12 +651,12 @@ namespace Drone
     bool BasicControl::finalize_basic_command_platform(
         SlateBuilder sudo_slate_control)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Initialize the Slate command interfaces.
          */
-        SacAbortIfNot(slate_command_interface_control, false);
-        SacAbortIfNot(slate_command_interface_control->init(
+        FswAbortIfNot(slate_command_interface_control, false);
+        FswAbortIfNot(slate_command_interface_control->init(
                           sudo_slate_control, ident.role_inst + "x"),
                       false);
         return true;
@@ -668,22 +668,22 @@ namespace Drone
      */
     bool BasicControl::build_state_machine()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Add other pre-transition tasks.
          */
-        SacAbortIfNot(build_state_machine_pre_transition(), false);
+        FswAbortIfNot(build_state_machine_pre_transition(), false);
         /*
          * Add alarms.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             state_machine->add_ctask("multi_sensor_alarm", slate_alarms),
             false);
         /*
          * Add post-transition tasks.
          */
-        SacAbortIfNot(state_machine->pre_transition_ctasks_added(), false);
-        SacAbortIfNot(build_state_machine_post_transition(), false);
+        FswAbortIfNot(state_machine->pre_transition_ctasks_added(), false);
+        FswAbortIfNot(build_state_machine_post_transition(), false);
         return true;
     }
     /**
@@ -696,8 +696,8 @@ namespace Drone
         /*
          * Ensure there are no uninitialized commands.
          */
-        SacAbortIfNeq(num_uninitialized_vehicle_cmds(), 0, false);
-        SacAbortIfNot(runtime_checks(), false);
+        FswAbortIfNeq(num_uninitialized_vehicle_cmds(), 0, false);
+        FswAbortIfNot(runtime_checks(), false);
         return true;
     }
     /**
@@ -708,7 +708,7 @@ namespace Drone
      */
     bool BasicControl::create_initial_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -719,7 +719,7 @@ namespace Drone
      */
     bool BasicControl::create_shared_receiver_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -732,7 +732,7 @@ namespace Drone
      */
     bool BasicControl::create_slate_sender_creators()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -743,11 +743,11 @@ namespace Drone
      */
     bool BasicControl::create_alert_system()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIf(alert_provider, false);
+        FswAbortIf(is_init, false);
+        FswAbortIf(alert_provider, false);
         Handle<VoidAlertProvider> alerts(new VoidAlertProvider());
-        SacAbortIfNot(alerts, false);
-        SacAbortIfNot(alerts->init(slate_control.sub_slate("alerts")), false);
+        FswAbortIfNot(alerts, false);
+        FswAbortIfNot(alerts->init(slate_control.sub_slate("alerts")), false);
         alert_provider = alerts;
         return true;
     }
@@ -762,7 +762,7 @@ namespace Drone
     bool BasicControl::create_control_systems(
         cycle_timer_name_s &cycle_timer_requests)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -773,7 +773,7 @@ namespace Drone
      */
     bool BasicControl::create_shared_sender_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -786,8 +786,8 @@ namespace Drone
     bool BasicControl::create_synced_command_deframer(
         Handle<ExternalCommandDeframer> &deframer)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(
             deframer.assume_ownership(new ExternalCommandDeframerNull()),
             false);
         return true;
@@ -802,8 +802,8 @@ namespace Drone
     bool BasicControl::create_synced_command_filter(
         Handle<ExternalCommandFilter> &cmd_filter)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(
             cmd_filter.assume_ownership(new ExternalCommandFilterNull()),
             false);
         return true;
@@ -821,17 +821,17 @@ namespace Drone
     bool BasicControl::create_synced_command_handlers(
         const std::string &dispatcher_name, ext_cmd_handler_v &handlers)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the device command handler.
          */
         Handle<ExternalCommandSlateHandler> device_handler(
             new ExternalCommandSlateHandler());
-        SacAbortIfNot(device_handler, false);
-        SacAbortIfNot(slate_command_interface_control.assume_ownership(
+        FswAbortIfNot(device_handler, false);
+        FswAbortIfNot(slate_command_interface_control.assume_ownership(
                           new SlateCommandInterface()),
                       false);
-        SacAbortIfNot(device_handler->init(slate_command_interface_control),
+        FswAbortIfNot(device_handler->init(slate_command_interface_control),
                       false);
         handlers.push_back(device_handler);
         /*
@@ -840,8 +840,8 @@ namespace Drone
         Handle<ExternalCommandStateMachineHandler> sm_handler(
             new ExternalCommandStateMachineHandler(
                 dispatcher_name + "_sm_handler", clock));
-        SacAbortIfNot(sm_handler, false);
-        SacAbortIfNot(
+        FswAbortIfNot(sm_handler, false);
+        FswAbortIfNot(
             sm_handler->init(slate_control, shard_sync, state_machine), false);
         handlers.push_back(sm_handler);
         return true;
@@ -859,7 +859,7 @@ namespace Drone
     BasicControl::finalize_control_systems(SlateBuilder sudo_slate_control,
                                            const cycle_timer_m &cycle_timers)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -870,7 +870,7 @@ namespace Drone
      */
     bool BasicControl::create_legacy_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -881,7 +881,7 @@ namespace Drone
      */
     bool BasicControl::populate_enums()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -891,7 +891,7 @@ namespace Drone
      */
     bool BasicControl::runtime_checks()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -902,7 +902,7 @@ namespace Drone
      */
     bool BasicControl::build_state_machine_pre_transition()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -913,7 +913,7 @@ namespace Drone
      */
     bool BasicControl::build_state_machine_post_transition()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -937,16 +937,16 @@ namespace Drone
      */
     bool BasicControl::create_alarm_system()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(alert_provider, false);
-        SacAbortIfNot(alarm_sequence_handler.init_storage(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(alert_provider, false);
+        FswAbortIfNot(alarm_sequence_handler.init_storage(
                           configs, slate_control, "alarm_event_sequences"),
                       false);
-        SacAbortIf(slate_alarms, false);
-        SacAbortIfNot(slate_alarms.assume_ownership(
+        FswAbortIf(slate_alarms, false);
+        FswAbortIfNot(slate_alarms.assume_ownership(
                           new SlateAlarmTask("multi_sensor_alarm")),
                       false);
-        SacAbortIfNot(slate_alarms->init(
+        FswAbortIfNot(slate_alarms->init(
                           control_period, slate_control, slate_control,
                           cmd_table, *alert_provider, configs,
                           true /* can_be_stopped */, "multi_sensor_alarms"),
@@ -957,17 +957,17 @@ namespace Drone
          * Alarms here. This allows Multi Sensor Alarm threshold devices to be
          * paired with the matching enum of their sensor devices.
          */
-        SacAbortIfNot(slate_alarms->populate_enums(*enum_registry), false);
+        FswAbortIfNot(slate_alarms->populate_enums(*enum_registry), false);
         /*
          * Set up a token to store alarm_inhibit.
          */
-        SacAbortIfNot(slate_control.create("alarm_inhibit", 0, shard_sync,
+        FswAbortIfNot(slate_control.create("alarm_inhibit", 0, shard_sync,
                                            slate_private, alarm_inhibit_tok),
                       false);
         /*
          * Handle alarm signals.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_alarms->alarm_sig.connect(RUNTIME_BIND(
                 make_slot(*this, &BasicControl::handle_alarm), state_machine)),
             false);
@@ -980,19 +980,19 @@ namespace Drone
      */
     bool BasicControl::finalize_alarm_system()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Initialize the AlarmEventSequenceHandler. This must be done before
          * any alarms are initialized.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             alarm_sequence_handler.init(slate_control, configs, cmd_table,
                                         "alarm_event_sequences", *enum_registry,
                                         ident.role_inst + 'x'),
             false);
         const std::vector<Handle<SlateAlarm>> &alarms =
             slate_alarms->get_alarms();
-        SacAbortIfNot(alarm_sequence_handler.validate_alarms(alarms), false);
+        FswAbortIfNot(alarm_sequence_handler.validate_alarms(alarms), false);
         return true;
     }
     /**
@@ -1016,23 +1016,23 @@ namespace Drone
         const sharer_create_or_bind_t create_or_bind,
         Handle<SlateSharerSender> &sender)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIf(sender, false);
+        FswAbortIf(is_init, false);
+        FswAbortIf(sender, false);
         Handle<Channel> out;
         if (is_triple_string)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 channel_manager->get_triple_string_output(output_channel, out),
                 false);
         }
         else
         {
-            SacAbortIfNot(channel_manager->get_output(output_channel, out),
+            FswAbortIfNot(channel_manager->get_output(output_channel, out),
                           false);
         }
-        SacAbortIfNot(sender.assume_ownership(new SlateSharerSender(clock)),
+        FswAbortIfNot(sender.assume_ownership(new SlateSharerSender(clock)),
                       false);
-        SacAbortIfNot(sender->init(sender_name, source, shard_sync, configs,
+        FswAbortIfNot(sender->init(sender_name, source, shard_sync, configs,
                                    config_list, out, create_or_bind),
                       false);
         return true;
@@ -1055,12 +1055,12 @@ namespace Drone
         const std::string &input_channel, const nano_t cycle_delay,
         Handle<SlateSharerReceiver> &receiver)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIf(receiver, false);
+        FswAbortIf(is_init, false);
+        FswAbortIf(receiver, false);
         Handle<DgramChannel> in;
-        SacAbortIfNot(channel_manager->get_dgram_input(input_channel, in),
+        FswAbortIfNot(channel_manager->get_dgram_input(input_channel, in),
                       false);
-        SacAbortIfNot(receiver.assume_ownership(
+        FswAbortIfNot(receiver.assume_ownership(
                           new SlateSharerReceiver(clock, cycle_delay)),
                       false);
         /*
@@ -1075,7 +1075,7 @@ namespace Drone
          * compatibility and to minimize chances of regression, we create them
          * in the sync shard.
          */
-        SacAbortIfNot(receiver->init("sharer", destination, shard_sync, configs,
+        FswAbortIfNot(receiver->init("sharer", destination, shard_sync, configs,
                                      config_list, in, sharer_create),
                       false);
         return true;
@@ -1096,12 +1096,12 @@ namespace Drone
         SlateBuilder raw, SlateBuilder scaled, SlateBuilder median,
         const bank_select_type_t ad_scaling_set, Handle<AdcScaler> &scaler)
     {
-        SacAbortIf(scaler, false);
+        FswAbortIf(scaler, false);
         bank_select_t bank_select = {};
-        SacAbortIfNot(AdcScaler::select_all_banks(bank_select), false);
+        FswAbortIfNot(AdcScaler::select_all_banks(bank_select), false);
         bank_select[ad_dev_t] = ad_scaling_set;
-        SacAbortIfNot(scaler.assume_ownership(new AdcScaler), false);
-        SacAbortIfNot(scaler->init(raw, scaled, median, adc_boards_info,
+        FswAbortIfNot(scaler.assume_ownership(new AdcScaler), false);
+        FswAbortIfNot(scaler->init(raw, scaled, median, adc_boards_info,
                                    bank_select, adc_scaler_exclude_channels),
                       false);
         return true;
@@ -1119,9 +1119,9 @@ namespace Drone
                                            SlateBuilder raw,
                                            Handle<AdcUnscaler> &unscaler)
     {
-        SacAbortIf(unscaler, false);
-        SacAbortIfNot(unscaler.assume_ownership(new AdcUnscaler), false);
-        SacAbortIfNot(unscaler->init(scaled, raw, shard_sync, adc_boards_info),
+        FswAbortIf(unscaler, false);
+        FswAbortIfNot(unscaler.assume_ownership(new AdcUnscaler), false);
+        FswAbortIfNot(unscaler->init(scaled, raw, shard_sync, adc_boards_info),
                       false);
         return true;
     }
@@ -1140,7 +1140,7 @@ namespace Drone
     bool BasicControl::handle_alarm(RUNTIME SlateAlarm &alarm,
                                     Handle<StateMachine> sm) RUNTIME
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         /*
          * Ignore all alarms that have a level less than or equal to
          * the current alarm inhibit value.
@@ -1158,13 +1158,13 @@ namespace Drone
          */
         if (alarm_sequence_handler.alarm_runs_event_sequence(alarm))
         {
-            SacAbortIfNot(alarm_sequence_handler.run_sequence(alarm), false);
+            FswAbortIfNot(alarm_sequence_handler.run_sequence(alarm), false);
         }
         else
         {
             vc_cmd_response_t response;
             nano_t retry_at;
-            SacAbortIfNot(sm->handle_cmd(clock.control_time(), alarm.command,
+            FswAbortIfNot(sm->handle_cmd(clock.control_time(), alarm.command,
                                          response, retry_at),
                           false);
             if (response == vc_cmd_defer)

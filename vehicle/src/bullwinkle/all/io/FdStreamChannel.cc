@@ -45,15 +45,15 @@ namespace Drone
     bool FdStreamChannel::assign_fd(Handle<FdEventSink> _fes,
                                     const std::string &mode)
     {
-        SacAbortIfNot(_fes, false);
-        SacAbortIf(_fes->is_closed(), false);
-        SacAbortIf(fes, false);
+        FswAbortIfNot(_fes, false);
+        FswAbortIf(_fes->is_closed(), false);
+        FswAbortIf(fes, false);
         /*
          * Verify mode string.
          */
         if (mode != "r" && mode != "w" && mode != "rw")
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(100, ": Allowed modes are 'r', 'w', 'rw', got '%s'\n",
                       mode.c_str());
             return false;
@@ -68,7 +68,7 @@ namespace Drone
          */
         if (can_read_flag)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 _fes->add_events(
                     fd_read_ev,
                     make_slot(*this, &FdStreamChannel::handle_fd_read)),
@@ -76,13 +76,13 @@ namespace Drone
         }
         if (can_write_flag)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 _fes->add_events(
                     fd_write_ev,
                     make_slot(*this, &FdStreamChannel::handle_fd_write)),
                 false);
         }
-        SacAbortIfNot(_fes->add_events(
+        FswAbortIfNot(_fes->add_events(
                           fd_close_ev,
                           make_slot(*this, &FdStreamChannel::handle_fd_close)),
                       false);
@@ -126,7 +126,7 @@ namespace Drone
     {
         if (is_empty())
             return true;
-        SacAbortIfNot(channel_clear(), false);
+        FswAbortIfNot(channel_clear(), false);
         /*
          * If we are closed and have just drained the channel, emit
          * a close signal.
@@ -137,7 +137,7 @@ namespace Drone
              * There's not a lot we can do if this fails. We've already
              * successfully closed the channel and cleared the data.
              */
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -227,7 +227,7 @@ namespace Drone
     {
         if (0 == bytes)
             return true;
-        SacAbortIfNot(channel_pop_front(bytes), false);
+        FswAbortIfNot(channel_pop_front(bytes), false);
         has_popped = true;
         /*
          * If someone removes data from our channel, switch on
@@ -235,14 +235,14 @@ namespace Drone
          */
         if (!is_closed() && can_read_flag)
         {
-            SacAbortIfNot(fes->add_events(fd_read_ev), false);
+            FswAbortIfNot(fes->add_events(fd_read_ev), false);
         }
         /*
          * If we have just drained the channel, emit a close signal.
          */
         else if (is_drained())
         {
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -251,7 +251,7 @@ namespace Drone
      */
     bool FdStreamChannel::channel_pop_front(const size_t bytes)
     {
-        SacAbortIfNot(output.pop_front(bytes), false);
+        FswAbortIfNot(output.pop_front(bytes), false);
         return true;
     }
     /**
@@ -261,14 +261,14 @@ namespace Drone
      */
     bool FdStreamChannel::channel_clear()
     {
-        SacAbortIfNot(output.clear(), false);
+        FswAbortIfNot(output.clear(), false);
         /*
          * If someone removes data from our channel, switch on
          * read events to start consuming more from the fd.
          */
         if (!is_closed() && can_read_flag)
         {
-            SacAbortIfNot(fes->add_events(fd_read_ev), false);
+            FswAbortIfNot(fes->add_events(fd_read_ev), false);
         }
         return true;
     }
@@ -283,17 +283,17 @@ namespace Drone
          */
         if (!fes)
         {
-            SacAbortIfNot(input.clear(), false);
+            FswAbortIfNot(input.clear(), false);
             return true;
         }
         else if (fes->is_closed())
         {
-            SacAbortIfNot(input.clear(), false);
+            FswAbortIfNot(input.clear(), false);
         }
         /*
          * Stop selecting on read events.
          */
-        SacAbortIfNot(fes->remove_events(fd_read_ev), false);
+        FswAbortIfNot(fes->remove_events(fd_read_ev), false);
         /*
          * If there is still data left to flush to the descriptor, we have
          * to wait.
@@ -328,14 +328,14 @@ namespace Drone
      */
     bool FdStreamChannel::channel_commit_dataframe(DataFrame &frame)
     {
-        SacAbortIfNot(can_write_flag, false);
-        SacAbortIfNot(input.commit_dataframe(frame), false);
+        FswAbortIfNot(can_write_flag, false);
+        FswAbortIfNot(input.commit_dataframe(frame), false);
         /*
          * If someone wrote data to our channel, switch on write events
          * to start pushing it down the file descriptor.
          */
-        SacAbortIfNot(fes, false);
-        SacAbortIfNot(fes->add_events(fd_write_ev), false);
+        FswAbortIfNot(fes, false);
+        FswAbortIfNot(fes->add_events(fd_write_ev), false);
         return true;
     }
     /**
@@ -350,14 +350,14 @@ namespace Drone
      */
     bool FdStreamChannel::handle_fd_read(FdEventSink &_fes, FdEvent &fev)
     {
-        SacAbortIfNot(fes == &_fes, false);
-        SacAbortIfNot(fes->get_fd() == fev.fd, false);
+        FswAbortIfNot(fes == &_fes, false);
+        FswAbortIfNot(fes->get_fd() == fev.fd, false);
         /*
          * If we have zero space left, ask the read_sig to free up
          * some data in our buffer.
          */
         if (!output.space_left())
-            SacAbortIfNot(signal_read(), false);
+            FswAbortIfNot(signal_read(), false);
         /*
          * If we still don't have any space, switch off read events
          * until someone pulls data from our channel.
@@ -365,7 +365,7 @@ namespace Drone
         const size_t space = output.space_left();
         if (!space)
         {
-            SacAbortIfNot(fes->remove_events(fd_read_ev), false);
+            FswAbortIfNot(fes->remove_events(fd_read_ev), false);
             return true;
         }
         /*
@@ -391,12 +391,12 @@ namespace Drone
         /*
          * Commit bytes to the output channel.
          */
-        SacAbortIfNot(df.commit_raw(retval), false);
-        SacAbortIfNot(output.commit_dataframe(df), false);
+        FswAbortIfNot(df.commit_raw(retval), false);
+        FswAbortIfNot(output.commit_dataframe(df), false);
         /*
          * Signal new data to clients.
          */
-        SacAbortIfNot(signal_read(), false);
+        FswAbortIfNot(signal_read(), false);
         return true;
     }
     /**
@@ -411,13 +411,13 @@ namespace Drone
      */
     bool FdStreamChannel::handle_fd_write(FdEventSink &_fes, FdEvent &fev)
     {
-        SacAbortIfNot(fes == &_fes, false);
-        SacAbortIfNot(fes->get_fd() == fev.fd, false);
+        FswAbortIfNot(fes == &_fes, false);
+        FswAbortIfNot(fes->get_fd() == fev.fd, false);
         /*
          * If we are empty, ask for more data.
          */
         if (!is_closed() && input.is_empty())
-            SacAbortIfNot(signal_write(), false);
+            FswAbortIfNot(signal_write(), false);
         const B2c data = input.get_b2();
         const bool was_empty = input.is_empty();
         if (data.len() > 0)
@@ -431,7 +431,7 @@ namespace Drone
                 }
                 return true;
             }
-            SacAbortIfNot(input.pop_front(retval), false);
+            FswAbortIfNot(input.pop_front(retval), false);
         }
         if (!is_closed())
         {
@@ -439,7 +439,7 @@ namespace Drone
              * If we have emptied our buffer, ask for more data.
              */
             if (!was_empty && input.is_empty())
-                SacAbortIfNot(signal_write(), false);
+                FswAbortIfNot(signal_write(), false);
         }
         /*
          * Check if we're closed again. signal_write() may have drained us,
@@ -452,7 +452,7 @@ namespace Drone
              * more data.
              */
             if (input.is_empty())
-                SacAbortIfNot(fes->remove_events(fd_write_ev), false);
+                FswAbortIfNot(fes->remove_events(fd_write_ev), false);
         }
         /*
          * If we are now drained, close the file descriptor by returning
@@ -480,12 +480,12 @@ namespace Drone
          * to emit a close signal. Thus we complain here, but do
          * not abort.
          */
-        SacIfNot2(fes == &_fes, ret);
+        FswIfNot2(fes == &_fes, ret);
         if (fes)
-            SacIfNot2(fes->get_fd() == fev.fd, ret);
-        SacIfNot2(channel_close(), ret);
+            FswIfNot2(fes->get_fd() == fev.fd, ret);
+        FswIfNot2(channel_close(), ret);
         if (is_drained())
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         return ret;
     }
 } /* end namespace Drone */

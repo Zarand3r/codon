@@ -106,10 +106,10 @@ namespace Drone
         const slate_element_t id = slate_id_build_invalid(next_invalid_count++);
 
         StackFrame stack_frame;
-        const SacStackFrame *ssf = SacStackFrame::get_current_stack_frame();
+        const FswStackFrame *ssf = FswStackFrame::get_current_stack_frame();
         if (ssf)
         {
-            stack_frame.sac_context = ssf->file_location;
+            stack_frame.fsw_context = ssf->file_location;
         }
 
         id_frames[id] = stack_frame;
@@ -127,7 +127,7 @@ namespace Drone
      */
     bool SlateTokenAccountant::dismiss_id(const slate_element_t id)
     {
-        SacAbortIfNot(register_id(id, ""), false);
+        FswAbortIfNot(register_id(id, ""), false);
         return true;
     }
 
@@ -144,7 +144,7 @@ namespace Drone
     bool SlateTokenAccountant::register_id(const slate_element_t id,
                                            const std::string &name)
     {
-        SacAbortIf(slate_id_is_valid(id), false);
+        FswAbortIf(slate_id_is_valid(id), false);
 
         /*
          * Ignore any registrations while disabled.
@@ -163,7 +163,7 @@ namespace Drone
              * there were duplicate unique invalid IDs given out. That should
              * just not be possible. We assert it out here.
              */
-            SacAssert(id == slate_element_default);
+            FswAssert(id == slate_element_default);
 
             std::string name_phrase;
 
@@ -176,7 +176,7 @@ namespace Drone
                 name_phrase = "the token for element '" + name + "'";
             }
 
-            SacPrefix();
+            FswPrefix();
             dbnprintf(500,
                       ": WARNING: %s had a default value. This means that "
                       "token tracking was off when it was created. If this "
@@ -225,7 +225,7 @@ namespace Drone
          * already been built. Multiple root SlateBuilders is not correctly
          * supported in a vehicle and it shouldn't be relied upon.
          */
-        SacAssert(_slate_token_accountant_enabled ||
+        FswAssert(_slate_token_accountant_enabled ||
                   _slate_token_accountant_auto_re_enable);
 
         if (_slate_token_accountant_auto_re_enable)
@@ -275,9 +275,9 @@ namespace Drone
          * ---
          *
          */
-        if (SacIfNeq(_slate_default_token_count, 0))
+        if (FswIfNeq(_slate_default_token_count, 0))
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(200,
                       ": ERROR: %zu leaked token(s) detected!\n",
                       _slate_default_token_count);
@@ -287,7 +287,7 @@ namespace Drone
         /*
          * Check that all tokens are accounted for.
          */
-        SacAbortIfNeq(valid_id_count + id_frames.size(),
+        FswAbortIfNeq(valid_id_count + id_frames.size(),
                       next_invalid_count - first_invalid_count,
                       false);
 
@@ -297,20 +297,20 @@ namespace Drone
         if (!id_frames.empty())
         {
             dbstring("----------------------------------------\n");
-            SacPrefix();
+            FswPrefix();
             dbstring(": ERROR: Uninitialized token(s) detected!:\n");
             dbstring("----------------------------------------\n");
 
             for (auto it = id_frames.begin(); it != id_frames.end(); ++it)
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(200, ": id: 0x%016llx.\n", it->first);
 
-                if (!it->second.sac_context.empty())
+                if (!it->second.fsw_context.empty())
                 {
-                    const std::string msg = ": Surrounding Sac macro at " +
-                                            it->second.sac_context + "\n";
-                    SacPrefix();
+                    const std::string msg = ": Surrounding Fsw macro at " +
+                                            it->second.fsw_context + "\n";
+                    FswPrefix();
                     dbstring(msg.c_str());
                 }
                 dbstring("----------------------------------------\n");

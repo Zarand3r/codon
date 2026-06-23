@@ -449,7 +449,7 @@ namespace Drone
      * 
      * There are three cases when this function may fail: 
      * - This function is called on a read-only element. In addition of 
-     *   returning false, this will also SacDebugAssert since this function
+     *   returning false, this will also FswDebugAssert since this function
      *   should never be called on read-only elements.
      * - A validator rejected the value specified.
      * - The value type is Slice<> and the value passed is a Slice<> of
@@ -470,7 +470,7 @@ namespace Drone
         slate_offset_t offset = 0;
         slate_id_breakdown(element_id, may_write, has_validator, shard, offset);
 
-        SacDebugAssert(may_write);
+        FswDebugAssert(may_write);
         if (!may_write)
         {
             return false;

@@ -37,7 +37,7 @@ namespace Drone
      * SlateBuilder builder;
      * 
      * ReadToken<int> reader_tok;
-     * SacAbortIfNot(builder.create("test_enum",
+     * FswAbortIfNot(builder.create("test_enum",
      *                               test_value0,
      *                               shard_sync,
      *                               slate_read_write,
@@ -49,7 +49,7 @@ namespace Drone
      * 
      * // Bind to the element. 
      * WriteValidatorToken<int> writer_tok;
-     * SacAbortIfNot(builder.bind("test_enum", writer_tok), false);
+     * FswAbortIfNot(builder.bind("test_enum", writer_tok), false);
      * \endcode
      * 
      * Post initialization, it is possible to set the value of the element using
@@ -67,20 +67,20 @@ namespace Drone
      * // Explicitly use the proxy object. 
      * SlateAccessor<int> proxy = slate[writer_tok];
      * proxy = test_value1;
-     * SacAbortIfNeq(proxy, test_value1, false);
+     * FswAbortIfNeq(proxy, test_value1, false);
      * 
      * // Common scenario: do not explicitly use the proxy object. 
      * slate[writer_tok] = test_value1;
-     * SacAbortIfNeq(slate[writer_tok], test_value1, false);
+     * FswAbortIfNeq(slate[writer_tok], test_value1, false);
      * \endcode
      * 
      * If a caller needs to know that writing to the element failed, it should
      * use the SlateAccessor store() method instead: 
      * \code{.cpp}
-     * SacAbortIf(slate[writer_tok].store(18), false);
+     * FswAbortIf(slate[writer_tok].store(18), false);
      * 
      * // The value wasn't changed. 
-     * SacAbortIfNeq(slate[writer_tok], test_value1, false);
+     * FswAbortIfNeq(slate[writer_tok], test_value1, false);
      * \endcode
      * 
      * The big advantage of using a validation function is that the dispatched
@@ -100,7 +100,7 @@ namespace Drone
      *     default:
      *         // This is not possible. The slate element can't be set to this
      *         // value. No special handling necessary.
-     *         SacAssert(0);
+     *         FswAssert(0);
      *     }
      * }
      * \endcode
@@ -115,7 +115,7 @@ namespace Drone
      * For example, create a slate element with an enum validator:
      * \code{.cpp}
      * ReadToken<int> reader_tok;
-     * SacAbortIfNot(builder.create("test_enum",
+     * FswAbortIfNot(builder.create("test_enum",
      *                               test_value0,
      *                               shard_sync,
      *                               slate_read_write,

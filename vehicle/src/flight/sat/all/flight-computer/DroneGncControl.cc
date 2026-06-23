@@ -7,7 +7,7 @@
 #include "src/bullwinkle/all/ExternalCommandGncHandler.h"
 #include "src/bullwinkle/all/ExternalCommandMultiSlateHandler.h"
 #include "src/bullwinkle/all/ExternalCommandReflectionHandler.h"
-#include "src/bullwinkle/all/core/sxtime.h"
+#include "src/bullwinkle/all/core/fswtime.h"
 #include "src/flight/common/all/ExternalCommandFilterCommon.h"
 #include "src/flight/sat/all/common/control/DronePermanentFailures.h"
 #include "src/flight/sat/all/common/control/DroneSuppressedAlertsConfig.h"
@@ -72,7 +72,7 @@ namespace Drone
     ControlNodeIdentity DroneGncControl::get_slate_sharing_identity() const
     {
         ControlNodeIdentity slate_sharing_ident;
-        SacAssert(slate_sharing_ident.init("satfc", 1));
+        FswAssert(slate_sharing_ident.init("satfc", 1));
         return slate_sharing_ident;
     }
     /**
@@ -82,21 +82,21 @@ namespace Drone
      */
     bool DroneGncControl::create_initial_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Initialize the telemetry timestamp synchronizer. Since this
          * system sends timestamps to itself on the next cycle, accept
          * timestamps which are up to one cycle old.
          */
         const nano_t max_master_age = 1 * satgnc_control_period;
-        SacAbortIfNot(timestamp_syncer.assume_ownership(
+        FswAbortIfNot(timestamp_syncer.assume_ownership(
                           new TimestampSynchronizer(clock, max_master_age)),
                       false);
         /*
          * Initialize the synchronized_timestamp token early in vehicle
          * bring-up, so other components can bind to the token.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             timestamp_syncer->init_synchronized_timestamp(slate_control),
             false);
         return true;
@@ -110,7 +110,7 @@ namespace Drone
      */
     bool DroneGncControl::create_shared_sender_systems()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Initialize the rest of TimestampSynchronizer now that local slate
          * sharing has been initialized and median elements are available.
@@ -131,7 +131,7 @@ namespace Drone
              * node's control slate.
              */
             SlateBuilder slate_master = slate_control;
-            SacAbortIfNot(timestamp_syncer->init(
+            FswAbortIfNot(timestamp_syncer->init(
                               slate_control, slate_shared, slate_control,
                               slate_master, followers, create_master_elems),
                           false);
@@ -145,11 +145,11 @@ namespace Drone
      */
     bool DroneGncControl::create_shared_receiver_systems()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(setup_conjunction_receiver(), false);
-        SacAbortIfNot(setup_low_velo_conjunction_receiver(), false);
-        SacAbortIfNot(setup_reference_trajectory_receiver(), false);
-        SacAbortIfNot(setup_space_weather_receiver(), false);
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(setup_conjunction_receiver(), false);
+        FswAbortIfNot(setup_low_velo_conjunction_receiver(), false);
+        FswAbortIfNot(setup_reference_trajectory_receiver(), false);
+        FswAbortIfNot(setup_space_weather_receiver(), false);
         return true;
     }
     /**
@@ -157,7 +157,7 @@ namespace Drone
      */
     void DroneGncControl::execute_synced() RUNTIME
     {
-        if (SacIfNot(is_init))
+        if (FswIfNot(is_init))
         {
             return;
         }
@@ -165,13 +165,13 @@ namespace Drone
         /*
          * Combine local shared data.
          */
-        SacIfNot(slate_combiner_control->combine());
+        FswIfNot(slate_combiner_control->combine());
         /*
          * Dispatch the remote slate combiners.
          */
         for (const Handle<SlateCombiner> &slate_combiner : sharer_combiners)
         {
-            SacIfNot(slate_combiner->combine());
+            FswIfNot(slate_combiner->combine());
         }
         /*
          * Set the Clock's telemetry timestamp for this control cycle and
@@ -182,11 +182,11 @@ namespace Drone
          * BasicControl subclasses are responsible for creating and
          * initializing TimestampSynchronizer appropriately.
          */
-        SacIfNot(timestamp_syncer->dispatch());
+        FswIfNot(timestamp_syncer->dispatch());
         /*
          * Dispatch failed hardware event sequence handler.
          */
-        SacIfNot(failed_hardware_seq_handler->dispatch());
+        FswIfNot(failed_hardware_seq_handler->dispatch());
         /*
          * Handle commands from the main control process first.
          * We skip this the first cycle (before the state machine has ever been
@@ -194,23 +194,23 @@ namespace Drone
          */
         if (slate[state_machine_ever_dispatched_tok])
         {
-            SacIfNot(handle_sm_commands());
+            FswIfNot(handle_sm_commands());
         }
         satfc_command_spammer->dispatch(control_time);
         /*
          * Dispatch synced commands and update the watchdog and
          * disconnect spammer.
          */
-        SacIfNot(ground_cmd_dispatcher_synced->dispatch());
+        FswIfNot(ground_cmd_dispatcher_synced->dispatch());
         disconnect_command_spammer->dispatch(control_time);
         /*
          * Dispatch any time triggered commands.
          */
-        SacIfNot(timed_command_queue->dispatch());
+        FswIfNot(timed_command_queue->dispatch());
         /*
          * Dispatch the StateRegistryInput interfaces.
          */
-        SacIfNot(sr_interface_manager->dispatch_inputs());
+        FswIfNot(sr_interface_manager->dispatch_inputs());
         /*
          * If we have a valid reference trajectory dispatch conditional
          * StateRegistryInput interfaces.
@@ -218,7 +218,7 @@ namespace Drone
         if (slate[reference_trajectory_sequence_number_tok] >
             slate[last_received_reference_trajectory_sequence_number_tok])
         {
-            SacIfNot(sr_conditional_interface_manager->dispatch_inputs());
+            FswIfNot(sr_conditional_interface_manager->dispatch_inputs());
             slate[last_received_reference_trajectory_sequence_number_tok] =
                 slate[reference_trajectory_sequence_number_tok];
         }
@@ -230,12 +230,12 @@ namespace Drone
         /*
          * Dispatch the StateRegistryOutput interfaces.
          */
-        SacIfNot(sr_interface_manager->dispatch_outputs());
+        FswIfNot(sr_interface_manager->dispatch_outputs());
         /*
          * Run satfc_comms_mapper late in cycle so that next cycle will have
          * fresh data to share to the vehicle control process.
          */
-        SacIfNot(satfc_comms_mapper->dispatch());
+        FswIfNot(satfc_comms_mapper->dispatch());
         /*
          * The AlertManagerControl must be dispatched after anything that may
          * signal an alert. It maintains state in the synced slate shard, so it
@@ -266,60 +266,60 @@ namespace Drone
      */
     bool DroneGncControl::create_gnc_system()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Register components.
          */
-        SacAbortIfNot(register_satfc_gnc_components(), false);
+        FswAbortIfNot(register_satfc_gnc_components(), false);
         /*
          * Create the StateRegistry.
          */
-        SacAbortIfNot(state_registry.assume_ownership(
+        FswAbortIfNot(state_registry.assume_ownership(
                           new StateRegistry(slate_control.sub_slate("gnc"))),
                       false);
         const std::string allowed_variables_file =
             "satgnc_state_registry_variables";
-        SacAbortIfNot(state_registry->init(configs, alert_provider,
+        FswAbortIfNot(state_registry->init(configs, alert_provider,
                                            allowed_variables_file),
                       false);
         /*
          * GNC factory.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             gnc_component_factory.assume_ownership(
                 new GncComponentFactory(clock, slate_control, *state_registry,
                                         *channel_manager, configs, cmd_table)),
             false);
-        SacAbortIfNot(gnc_component_factory->init("mission_gnc_components"),
+        FswAbortIfNot(gnc_component_factory->init("mission_gnc_components"),
                       false);
         /*
          * GNC controller.
          */
-        SacAbortIfNot(gnc.assume_ownership(new GncController(
+        FswAbortIfNot(gnc.assume_ownership(new GncController(
                           "gnc_controller", satgnc_control_period)),
                       false);
-        SacAbortIfNot(gnc->init(slate_control, configs, gnc_component_factory,
+        FswAbortIfNot(gnc->init(slate_control, configs, gnc_component_factory,
                                 "mission_gnc_controller", ""),
                       false);
         /*
          * Make the state machine listen to GNC transition requests.
          */
-        SacAbortIfNot(gnc->cmd_sig.connect(
+        FswAbortIfNot(gnc->cmd_sig.connect(
                           make_slot(*state_machine, &StateMachine::handle_cmd)),
                       false);
         /*
          * Create the state registry interfaces.
          */
-        SacAbortIf(sr_interface_manager, false);
-        SacAbortIfNot(
+        FswAbortIf(sr_interface_manager, false);
+        FswAbortIfNot(
             sr_interface_manager = StateRegistrySlateInterfaceManager::create(
                 state_registry, slate_control, configs, "sr_interface_manager"),
             false);
         /*
          * Create the conditional state registry interfaces.
          */
-        SacAbortIf(sr_conditional_interface_manager, false);
-        SacAbortIfNot(sr_conditional_interface_manager =
+        FswAbortIf(sr_conditional_interface_manager, false);
+        FswAbortIfNot(sr_conditional_interface_manager =
                           StateRegistrySlateInterfaceManager::create(
                               state_registry, slate_control, configs,
                               "sr_conditional_interface_manager"),
@@ -327,22 +327,22 @@ namespace Drone
         /*
          * No futher changes to the GNC state allowed.
          */
-        SacAbortIfNot(state_registry->lock(), false);
+        FswAbortIfNot(state_registry->lock(), false);
         /*
          * Create devices for StateRegistry.
          */
-        SacAbortIfNot(state_registry->create_devices(), false);
+        FswAbortIfNot(state_registry->create_devices(), false);
         /*
          * Initialize StateRegistry alarms.
          */
-        SacAbortIfNot(state_registry->init_alarms(), false);
+        FswAbortIfNot(state_registry->init_alarms(), false);
         /*
          * Initialize a monitor that dumps the state registry to a file.
          */
         SlateBuilder gnc_subslate = slate_control.sub_slate("gnc");
         cola_burn_monitor =
             ColaBurnMonitor::create(slate_control, gnc_subslate);
-        SacAbortIfNot(cola_burn_monitor, false);
+        FswAbortIfNot(cola_burn_monitor, false);
         if (!state_registry_dump_file.empty())
         {
             /*
@@ -353,7 +353,7 @@ namespace Drone
             /*
              * Wire up the ColaBurnMonitor to do the state registry dump.
              */
-            SacAbortIfNot(
+            FswAbortIfNot(
                 cola_burn_monitor->cola_event_sig.connect(slot_bind(
                     make_slot(*state_registry, &StateRegistry::save_snapshot),
                     state_registry_dump_file, tmp_file,
@@ -374,35 +374,35 @@ namespace Drone
     bool DroneGncControl::create_control_systems(
         cycle_timer_name_s &cycle_timer_requests)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(create_gnc_system(), false);
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(create_gnc_system(), false);
         /*
          * Spam commands from the main control process into the state machine.
          */
-        SacAbortIfNot(satfc_command_spammer.assume_ownership(new CommandSpammer(
+        FswAbortIfNot(satfc_command_spammer.assume_ownership(new CommandSpammer(
                           clock, state_machine,
                           ident.role_inst + "_satfc_command_spammer")),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             satfc_command_spammer->init(slate_control, control_period), false);
         /*
          * Bind to the state machine command.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_control.bind("satfc1.state_machine_command", satfc_cmd_tok),
             false);
-        SacAbortIfNot(slate_control.create("old_state_machine_command", 0,
+        FswAbortIfNot(slate_control.create("old_state_machine_command", 0,
                                            shard_sync, slate_read_only,
                                            old_satfc_cmd_tok),
                       false);
-        SacAbortIfNot(slate_control.create("state_machine_ever_dispatched", 0,
+        FswAbortIfNot(slate_control.create("state_machine_ever_dispatched", 0,
                                            shard_sync, slate_read_only,
                                            state_machine_ever_dispatched_tok),
                       false);
         /*
          * Create the calibration parsed token.
          */
-        SacAbortIfNot(slate_control.create("calibration_status",
+        FswAbortIfNot(slate_control.create("calibration_status",
                                            calibration_status_parse_succeeded,
                                            shard_sync, slate_read_only,
                                            calibration_status_tok),
@@ -410,17 +410,17 @@ namespace Drone
         /*
          * Create feature flag for state registry dumps.
          */
-        SacAbortIfNot(slate_control.create("state_registry_dumps_enabled", true,
+        FswAbortIfNot(slate_control.create("state_registry_dumps_enabled", true,
                                            shard_sync, slate_read_write,
                                            state_registry_dumps_enabled_tok),
                       false);
         /*
          * Create failed hardware handler.
          */
-        SacAbortIfNot(failed_hardware_seq_handler.assume_ownership(
+        FswAbortIfNot(failed_hardware_seq_handler.assume_ownership(
                           new TriggeredEventSequenceHandler),
                       false);
-        SacAbortIfNot(failed_hardware_seq_handler->init_storage(
+        FswAbortIfNot(failed_hardware_seq_handler->init_storage(
                           *alert_provider, configs, slate_control,
                           failed_hardware_seq_filename, ident),
                       false);
@@ -433,12 +433,12 @@ namespace Drone
      */
     bool DroneGncControl::build_state_machine_post_transition()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(state_machine, false);
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(state_machine, false);
         /*
          * GNC mode depends on the state machine state.
          */
-        SacAbortIfNot(state_machine->add_ctask("gnc", gnc), false);
+        FswAbortIfNot(state_machine->add_ctask("gnc", gnc), false);
         return true;
     }
     /**
@@ -449,11 +449,11 @@ namespace Drone
      */
     bool DroneGncControl::setup_conjunction_receiver()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const sharer_config_v receiver_config(
             1, sharer_config_t("satellite_fleet_client_conjunction_to_satgnc",
                                ""));
-        SacAbortIfNot(
+        FswAbortIfNot(
             setup_remote_node_receiver(
                 "fleet_client_conjunction1", receiver_config, "fleet_client1",
                 "conjunction_data_client.last_cdm_fetch_ns", nano_t_max, true),
@@ -468,12 +468,12 @@ namespace Drone
      */
     bool DroneGncControl::setup_low_velo_conjunction_receiver()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const sharer_config_v receiver_config(
             1,
             sharer_config_t(
                 "satellite_fleet_client_low_velo_conjunction_to_satgnc", ""));
-        SacAbortIfNot(setup_remote_node_receiver(
+        FswAbortIfNot(setup_remote_node_receiver(
                           "fleet_client_low_velo_conjunction1", receiver_config,
                           "fleet_client_low_velo_conjunction1",
                           "low_velo_conjunction_data_client.last_traj_fetch_ns",
@@ -489,10 +489,10 @@ namespace Drone
      */
     bool DroneGncControl::setup_reference_trajectory_receiver()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const sharer_config_v reference_config(
             1, sharer_config_t("reference_trajectory_to_satgnc", ""));
-        SacAbortIfNot(setup_remote_node_receiver(
+        FswAbortIfNot(setup_remote_node_receiver(
                           "fleet_client_reference_trajectory1",
                           reference_config,
                           "fleet_client_reference_trajectory1",
@@ -508,11 +508,11 @@ namespace Drone
      */
     bool DroneGncControl::setup_space_weather_receiver()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const sharer_config_v receiver_config(
             1, sharer_config_t("satellite_fleet_client_space_weather_to_satgnc",
                                ""));
-        SacAbortIfNot(setup_remote_node_receiver(
+        FswAbortIfNot(setup_remote_node_receiver(
                           "fleet_client_space_weather1", receiver_config,
                           "fleet_client_space_weather1",
                           "space_weather_client.last_space_weather_fetch_ns",
@@ -558,13 +558,13 @@ namespace Drone
                     .sub_slate(subslate_name);
             Handle<SlateSharerReceiver> receiver;
             Handle<DgramChannel> in;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 channel_manager->get_dgram_input(component_name + string, in),
                 false);
-            SacAbortIfNot(receiver.assume_ownership(
+            FswAbortIfNot(receiver.assume_ownership(
                               new SlateSharerReceiver(clock, cycle_delay)),
                           false);
-            SacAbortIfNot(receiver->init("receiver", receiver_subslate,
+            FswAbortIfNot(receiver->init("receiver", receiver_subslate,
                                          shard_sync, configs, receiver_config,
                                          in, sharer_create),
                           false);
@@ -580,8 +580,8 @@ namespace Drone
          * the gnc computers will not desync in the event of a dropped packet
          */
         Handle<SlateCombiner> combiner;
-        SacAbortIfNot(combiner.assume_ownership(new SlateCombiner), false);
-        SacAbortIfNot(combiner->init(configs, freshness_name, combiner_in,
+        FswAbortIfNot(combiner.assume_ownership(new SlateCombiner), false);
+        FswAbortIfNot(combiner->init(configs, freshness_name, combiner_in,
                                      slate_control.sub_slate(subslate_name),
                                      receiver_config, false, /* bind_outputs */
                                      "combiner",             /* combiner_name */
@@ -599,12 +599,12 @@ namespace Drone
      */
     bool DroneGncControl::populate_enums()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(enum_registry, false);
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(enum_registry, false);
         /*
          * Register GNC enums.
          */
-        SacAbortIfNot(enum_registry->register_other(
+        FswAbortIfNot(enum_registry->register_other(
                           ident.role_inst + "x.gnc",
                           gnc_component_factory->get_enum_registry()),
                       false);
@@ -613,10 +613,10 @@ namespace Drone
          */
         {
             std::string path;
-            SacAbortIfNot(slate_control.get_path(satfc_cmd_tok, path), false);
+            FswAbortIfNot(slate_control.get_path(satfc_cmd_tok, path), false);
             str_v channels;
             channels.push_back(path);
-            SacAbortIfNot(cmd_table.populate_enums(*enum_registry, channels),
+            FswAbortIfNot(cmd_table.populate_enums(*enum_registry, channels),
                           false);
         }
         /*
@@ -625,7 +625,7 @@ namespace Drone
         {
             str_v channels;
             channels.push_back(ident.control_node_name + ".calibration_status");
-            SacAbortIfNot(enum_registry->register_enum(
+            FswAbortIfNot(enum_registry->register_enum(
                               "calibration_status_t", calibration_status_t_sym,
                               channels, "calibration_status_"),
                           false);
@@ -649,10 +649,10 @@ namespace Drone
         {
             slate[old_satfc_cmd_tok] = slate[satfc_cmd_tok];
             vehicle_cmd_t vehicle_cmd;
-            SacMsgAbortIfNot(
+            FswMsgAbortIfNot(
                 cmd_table.lookup(slate[satfc_cmd_tok], vehicle_cmd), false, 100,
                 "Invalid command index '%d'.\n", slate[satfc_cmd_tok]);
-            SacAbortIfNot(satfc_command_spammer->handle_cmd(vehicle_cmd),
+            FswAbortIfNot(satfc_command_spammer->handle_cmd(vehicle_cmd),
                           false);
         }
         return true;
@@ -670,51 +670,51 @@ namespace Drone
     bool DroneGncControl::create_synced_command_handlers(
         const std::string &dispatcher_name, ext_cmd_handler_v &handlers)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Get the default list of handlers used by BasicControl.
          */
         ext_cmd_handler_v base_handlers;
-        SacAbortIfNot(BasicControl::create_synced_command_handlers(
+        FswAbortIfNot(BasicControl::create_synced_command_handlers(
                           dispatcher_name, base_handlers),
                       false);
         /*
          * Set up the GNC command handler.
          */
-        SacAbortIfNot(gnc_command_handler.assume_ownership(
+        FswAbortIfNot(gnc_command_handler.assume_ownership(
                           new ExternalCommandGncHandler(*state_registry)),
                       false);
-        SacAbortIfNot(gnc_command_handler->init(), false);
+        FswAbortIfNot(gnc_command_handler->init(), false);
         base_handlers.push_back(gnc_command_handler);
         /*
          * Set up the Multi command handler.
          */
-        SacAbortIfNot(slate_command_interface_control, false);
+        FswAbortIfNot(slate_command_interface_control, false);
         Handle<ExternalCommandMultiSlateHandler> multi_cmd_handler(
             new ExternalCommandMultiSlateHandler());
-        SacAbortIfNot(multi_cmd_handler, false);
-        SacAbortIfNot(multi_cmd_handler->init(slate_command_interface_control),
+        FswAbortIfNot(multi_cmd_handler, false);
+        FswAbortIfNot(multi_cmd_handler->init(slate_command_interface_control),
                       false);
         base_handlers.push_back(multi_cmd_handler);
         /*
          * Create and initialize the reflection manager. This must be done after
          * the slate command handler is created.
          */
-        SacAbortIfNot(ReflectionManager::create(
+        FswAbortIfNot(ReflectionManager::create(
                           Satellite::num_control_reflect_slots, slate_control,
                           shard_sync, "control_" /* prefix */,
                           slate_command_interface_control, reflection_manager),
                       false);
-        SacAbortIfNot(reflection_manager, false);
+        FswAbortIfNot(reflection_manager, false);
         /*
          * Create and initialize the reflection command handler. This must be
          * done after the reflection manager is created.
          */
         Handle<ExternalCommandReflectionHandler> reflection_handler;
-        SacAbortIfNot(ExternalCommandReflectionHandler::create(
+        FswAbortIfNot(ExternalCommandReflectionHandler::create(
                           reflection_manager, reflection_handler),
                       false);
-        SacAbortIfNot(reflection_handler, false);
+        FswAbortIfNot(reflection_handler, false);
         base_handlers.push_back(reflection_handler);
         {
             /*
@@ -725,9 +725,9 @@ namespace Drone
              */
             Handle<ExternalCommandFilterCommon> common_cmd_filter(
                 new ExternalCommandFilterCommon);
-            SacAbortIfNot(common_cmd_filter->init(command_filter_synced),
+            FswAbortIfNot(common_cmd_filter->init(command_filter_synced),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 timed_command_queue = TimedCommandQueue::create(
                     timed_command_queue_capacity, slate_control,
                     common_cmd_filter, base_handlers,
@@ -750,7 +750,7 @@ namespace Drone
     bool DroneGncControl::create_synced_command_filter(
         Handle<ExternalCommandFilter> &cmd_filter)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the command filter.
          *
@@ -758,17 +758,17 @@ namespace Drone
          * sufficiently configurable through config and isn't really vehicle
          * specific.
          */
-        SacAbortIf(command_filter_synced, false);
-        SacAbortIfNot(command_filter_synced.assume_ownership(
+        FswAbortIf(command_filter_synced, false);
+        FswAbortIfNot(command_filter_synced.assume_ownership(
                           new CommonCommandFilter("command_filter")),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             command_filter_synced->init_storage(
                 configs, slate_control, shard_sync, true /* enabled_at_init */),
             false);
         Handle<ExternalCommandFilterCommon> common_cmd_filter(
             new ExternalCommandFilterCommon);
-        SacAbortIfNot(common_cmd_filter->init(command_filter_synced), false);
+        FswAbortIfNot(common_cmd_filter->init(command_filter_synced), false);
         cmd_filter = common_cmd_filter;
         return true;
     }
@@ -779,7 +779,7 @@ namespace Drone
      */
     bool DroneGncControl::create_alert_system()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Set up the alert system so that systems initialized after this
          * point can get the alerts they need to signal.
@@ -787,12 +787,12 @@ namespace Drone
          * Configure the AlertManager to automatically reset alerts after 24
          * hours.
          */
-        SacAbortIf(alert_manager, false);
-        SacAbortIfNot(alert_manager.assume_ownership(new AlertManagerControl()),
+        FswAbortIf(alert_manager, false);
+        FswAbortIfNot(alert_manager.assume_ownership(new AlertManagerControl()),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_manager->set_auto_reset_delta(24 * 60 * 60 * billion), false);
-        SacAbortIfNot(alert_manager->init(
+        FswAbortIfNot(alert_manager->init(
                           configs, "alert_groups", "alerts", slate_control,
                           TimestampSynchronizer::synchronized_timestamp_path),
                       false);
@@ -800,7 +800,7 @@ namespace Drone
          * Make alerts accessible to BasicControl. We still hold a local
          * derived-type handle for convenience.
          */
-        SacAbortIf(alert_provider, false);
+        FswAbortIf(alert_provider, false);
         alert_provider = alert_manager;
         return true;
     }
@@ -810,16 +810,16 @@ namespace Drone
      */
     bool DroneGncControl::create_basic_synced_command_platform()
     {
-        SacAbortIfNot(BasicControl::create_basic_synced_command_platform(),
+        FswAbortIfNot(BasicControl::create_basic_synced_command_platform(),
                       false);
         /*
          * Setup a slate mapper for copying some channels from root slate
          * to a satfc1-outbound slate.
          */
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 satfc_comms_mapper.assume_ownership(new SlateMapper()), false);
-            SacAbortIfNot(satfc_comms_mapper->init(slate_control, configs,
+            FswAbortIfNot(satfc_comms_mapper->init(slate_control, configs,
                                                    "satfc_comms_mapper", {""},
                                                    true, shard_sync),
                           false);
@@ -833,16 +833,16 @@ namespace Drone
      */
     bool DroneGncControl::pre_finalize_slate()
     {
-        SacAbortIfNot(BasicControl::pre_finalize_slate(), false);
+        FswAbortIfNot(BasicControl::pre_finalize_slate(), false);
         /*
          * Finalize the alert manager. Calling get_signal_tok() after this point
          * will fail.
          */
-        SacAbortIfNot(alert_manager->finalize(slate_control), false);
+        FswAbortIfNot(alert_manager->finalize(slate_control), false);
         /*
          * Bind to reference reference trajectory sequence number.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_control.bind("fleet_client_reference_trajectory1.reference_"
                                "trajectory.sequence_number",
                                reference_trajectory_sequence_number_tok),
@@ -850,7 +850,7 @@ namespace Drone
         /*
          * Create last received reference trajectory sequence number.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_control.create(
                 "last_received_reference_trajectory_sequence_number", 0,
                 shard_sync, slate_read_write,
@@ -870,13 +870,13 @@ namespace Drone
     bool DroneGncControl::finalize_control_systems(
         SlateBuilder sudo_slate_control, const cycle_timer_m &cycle_timers)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(failed_hardware_seq_handler->init(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(failed_hardware_seq_handler->init(
                           sudo_slate_control, configs, *enum_registry,
                           ident.control_node_name),
                       false);
         slate[calibration_status_tok] = parse_calibration();
-        SacIfNeq(slate[calibration_status_tok],
+        FswIfNeq(slate[calibration_status_tok],
                  calibration_status_parse_succeeded);
         if (!state_registry_dump_file.empty())
         {
@@ -886,7 +886,7 @@ namespace Drone
              * low before the first state registry dump.
              */
             const std::string tmp_file = state_registry_dump_file + ".tmp";
-            SacAbortIfNot(state_registry->save_snapshot(
+            FswAbortIfNot(state_registry->save_snapshot(
                               tmp_file, state_registry_dump_file,
                               dump_file_compression_level),
                           false);
@@ -904,7 +904,7 @@ namespace Drone
     bool DroneGncControl::finalize_basic_command_platform(
         SlateBuilder sudo_slate_control)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * A list of valid state machine prefixes to determine the
          * destination state machine of an incoming command. There are no
@@ -912,7 +912,7 @@ namespace Drone
          * command right now.
          */
         const str_v sm_prefixes;
-        SacAbortIfNot(command_filter_synced->init(
+        FswAbortIfNot(command_filter_synced->init(
                           configs, sudo_slate_control, cmd_table,
                           *state_registry, "satgnc_state_registry_variables",
                           "gnc" /* sr_slate_prefix */, sm_prefixes,
@@ -921,8 +921,8 @@ namespace Drone
         /*
          * Initialize the Slate command interfaces.
          */
-        SacAbortIfNot(slate_command_interface_control, false);
-        SacAbortIfNot(slate_command_interface_control->init(sudo_slate_control),
+        FswAbortIfNot(slate_command_interface_control, false);
+        FswAbortIfNot(slate_command_interface_control->init(sudo_slate_control),
                       false);
         return true;
     }
@@ -935,13 +935,13 @@ namespace Drone
     calibration_status_t DroneGncControl::parse_calibration()
     {
         std::vector<calibration_dir_t> permanent_failures_reldirs;
-        SacAbortIfNot(get_per_vehicle_calibration_reldirs(
+        FswAbortIfNot(get_per_vehicle_calibration_reldirs(
                           "satellite",
                           /* include_manually_updated_calibration_dir */ true,
                           permanent_failures_reldirs),
                       calibration_status_vehicle_unknown);
         std::vector<calibration_dir_t> standard_calibration_reldirs;
-        SacAbortIfNot(get_per_vehicle_calibration_reldirs(
+        FswAbortIfNot(get_per_vehicle_calibration_reldirs(
                           "satellite",
                           /* include_manually_updated_calibration_dir */ false,
                           standard_calibration_reldirs),
@@ -973,7 +973,7 @@ namespace Drone
                                     "per_vehicle_config_permanent_failures"};
         calibration_status_t status = setup_per_vehicle_calibration(
             calibrations, failure_file_names, root_reldirs);
-        SacAbortIfNeq(status, calibration_status_parse_succeeded, status);
+        FswAbortIfNeq(status, calibration_status_parse_succeeded, status);
         str_v config_keys = {"permanent_failures",
                              "per_vehicle_config_permanent_failures"};
         return DronePermanentFailures::run_init_sequences(
@@ -996,7 +996,7 @@ namespace Drone
                                   "per_vehicle_config_suppressed_alerts"};
         calibration_status_t status = setup_per_vehicle_calibration(
             calibrations, alert_file_names, root_reldirs);
-        SacAbortIfNeq(status, calibration_status_parse_succeeded, status);
+        FswAbortIfNeq(status, calibration_status_parse_succeeded, status);
         return DroneSuppressedAlertsConfig::parse_and_apply(
             calibrations, alert_file_names, slate_control, ident);
     }

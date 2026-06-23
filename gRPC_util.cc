@@ -75,7 +75,7 @@ namespace Drone
          */
         endpoint.channel_args.SetMaxReceiveMessageSize(-1);
         endpoint.channel_args.SetMaxSendMessageSize(-1);
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
         if (auth.key_handler != nullptr)
         {
             endpoint.channel_args.SetPointer(GRPC_SSL_CUSTOM_KEY_ARG,
@@ -144,13 +144,13 @@ namespace Drone
         {
             return true;
         }
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
         auto opts = grpc::SslCredentialsOptions();
         /*
          * If SSL is required, read CA certs needed to validate server
          * cert.
          */
-        SacAbortIfNot(read_str(auth.ca_certs_path, opts.pem_root_certs), false);
+        FswAbortIfNot(read_str(auth.ca_certs_path, opts.pem_root_certs), false);
         /*
          * If client authentication should be used, read client cert and
          * key.
@@ -172,7 +172,7 @@ namespace Drone
                 }
                 else
                 {
-                    SacAbort(
+                    FswAbort(
                         "read_str(auth.client_cert_path, opts.pem_cert_chain)",
                         false);
                 }
@@ -196,12 +196,12 @@ namespace Drone
                     {
                     case hsm_type_t::stsafe: {
                         std::string stsafe_cipher;
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             read_str(auth.stsafe_cipher_path, stsafe_cipher),
                             false);
                         if (!auth.key_handler)
                         {
-                            SacAbortIfNot(create_external_stsafe_method(
+                            FswAbortIfNot(create_external_stsafe_method(
                                               stsafe_cipher, auth.key_handler,
                                               auth.stsafe_config),
                                           false);
@@ -228,14 +228,14 @@ namespace Drone
                     break;
                     case hsm_type_t::trustzone: {
                         std::string wrapped_key;
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             read_str_binary(auth.client_key_path, wrapped_key),
                             false);
                         std::vector<uint8_t> trustzone_wrapped_key(
                             wrapped_key.begin(), wrapped_key.end());
                         if (!auth.key_handler)
                         {
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 create_external_trustzone_method(
                                     auth.key_handler, trustzone_wrapped_key),
                                 false);
@@ -245,7 +245,7 @@ namespace Drone
                     case hsm_type_t::cmrt: {
                         if (!auth.key_handler)
                         {
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 create_external_cmrt_method(auth.key_handler),
                                 false);
                         }
@@ -253,20 +253,20 @@ namespace Drone
                     break;
                     case hsm_type_t::undefined:
                     default:
-                        SacAbort("Invalid HSM.\n", false);
+                        FswAbort("Invalid HSM.\n", false);
                         break;
                     }
                 }
                 else
                 {
-                    SacAbortIfNot(
+                    FswAbortIfNot(
                         read_str(auth.client_key_path, opts.pem_private_key),
                         false);
                 }
             }
             endpoint.credentials = grpc::SslCredentials(opts);
 #else
-        SacMsgAbort(false, 100,
+        FswMsgAbort(false, 100,
                     "SSL required on a platform that doesn't support SSL");
 #endif
         }
@@ -283,13 +283,13 @@ namespace Drone
         /*
          * Build the credentials for this endpoint.
          */
-        SacMsgAbortIfNot(create_channel_creds(auth, endpoint), false, 500,
+        FswMsgAbortIfNot(create_channel_creds(auth, endpoint), false, 500,
                          "Failed to create credentials for '%s'",
                          endpoint.grpc_endpoint.c_str());
         /*
          * Build the channel arguments for this endpoint.
          */
-        SacAbortIfNot(create_channel_args(auth, endpoint), false);
+        FswAbortIfNot(create_channel_args(auth, endpoint), false);
         return true;
     }
     /**
@@ -317,15 +317,15 @@ namespace Drone
         /*
          * Create the authentication configuration.
          */
-        SacAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
+        FswAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
                                          identity_provider),
                       false);
         /*
          * Lookup the host/authority/port in the service-directory.
          */
-        SacAbortIf(service.empty(), false);
+        FswAbortIf(service.empty(), false);
         Service grpc_service;
-        SacAbortIfNot(service_directory().lookup(service, grpc_service), false);
+        FswAbortIfNot(service_directory().lookup(service, grpc_service), false);
         const std::string grpc_dest =
             grpc_service.dns_name + ":" + to_string(grpc_service.port);
         const std::string grpc_authority = grpc_service.host_name;
@@ -335,7 +335,7 @@ namespace Drone
          */
         GrpcEndpoint grpc_endpoint{.grpc_endpoint = grpc_dest,
                                    .grpc_authority = grpc_authority};
-        SacAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
+        FswAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
         endpoint = StaticGrpcEndpoint::create(grpc_endpoint);
         return true;
     }
@@ -367,15 +367,15 @@ namespace Drone
         /*
          * Create the authentication configuration.
          */
-        SacAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
+        FswAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
                                          identity_provider),
                       false);
         /*
          * Lookup the host/authority/port in the service-directory.
          */
-        SacAbortIf(service.empty(), false);
+        FswAbortIf(service.empty(), false);
         Service grpc_service;
-        SacAbortIfNot(service_directory().lookup(service, grpc_service), false);
+        FswAbortIfNot(service_directory().lookup(service, grpc_service), false);
         const std::string grpc_dest =
             ip_address_override + ":" + to_string(grpc_service.port);
         const std::string grpc_authority = grpc_service.host_name;
@@ -385,7 +385,7 @@ namespace Drone
          */
         GrpcEndpoint grpc_endpoint{.grpc_endpoint = grpc_dest,
                                    .grpc_authority = grpc_authority};
-        SacAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
+        FswAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
         endpoint = StaticGrpcEndpoint::create(grpc_endpoint);
         return true;
     }
@@ -424,7 +424,7 @@ namespace Drone
         /*
          * Create the authentication configuration.
          */
-        SacAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
+        FswAbortIfNot(create_auth_config(auth, cmd, trustzone_available,
                                          identity_provider),
                       false);
         /*
@@ -433,9 +433,9 @@ namespace Drone
          * NOTE: The host/port is not used from the static service-directory
          * because that information is resolved through DNS.
          */
-        SacAbortIf(service_name.empty(), false);
+        FswAbortIf(service_name.empty(), false);
         Service grpc_service;
-        SacAbortIfNot(service_directory().lookup(service_name, grpc_service),
+        FswAbortIfNot(service_directory().lookup(service_name, grpc_service),
                       false);
         const std::string grpc_authority = grpc_service.host_name;
         /*
@@ -443,7 +443,7 @@ namespace Drone
          * information.
          */
         GrpcEndpoint grpc_endpoint{.grpc_authority = grpc_authority};
-        SacAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
+        FswAbortIfNot(init_grpc_endpoint(auth, grpc_endpoint), false);
         /*
          * Create the dynamic endpoint and initialize it.
          *
@@ -451,7 +451,7 @@ namespace Drone
          * populate the default port "override" value.
          */
         endpoint = DynamicGrpcEndpoint::create();
-        SacAbortIfNot(endpoint->init(dns_info_builder, instance_builder,
+        FswAbortIfNot(endpoint->init(dns_info_builder, instance_builder,
                                      service_dns_info_subslate, grpc_endpoint,
                                      grpc_service.port),
                       false);
@@ -480,7 +480,7 @@ namespace Drone
         void *custom_key_handler, const std::string &hsm_curve_name,
         bool ignore_validity_start_verification)
     {
-        SacAbortIfNot(is_rpc_initialized(), false);
+        FswAbortIfNot(is_rpc_initialized(), false);
         grpc::ServerBuilder builder;
         builder.AddListeningPort(listen_host_port, server_credentials);
         for (const Handle<grpc::Service> &service : grpc_services)
@@ -522,7 +522,7 @@ namespace Drone
     Handle<grpc::ClientContext> create_context(const nano_t &timeout)
     {
         Handle<grpc::ClientContext> context(new grpc::ClientContext);
-        SacAbortIfNot(context, context);
+        FswAbortIfNot(context, context);
         /*
          * set_deadline expects a time_point with a duration type matching that
          * of system_clock, which can vary by libc++ implementation -
@@ -564,7 +564,7 @@ namespace Drone
      */
     bool GRPCAsyncCallbackDispatcher::init()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Start separate thread.
          */
@@ -584,9 +584,9 @@ namespace Drone
     bool GRPCAsyncCallbackDispatcher::add_callback(callback_t callback,
                                                    void *tag)
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         std::lock_guard<std::mutex> lock(mutex);
-        SacAbortIfNot(
+        FswAbortIfNot(
             map_insert(callbacks, tag, std::make_pair(callback, true)), false);
         return true;
     }
@@ -599,10 +599,10 @@ namespace Drone
      */
     bool GRPCAsyncCallbackDispatcher::remove_callback(void *tag)
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         std::lock_guard<std::mutex> lock(mutex);
         auto it = callbacks.find(tag);
-        SacAbortIf(it == callbacks.end(), false);
+        FswAbortIf(it == callbacks.end(), false);
         it->second.second = false;
         return true;
     }
@@ -613,7 +613,7 @@ namespace Drone
      */
     grpc::CompletionQueue &GRPCAsyncCallbackDispatcher::get_completion_queue()
     {
-        SacAssert(is_init);
+        FswAssert(is_init);
         return completion_queue;
     }
     /**
@@ -637,7 +637,7 @@ namespace Drone
             }
             std::lock_guard<std::mutex> lock(this_->mutex);
             auto it = this_->callbacks.find(tag);
-            if (SacIf(it == this_->callbacks.end()))
+            if (FswIf(it == this_->callbacks.end()))
             {
                 continue;
             }

@@ -33,73 +33,73 @@ namespace Drone
                                   Handle<GrpcPollerInterface> _poller,
                                   GroundNumericFlow *flow)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         poller = _poller;
-        SacAbortIfNot(poller, false);
-        SlateBuilder noc_keystore_slate = builder.sub_slate("noc_keystore");
-        SacAbortIfNot(noc_keystore.init(noc_keystore_slate), false);
+        FswAbortIfNot(poller, false);
+        SlateBuilder operator_keystore_slate = builder.sub_slate("operator_keystore");
+        FswAbortIfNot(operator_keystore.init(operator_keystore_slate), false);
         SlateBuilder command_auth_keystore_slate =
             builder.sub_slate("command_auth_keystore");
-        SacAbortIfNot(command_auth_keystore.init(command_auth_keystore_slate),
+        FswAbortIfNot(command_auth_keystore.init(command_auth_keystore_slate),
                       false);
-        SacAbortIfNot(builder.create("last_send_sequence_num", shard_sync,
+        FswAbortIfNot(builder.create("last_send_sequence_num", shard_sync,
                                      slate_read_only,
                                      last_send_sequence_num_tok),
                       false);
-        SacAbortIfNot(builder.create("send_failed_sequence_num", 0, shard_sync,
+        FswAbortIfNot(builder.create("send_failed_sequence_num", 0, shard_sync,
                                      slate_read_only,
                                      send_failed_sequence_num_tok),
                       false);
-        SacAbortIfNot(builder.create("returned_with_payload", shard_sync,
+        FswAbortIfNot(builder.create("returned_with_payload", shard_sync,
                                      slate_read_only,
                                      returned_with_command_tok),
                       false);
-        SacAbortIfNot(builder.create("last_request_accepted_seq_num", 0,
+        FswAbortIfNot(builder.create("last_request_accepted_seq_num", 0,
                                      shard_sync, slate_read_only,
                                      last_request_accepted_seq_num_tok),
                       false);
-        SacAbortIfNot(builder.create("last_request_rejected_seq_num", 0,
+        FswAbortIfNot(builder.create("last_request_rejected_seq_num", 0,
                                      shard_sync, slate_read_only,
                                      last_request_rejected_seq_num_tok),
                       false);
-        SacAbortIfNot(builder.create("accepted_sequence_number", 0, shard_sync,
+        FswAbortIfNot(builder.create("accepted_sequence_number", 0, shard_sync,
                                      slate_read_only,
                                      accepted_sequence_number_tok),
                       false);
-        SacAbortIfNot(builder.create("rejected_sequence_number_tok", 0,
+        FswAbortIfNot(builder.create("rejected_sequence_number_tok", 0,
                                      shard_sync, slate_read_only,
                                      rejected_sequence_number_tok),
                       false);
-        SacAbortIfNot(builder.create("wrong_signature_state", 0, shard_sync,
+        FswAbortIfNot(builder.create("wrong_signature_state", 0, shard_sync,
                                      slate_read_only,
                                      wrong_signature_state_tok),
                       false);
-        SacAbortIfNot(builder.create("signed_seq_num_check_failed", 0,
+        FswAbortIfNot(builder.create("signed_seq_num_check_failed", 0,
                                      shard_sync, slate_read_only,
                                      signed_seq_num_check_failed_tok),
                       false);
-        SacAbortIfNot(builder.create("ephemeral_id_check_failed", 0, shard_sync,
+        FswAbortIfNot(builder.create("ephemeral_id_check_failed", 0, shard_sync,
                                      slate_read_only,
                                      ephemeral_id_check_failed_tok),
                       false);
-        SacAbortIfNot(builder.create("invalid_command_payload_encoding", 0,
+        FswAbortIfNot(builder.create("invalid_command_payload_encoding", 0,
                                      shard_sync, slate_read_only,
                                      invalid_command_payload_encoding_tok),
                       false);
-        SacAbortIfNot(builder.create("target_id_check_failed", 0, shard_sync,
+        FswAbortIfNot(builder.create("target_id_check_failed", 0, shard_sync,
                                      slate_read_only,
                                      target_id_check_failed_tok),
                       false);
-        SacAbortIfNot(builder.bind("enabled", enabled_tok), false);
-        SacAbortIfNot(
+        FswAbortIfNot(builder.bind("enabled", enabled_tok), false);
+        FswAbortIfNot(
             builder.bind("require_signed_command", require_signed_command_tok),
             false);
         slate = builder.slate(slate_no_validation);
         if (flow)
         {
-            SacAbortIfNot(flow->add_slate_element(last_send_sequence_num_tok),
+            FswAbortIfNot(flow->add_slate_element(last_send_sequence_num_tok),
                           false);
-            SacAbortIfNot(flow->add_slate_element(returned_with_command_tok),
+            FswAbortIfNot(flow->add_slate_element(returned_with_command_tok),
                           false);
         }
         is_init = true;
@@ -120,7 +120,7 @@ namespace Drone
     bool CommandQueueClient::pump_now(uint32_t accepted_sequence_num,
                                       uint32_t rejected_sequence_num)
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         slate[accepted_sequence_number_tok] = accepted_sequence_num;
         slate[rejected_sequence_number_tok] = rejected_sequence_num;
         /* Cancel previous gRPC request and try a new one. We know the old,
@@ -186,7 +186,7 @@ namespace Drone
         const grpc::Status &status,
         const CommandServiceAPI::PumpQueueResponse &response)
     {
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         if (!status.ok())
         {
             return true;
@@ -196,7 +196,7 @@ namespace Drone
         if (response.has_payload() || response.has_signed_command())
         {
             ++slate[returned_with_command_tok];
-            SacAbortIf(seq_num == 0, false);
+            FswAbortIf(seq_num == 0, false);
             CommandPayload payload;
             if (slate[require_signed_command_tok])
             {
@@ -221,7 +221,7 @@ namespace Drone
                  */
                 TBSCommand tbs;
                 std::string inner_ephemeral_id;
-                if (!noc_keystore.unwrap(tbs, inner_ephemeral_id,
+                if (!operator_keystore.unwrap(tbs, inner_ephemeral_id,
                                          single_signed))
                 {
                     return false;
@@ -281,7 +281,7 @@ namespace Drone
                 }
             }
             bool issued = false;
-            SacAbortIfNot(send_command_sig.emit(seq_num, payload, issued),
+            FswAbortIfNot(send_command_sig.emit(seq_num, payload, issued),
                           false);
             if (!issued)
             {

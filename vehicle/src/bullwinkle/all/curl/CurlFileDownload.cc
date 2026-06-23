@@ -7,7 +7,7 @@
 #include "src/bullwinkle/all/ExponentialBackoff.h"
 #include "src/bullwinkle/all/FdEventSink.h"
 #include "src/bullwinkle/all/config_file.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/bullwinkle/all/curl/CurlDispatcher.h"
 #include "src/bullwinkle/all/curl/curl_utils.h"
 #include "src/bullwinkle/all/hsm/CmrtSslPrivateKeyMethod.h"
@@ -83,10 +83,10 @@ namespace Drone
          */
         if (dlnow > 0 && config.retry_backoff)
         {
-            SacIfNot(config.retry_backoff->reset());
+            FswIfNot(config.retry_backoff->reset());
         }
     }
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
     /**
      * Callback for making modifications to the ssl context.
      *
@@ -157,40 +157,40 @@ namespace Drone
         /*
          * Create our slate tokens.
          */
-        SacAbortIfNot(sub_slate.create("status", download_idle, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("status", download_idle, shard_nonsync,
                                        slate_read_only, status_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("bytes_received", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("bytes_received", 0, shard_nonsync,
                                        slate_read_only, bytes_received_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("bytes_expected", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("bytes_expected", 0, shard_nonsync,
                                        slate_read_only, bytes_expected_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("download_progress", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("download_progress", 0, shard_nonsync,
                                        slate_read_only, download_progress_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("retry_count", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("retry_count", 0, shard_nonsync,
                                        slate_read_only, retry_count_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("pending_retry", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("pending_retry", 0, shard_nonsync,
                                        slate_read_only, pending_retry_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("resume_from", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("resume_from", 0, shard_nonsync,
                                        slate_read_only, resume_from_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("last_curl_status", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("last_curl_status", 0, shard_nonsync,
                                        slate_read_only, last_curl_status_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("last_http_status", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("last_http_status", 0, shard_nonsync,
                                        slate_read_only, last_http_status_tok),
                       false);
-        SacAbortIfNot(sub_slate.create("hsm_type", 0, shard_nonsync,
+        FswAbortIfNot(sub_slate.create("hsm_type", 0, shard_nonsync,
                                        slate_read_only, hsm_type_tok),
                       false);
         /*
          * Make sure we configured a retry backoff if we allow retries.
          */
-        SacAbortIf(config.max_retries != 0 && !config.retry_backoff, false);
+        FswAbortIf(config.max_retries != 0 && !config.retry_backoff, false);
         /*
          * If we don't have a storage ready token, create the temp file now.
          * If we do, we need to wait until dispatch, so we know if storage is
@@ -198,7 +198,7 @@ namespace Drone
          */
         if (!_lazy_init_temp_file)
         {
-            SacAbortIfNot(open_temp_file(), false);
+            FswAbortIfNot(open_temp_file(), false);
         }
         return true;
     }
@@ -214,8 +214,8 @@ namespace Drone
      */
     bool CurlFileDownload::open_temp_file()
     {
-        SacAbortIf(config.max_file_size == 0, false);
-        SacAbortOnErrno(fd = open(temp_file_name.c_str(), O_CREAT | O_RDWR,
+        FswAbortIf(config.max_file_size == 0, false);
+        FswAbortOnErrno(fd = open(temp_file_name.c_str(), O_CREAT | O_RDWR,
                                   config.output_file_permissions),
                         false);
         if (config.max_file_size > 0)
@@ -224,7 +224,7 @@ namespace Drone
              * Preallocate space in our temp file. This guarantees we'll have
              * enough space to write out the file.
              */
-            SacAbortOnErrno(posix_fallocate(fd.get(), 0, config.max_file_size),
+            FswAbortOnErrno(posix_fallocate(fd.get(), 0, config.max_file_size),
                             false);
         }
         return true;
@@ -244,10 +244,10 @@ namespace Drone
         {
             if (fd.get() == -1)
             {
-                SacIfNot(open_temp_file());
+                FswIfNot(open_temp_file());
             }
             slate[retry_count_tok]++;
-            SacIfNot(setup_and_add_handle());
+            FswIfNot(setup_and_add_handle());
             slate[pending_retry_tok] = false;
         }
         return next_time;
@@ -270,19 +270,19 @@ namespace Drone
                                          const std::string &_connect_to,
                                          const int _port)
     {
-        SacAbortIf(slate[status_tok] == download_in_progress, false);
+        FswAbortIf(slate[status_tok] == download_in_progress, false);
         if (fd.get() == -1)
         {
-            SacAbortIfNot(open_temp_file(), false);
+            FswAbortIfNot(open_temp_file(), false);
         }
         if (config.verbose)
         {
             dbnprintf(200, "Start download of %s...\n", _url.c_str());
         }
-        SacAbortOnErrno(lseek(fd.get(), 0, SEEK_SET), false);
+        FswAbortOnErrno(lseek(fd.get(), 0, SEEK_SET), false);
         if (config.max_file_size < 0)
         {
-            SacAbortOnErrno(::ftruncate(fd.get(), 0), false);
+            FswAbortOnErrno(::ftruncate(fd.get(), 0), false);
         }
         slate[bytes_received_tok] = 0;
         slate[bytes_expected_tok] = 0;
@@ -291,9 +291,9 @@ namespace Drone
         connect_to = _connect_to;
         if (config.retry_backoff)
         {
-            SacIfNot(config.retry_backoff->reset());
+            FswIfNot(config.retry_backoff->reset());
         }
-        SacAbortIfNot(setup_and_add_handle(), false);
+        FswAbortIfNot(setup_and_add_handle(), false);
         slate[status_tok] = download_in_progress;
         return true;
     }
@@ -305,68 +305,68 @@ namespace Drone
      */
     bool CurlFileDownload::setup_and_add_handle()
     {
-        SacAbortIf(fd.get() == -1, false);
+        FswAbortIf(fd.get() == -1, false);
         handle = curl_easy_init();
-        SacAbortIf(handle == NULL, false);
+        FswAbortIf(handle == NULL, false);
         /*
          * Set the URL we intend to retrieve.
          */
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_URL, url.c_str()),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_URL, url.c_str()),
                           false);
         /*
          * Set the PORT we intend to retrieve.
          */
         if (port > 0)
         {
-            SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_PORT, port),
+            FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_PORT, port),
                               false);
         }
         /*
          * Set up the write callback.
          */
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, &write_cb), false);
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_WRITEDATA, this),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_WRITEDATA, this),
                           false);
         /*
          * Get progress updates.
          */
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(handle, CURLOPT_XFERINFOFUNCTION, &progress_cb),
             false);
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_XFERINFODATA, this),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_XFERINFODATA, this),
                           false);
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_NOPROGRESS, 0),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_NOPROGRESS, 0),
                           false);
         /*
          * Make libcurl tell us about http errors.
          */
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_FAILONERROR, 1L),
                           false);
         /*
          * Tell curl to follow redirects automatically.
          */
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L),
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_FOLLOWLOCATION, 1L),
                           false);
         /*
          * Set the maximum file size.
          */
         if (config.max_file_size > 0)
         {
-            SacAbortOnCurlErr(
+            FswAbortOnCurlErr(
                 curl_easy_setopt(handle, CURLOPT_MAXFILESIZE_LARGE,
                                  static_cast<curl_off_t>(config.max_file_size)),
                 false);
         }
         if (config.verbose)
         {
-            SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_VERBOSE, 1),
+            FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_VERBOSE, 1),
                               false);
         }
         /**
          * Force downloader to use 256 bit encryption. See SATSW-52489.
          */
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(
                 handle, CURLOPT_SSL_CIPHER_LIST,
                 "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"),
@@ -374,7 +374,7 @@ namespace Drone
         /*
          * Provide a buffer for curl to store errors messages in.
          */
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(handle, CURLOPT_ERRORBUFFER, error_buffer), false);
         /*
          * Set the buffer to empty prior to performing the request.
@@ -388,18 +388,18 @@ namespace Drone
         {
             allowed_protocols |= CURLPROTO_HTTP;
         }
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(handle, CURLOPT_PROTOCOLS, allowed_protocols),
             false);
         if (config.use_hsm)
         {
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
             /*
              * Setup the SSL callback so that the SSL context can be modified.
              */
-            SacAbortOnCurlErr(
+            FswAbortOnCurlErr(
                 curl_easy_setopt(handle, CURLOPT_SSL_CTX_DATA, this), false);
-            SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_SSL_CTX_FUNCTION,
+            FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_SSL_CTX_FUNCTION,
                                                modify_ssl_ctx_cb),
                               false);
 #endif
@@ -411,7 +411,7 @@ namespace Drone
              */
             if (!config.ca_certs_path.empty())
             {
-                SacAbortOnCurlErr(
+                FswAbortOnCurlErr(
                     curl_easy_setopt(handle, CURLOPT_CAINFO,
                                      config.ca_certs_path.c_str()),
                     false);
@@ -421,14 +421,14 @@ namespace Drone
              */
             if (!config.client_cert_path.empty())
             {
-                SacAbortOnCurlErr(
+                FswAbortOnCurlErr(
                     curl_easy_setopt(handle, CURLOPT_SSLCERT,
                                      config.client_cert_path.c_str()),
                     false);
             }
             if (!config.client_key_path.empty())
             {
-                SacAbortOnCurlErr(
+                FswAbortOnCurlErr(
                     curl_easy_setopt(handle, CURLOPT_SSLKEY,
                                      config.client_key_path.c_str()),
                     false);
@@ -437,7 +437,7 @@ namespace Drone
         /*
          * Set speed limit.
          */
-        SacAbortOnCurlErr(
+        FswAbortOnCurlErr(
             curl_easy_setopt(handle, CURLOPT_MAX_RECV_SPEED_LARGE,
                              static_cast<curl_off_t>(config.speed_limit)),
             false);
@@ -445,10 +445,10 @@ namespace Drone
          * Fail out of curl if we average too low a rate for too long.  This
          * likely indicates LOS while downloading.
          */
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_LOW_SPEED_TIME,
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_LOW_SPEED_TIME,
                                            config.low_speed_timeout),
                           false);
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_LOW_SPEED_LIMIT,
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_LOW_SPEED_LIMIT,
                                            config.low_speed_threshold),
                           false);
         /*
@@ -456,7 +456,7 @@ namespace Drone
          * timeout.  This likely indicates we're LOS or otherwise don't have
          * connectivity to the server.
          */
-        SacAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT,
+        FswAbortOnCurlErr(curl_easy_setopt(handle, CURLOPT_CONNECTTIMEOUT,
                                            config.connect_timeout),
                           false);
         /*
@@ -465,7 +465,7 @@ namespace Drone
          * us.
          */
         curl_off_t resume_from = 0;
-        SacAbortOnErrno(resume_from = lseek(fd.get(), 0, SEEK_CUR), false);
+        FswAbortOnErrno(resume_from = lseek(fd.get(), 0, SEEK_CUR), false);
         slate[resume_from_tok] = resume_from;
         if (resume_from != 0)
         {
@@ -474,7 +474,7 @@ namespace Drone
                 dbnprintf(100, "Resuming download from %lld\n",
                           static_cast<long long>(resume_from));
             }
-            SacAbortOnCurlErr(curl_easy_setopt(handle,
+            FswAbortOnCurlErr(curl_easy_setopt(handle,
                                                CURLOPT_RESUME_FROM_LARGE,
                                                resume_from),
                               false);
@@ -489,14 +489,14 @@ namespace Drone
             new_list = curl_slist_append(connect_to_list, connect_to.c_str());
             if (!new_list)
             {
-                SacMsgAbort(false, 100, "curl_slist_append failure.");
+                FswMsgAbort(false, 100, "curl_slist_append failure.");
             }
             connect_to_list = new_list;
-            SacAbortOnCurlErr(
+            FswAbortOnCurlErr(
                 curl_easy_setopt(handle, CURLOPT_CONNECT_TO, connect_to_list),
                 false);
         }
-        SacAbortIfNot(
+        FswAbortIfNot(
             curl->add_handle(handle,
                              make_slot(*this, &CurlFileDownload::complete_cb)),
             false);
@@ -511,7 +511,7 @@ namespace Drone
      */
     void CurlFileDownload::complete_cb(CURL *easy_handle, CURLcode result)
     {
-        if (SacIfNot(easy_handle == handle))
+        if (FswIfNot(easy_handle == handle))
         {
             return;
         }
@@ -534,7 +534,7 @@ namespace Drone
             /*
              * Sync file to storage.
              */
-            SacOnErrno(::fsync(fd.get()));
+            FswOnErrno(::fsync(fd.get()));
             if (config.verbose)
             {
                 dbnprintf(100, "%s download complete\n", url.c_str());
@@ -603,7 +603,7 @@ namespace Drone
             {
                 move_cursor_back = -1 * slate[bytes_received_tok];
             }
-            SacOnErrno(resume_from =
+            FswOnErrno(resume_from =
                            lseek(fd.get(), move_cursor_back, SEEK_CUR));
             slate[bytes_received_tok] = resume_from;
             can_retry = true;
@@ -703,21 +703,21 @@ namespace Drone
      */
     bool CurlFileDownload::move_temp_file_to(const std::string &filename)
     {
-        SacAbortIf(slate[status_tok] == download_in_progress, false);
+        FswAbortIf(slate[status_tok] == download_in_progress, false);
         /*
          * rename() syscall offers atomic replacement of the destination
          * file, so it's the safest choice.
          */
-        SacAbortOnErrno(::rename(temp_file_name.c_str(), filename.c_str()),
+        FswAbortOnErrno(::rename(temp_file_name.c_str(), filename.c_str()),
                         false);
         /*
          * We must reopen the fd otherwise it will point to the new location
          * instead of the temp file location.
          */
-        SacAbortIfNot(open_temp_file(), false);
+        FswAbortIfNot(open_temp_file(), false);
         return true;
     }
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
     /**
      * Callback for modifying the SSL context.
      *
@@ -726,13 +726,13 @@ namespace Drone
     void CurlFileDownload::modify_ssl_ctx(void *ssl_ctx)
     {
         SSL_CTX *ctx = static_cast<SSL_CTX *>(ssl_ctx);
-        if (SacIfNot(file_exists(config.client_cert_path.c_str())))
+        if (FswIfNot(file_exists(config.client_cert_path.c_str())))
         {
             dbnprintf(100, "Missing file %s.\n",
                       config.client_cert_path.c_str());
             return;
         }
-        if (SacIfNot(file_exists(config.ca_certs_path.c_str())))
+        if (FswIfNot(file_exists(config.ca_certs_path.c_str())))
         {
             dbnprintf(100, "Missing file %s.\n", config.ca_certs_path.c_str());
             return;
@@ -742,7 +742,7 @@ namespace Drone
         {
         case hsm_type_t::stsafe: {
             std::string stsafe_cipher;
-            if (SacIfNot(read_str(config.stsafe_cipher_path, stsafe_cipher)))
+            if (FswIfNot(read_str(config.stsafe_cipher_path, stsafe_cipher)))
             {
                 dbnprintf(100, "read_str failed for file %s.\n",
                           config.stsafe_cipher_path.c_str());
@@ -750,7 +750,7 @@ namespace Drone
             }
             key_method *p;
             StsafeIdentityConfig stsafe_config;
-            SacAssert(Drone::create_external_stsafe_method(stsafe_cipher, p,
+            FswAssert(Drone::create_external_stsafe_method(stsafe_cipher, p,
                                                             stsafe_config));
             key_handler.assume_ownership(p);
             static uint16_t pref_curve = 0;
@@ -776,9 +776,9 @@ namespace Drone
         break;
         case hsm_type_t::trustzone: {
             std::string wrapped_key;
-            if (SacIfNot(read_str_binary(config.client_key_path, wrapped_key)))
+            if (FswIfNot(read_str_binary(config.client_key_path, wrapped_key)))
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(100, "Failed to read wrapped key file: %s.\n",
                           config.client_key_path.c_str());
                 return;
@@ -786,7 +786,7 @@ namespace Drone
             std::vector<uint8_t> trustzone_wrapped_key(wrapped_key.begin(),
                                                        wrapped_key.end());
             key_method *p;
-            SacAssert(Drone::create_external_trustzone_method(
+            FswAssert(Drone::create_external_trustzone_method(
                 p, trustzone_wrapped_key));
             key_handler.assume_ownership(p);
             static uint16_t pref_curve = SSL_SIGN_ED25519;
@@ -799,7 +799,7 @@ namespace Drone
         break;
         case hsm_type_t::cmrt: {
             key_method *p;
-            SacAssert(Drone::create_external_cmrt_method(p));
+            FswAssert(Drone::create_external_cmrt_method(p));
             key_handler.assume_ownership(p);
             static uint16_t pref_curve = SSL_SIGN_ED25519;
             if (SSL_CTX_set_signing_algorithm_prefs(ctx, &pref_curve, 1) != 1)
@@ -810,20 +810,20 @@ namespace Drone
         }
         break;
         default:
-            SacPrefix();
+            FswPrefix();
             dbnprintf(
                 200, "Expected hsm type to be one of ['stsafe', 'trustzone'].");
             return;
         }
         SSL_CTX_set_private_key_method(ctx, key_handler.get());
-        if (SacIfNot(SSL_CTX_use_certificate_file(
+        if (FswIfNot(SSL_CTX_use_certificate_file(
                 ctx, config.client_cert_path.c_str(), SSL_FILETYPE_PEM)))
         {
             dbnprintf(100, "Unable to read the file %s\n",
                       config.client_cert_path.c_str());
             return;
         }
-        if (SacIfNot(SSL_CTX_load_verify_locations(
+        if (FswIfNot(SSL_CTX_load_verify_locations(
                 ctx, config.ca_certs_path.c_str(), nullptr)))
         {
             dbnprintf(100, "Unable to use the file %s\n",

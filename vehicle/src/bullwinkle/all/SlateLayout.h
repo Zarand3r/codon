@@ -126,7 +126,7 @@ namespace Drone
          */
         const AlignedBuffer &get_initial_values(const slate_shard_t shard) const
         {
-            SacDebugAssert(shard < num_slate_shard_t);
+            FswDebugAssert(shard < num_slate_shard_t);
 
             return initial_values[shard];
         }

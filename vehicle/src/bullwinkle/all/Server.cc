@@ -22,7 +22,7 @@ namespace Drone
           prune_cycle("ServerPruneCycle", 1 * billion),
           do_prune_connections(false)
     {}
-    Server::~Server() { SacIfNot(stop()); }
+    Server::~Server() { FswIfNot(stop()); }
     /**
      * Start the server on the given port.
      *
@@ -45,7 +45,7 @@ namespace Drone
     bool Server::start(in_port_t _port, int socket_receive_buffer_size,
                        int socket_send_buffer_size)
     {
-        SacAbortIf(listen_fd, false);
+        FswAbortIf(listen_fd, false);
         /*
          * Construct sockaddr.
          */
@@ -53,7 +53,7 @@ namespace Drone
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
         addr.sin_port = htons(_port);
-        SacAbortIfNot(start(to_sockaddr(&addr), sizeof(addr),
+        FswAbortIfNot(start(to_sockaddr(&addr), sizeof(addr),
                             socket_receive_buffer_size,
                             socket_send_buffer_size),
                       false);
@@ -87,13 +87,13 @@ namespace Drone
                        int socket_receive_buffer_size,
                        int socket_send_buffer_size)
     {
-        SacAbortIfNot(addr, false);
+        FswAbortIfNot(addr, false);
         AutoFd fd;
-        SacAbortIfNot(net_server(addr, addr_len, tcp_proto,
+        FswAbortIfNot(net_server(addr, addr_len, tcp_proto,
                                  socket_receive_buffer_size,
                                  socket_send_buffer_size, fd),
                       false);
-        SacAbortIfNot(start(fdbag.fd(std::move(fd))), false);
+        FswAbortIfNot(start(fdbag.fd(std::move(fd))), false);
         return true;
     }
     /**
@@ -106,24 +106,24 @@ namespace Drone
      */
     bool Server::start(Handle<FdEventSink> fes)
     {
-        SacAbortIfNot(fes, false);
-        SacAbortIf(fes->is_closed(), false);
+        FswAbortIfNot(fes, false);
+        FswAbortIf(fes->is_closed(), false);
         /*
          * Store off the listening port of the file descriptor.
          */
         sockaddr_in addr;
         socklen_t addr_len = sizeof(addr);
-        SacAbortOnErrno(
-            sx_getsockname(fes->get_fd(), (sockaddr *)&addr, &addr_len), false);
+        FswAbortOnErrno(
+            fsw_getsockname(fes->get_fd(), (sockaddr *)&addr, &addr_len), false);
         port = ntohs(addr.sin_port);
         /*
          * Connect signal handlers to the server file descriptor.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             fes->add_events(fd_read_ev,
                             make_slot(*this, &Server::server_handle_connect)),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             fes->add_events(fd_close_ev,
                             make_slot(*this, &Server::server_handle_close)),
             false);
@@ -134,9 +134,9 @@ namespace Drone
         /*
          * Ask subclass for any extra initialization steps.
          */
-        if (SacIfNot(server_start()))
+        if (FswIfNot(server_start()))
         {
-            SacAbortIfNot(stop(), false);
+            FswAbortIfNot(stop(), false);
             return false;
         }
         return true;
@@ -151,7 +151,7 @@ namespace Drone
         /*
          * Ask subclass for any extra terminating steps.
          */
-        SacAbortIfNot(server_stop(), false);
+        FswAbortIfNot(server_stop(), false);
         /*
          * Close all pending conections. The connection_closed flag should not
          * be set here since the closing of a pending connection should not
@@ -159,7 +159,7 @@ namespace Drone
          */
         while (!pending_connections.empty())
         {
-            SacIfNot(server_close_pending_connection(0));
+            FswIfNot(server_close_pending_connection(0));
             pending_connections.pop_front();
         }
         /*
@@ -173,7 +173,7 @@ namespace Drone
         while (!connections.empty())
         {
             connection_closed = true;
-            SacIfNot(server_close_connection(0));
+            FswIfNot(server_close_connection(0));
             connections.pop_front();
         }
         /*
@@ -183,14 +183,14 @@ namespace Drone
          */
         if (connection_closed)
         {
-            SacIfNot(server_all_disconnect());
+            FswIfNot(server_all_disconnect());
         }
         if (!listen_fd)
             return true;
         /*
          * Clear signal handlers on the listen_fd.
          */
-        SacAbortIfNot(listen_fd->clear_signals(), false);
+        FswAbortIfNot(listen_fd->clear_signals(), false);
         listen_fd->close();
         listen_fd.clear();
         port = 0;
@@ -225,7 +225,7 @@ namespace Drone
      */
     bool Server::set_max_connections(uint _max_connections)
     {
-        SacAbortIfEqInt(max_connections, 0, false);
+        FswAbortIfEqInt(max_connections, 0, false);
         max_connections = _max_connections;
         return true;
     }
@@ -258,15 +258,15 @@ namespace Drone
         /*
          * Create a ServerFd object.
          */
-        SacIfNot2(server_create_connection(fes, connection), success);
-        SacIfNot2(connection, success);
+        FswIfNot2(server_create_connection(fes, connection), success);
+        FswIfNot2(connection, success);
         /*
          * Ensure a valid connection.
          */
         if (connection)
         {
-            SacIf2(connection->is_closed(), success);
-            SacIfNot2(connection->get_fd() == fes, success);
+            FswIf2(connection->is_closed(), success);
+            FswIfNot2(connection->get_fd() == fes, success);
         }
         /*
          * Close new connection file descriptor if connection was not
@@ -274,7 +274,7 @@ namespace Drone
          */
         if (!success)
         {
-            SacIfNot(fes->close());
+            FswIfNot(fes->close());
             return true;
         }
         /*
@@ -291,7 +291,7 @@ namespace Drone
          */
         if (connection->is_acceptance_requested())
         {
-            SacIfNot(server_accept_connection(connection));
+            FswIfNot(server_accept_connection(connection));
         }
         else
         {
@@ -301,7 +301,7 @@ namespace Drone
          * Run the pruning algorithm. This will handle the case that we have
          * exceeded the connection limit.
          */
-        SacAbortIfNot(server_prune_connections(), false);
+        FswAbortIfNot(server_prune_connections(), false);
         return true;
     }
     /**
@@ -348,7 +348,7 @@ namespace Drone
          * Periodic is due. This is to make sure we always clean up and accept
          * connections whenever we have the opportunity to do so.
          */
-        SacAbortIfNot(server_prune_connections(), next_time);
+        FswAbortIfNot(server_prune_connections(), next_time);
         do_prune_connections = false;
         return next_time;
     }
@@ -416,15 +416,15 @@ namespace Drone
      */
     bool Server::server_handle_connect(FdEventSink &fes, FdEvent &fev)
     {
-        SacAbortIfNot(listen_fd, false);
-        SacAbortIfNot(fes.get_fd() == listen_fd->get_fd(), false);
+        FswAbortIfNot(listen_fd, false);
+        FswAbortIfNot(fes.get_fd() == listen_fd->get_fd(), false);
         /*
          * Accept new connection.
          */
         sockaddr addr;
         socklen_t addr_len = sizeof(addr);
         memset(&addr, 0, addr_len);
-        AutoFd fd(sx_accept(fes.get_fd(), &addr, &addr_len));
+        AutoFd fd(fsw_accept(fes.get_fd(), &addr, &addr_len));
         if (fd.get() == -1)
         {
             /*
@@ -432,9 +432,9 @@ namespace Drone
              * to help people figure out which Server this is and who was trying
              * to connect.
              */
-            SacPrefix();
+            FswPrefix();
             dbnprintf(200,
-                      ": sx_accept failed in Server::server_handle_connect:\n");
+                      ": fsw_accept failed in Server::server_handle_connect:\n");
             dbnprintf(500, "-- errno=%d: %s\n", errno, strerror(errno));
             dbnprintf(200, "-- listen port = %d\n", port);
             dbnprintf(200, "-- max_connections = %u\n", max_connections);
@@ -443,7 +443,7 @@ namespace Drone
              * since accept() failed, so let the user know as well.
              */
             char address_string[200];
-            if (!SacIfNot(address_to_string(&addr, addr_len, address_string,
+            if (!FswIfNot(address_to_string(&addr, addr_len, address_string,
                                             sizeof(address_string))))
             {
                 dbnprintf(300, "-- client address: %s\n", address_string);
@@ -454,7 +454,7 @@ namespace Drone
             }
             return true;
         }
-        SacAbortIfNot(add_connection(fdbag.fd(std::move(fd))), false);
+        FswAbortIfNot(add_connection(fdbag.fd(std::move(fd))), false);
         return true;
     }
     /**
@@ -490,11 +490,11 @@ namespace Drone
      */
     bool Server::server_handle_close(FdEventSink &fes, FdEvent &fev)
     {
-        SacAbortIfNot(listen_fd, false);
-        SacAbortIfNot(fes.get_fd() == listen_fd->get_fd(), false);
-        SacPrefix();
+        FswAbortIfNot(listen_fd, false);
+        FswAbortIfNot(fes.get_fd() == listen_fd->get_fd(), false);
+        FswPrefix();
         dbstring(": Server listening port closed unexpectedly!\n");
-        SacAbortIfNot(stop(), false);
+        FswAbortIfNot(stop(), false);
         return true;
     }
     /**
@@ -511,15 +511,15 @@ namespace Drone
      */
     bool Server::server_accept_connection(Handle<ServerFd> connection)
     {
-        SacAbortIfNot(connection, false);
+        FswAbortIfNot(connection, false);
         /*
          * This method should only have been called if acceptance was
          * requested. If that is not true then something is wrong and we should
          * just close the connection.
          */
-        if (SacIfNot(connection->is_acceptance_requested()))
+        if (FswIfNot(connection->is_acceptance_requested()))
         {
-            SacAbortIfNot(connection->close(), false);
+            FswAbortIfNot(connection->close(), false);
             return false;
         }
         /*
@@ -532,15 +532,15 @@ namespace Drone
          * not have happened. However, if someone else has called accept before
          * us we should just continue, but emit a warning.
          */
-        SacIfNot(connection->accept_connection());
+        FswIfNot(connection->accept_connection());
         /*
          * Inform the subclass of Server that this connection has been
          * accepted.
          */
-        SacAssert(connections.size() > 0);
-        if (SacIfNot(server_handle_accepted_connection(connections.size() - 1)))
+        FswAssert(connections.size() > 0);
+        if (FswIfNot(server_handle_accepted_connection(connections.size() - 1)))
         {
-            SacAbortIfNot(connection->close(), false);
+            FswAbortIfNot(connection->close(), false);
             return false;
         }
         return true;
@@ -554,19 +554,19 @@ namespace Drone
      */
     bool Server::server_close_connection(uint index)
     {
-        SacAbortOutsideRangeUint(index, 0, connections.size(), false);
+        FswAbortOutsideRangeUint(index, 0, connections.size(), false);
         Handle<ServerFd> connection = connections[index];
         if (!connection)
             return true;
         /*
          * Finalize this connection.
          */
-        SacIfNot(server_finalize_connection(index));
+        FswIfNot(server_finalize_connection(index));
         /*
          * If the subclass deleted our connection behind our back, emit a
          * warning, but return true.
          */
-        SacAbortIfNot(connection, true);
+        FswAbortIfNot(connection, true);
         /*
          * If the connection is already closed, we're done.
          */
@@ -578,7 +578,7 @@ namespace Drone
          */
         const bool close_success = connection->close();
         if (!connection->close_sig.empty())
-            SacAbortIfNot(close_success, false);
+            FswAbortIfNot(close_success, false);
         return true;
     }
     /**
@@ -590,7 +590,7 @@ namespace Drone
      */
     bool Server::server_close_pending_connection(uint index)
     {
-        SacAbortOutsideRangeUint(index, 0, pending_connections.size(), false);
+        FswAbortOutsideRangeUint(index, 0, pending_connections.size(), false);
         Handle<ServerFd> pending_connection = pending_connections[index];
         if (!pending_connection)
             return true;
@@ -612,7 +612,7 @@ namespace Drone
          */
         const bool close_success = pending_connection->close();
         if (!pending_connection->close_sig.empty())
-            SacAbortIfNot(close_success, false);
+            FswAbortIfNot(close_success, false);
         return true;
     }
     /**
@@ -625,8 +625,8 @@ namespace Drone
      */
     bool Server::server_prune_connections()
     {
-        SacAbortIfNot(server_prune_pending_connections(), false);
-        SacAbortIfNot(server_prune_accepted_connections(), false);
+        FswAbortIfNot(server_prune_pending_connections(), false);
+        FswAbortIfNot(server_prune_accepted_connections(), false);
         return true;
     }
     /**
@@ -658,7 +658,7 @@ namespace Drone
                 is_valid = !pending_connection->get_fd()->is_closed();
             if (!is_valid)
             {
-                SacIfNot(server_close_pending_connection(i));
+                FswIfNot(server_close_pending_connection(i));
                 pending_connections.erase(pending_connections.begin() + i);
             }
         }
@@ -679,7 +679,7 @@ namespace Drone
             }
             if (pending_connection->is_acceptance_requested())
             {
-                SacIfNot(server_accept_connection(pending_connection));
+                FswIfNot(server_accept_connection(pending_connection));
             }
         }
         /*
@@ -708,7 +708,7 @@ namespace Drone
          */
         while (pending_connections.size() > max_connections)
         {
-            SacIfNot(server_close_pending_connection(0));
+            FswIfNot(server_close_pending_connection(0));
             pending_connections.pop_front();
         }
         return true;
@@ -746,7 +746,7 @@ namespace Drone
             if (!is_valid)
             {
                 connection_closed = true;
-                SacIfNot(server_close_connection(i));
+                FswIfNot(server_close_connection(i));
                 connections.erase(connections.begin() + i);
             }
         }
@@ -757,7 +757,7 @@ namespace Drone
         while (connections.size() > max_connections)
         {
             connection_closed = true;
-            SacIfNot(server_close_connection(0));
+            FswIfNot(server_close_connection(0));
             connections.pop_front();
         }
         /*
@@ -767,7 +767,7 @@ namespace Drone
          */
         if (connection_closed && connections.size() == 0)
         {
-            SacIfNot(server_all_disconnect());
+            FswIfNot(server_all_disconnect());
         }
         return true;
     }

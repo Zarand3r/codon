@@ -142,10 +142,10 @@ field (`udp_proto`, `tcp_proto`). Examples in `DroneFtRuntime.cc`:
 
 ```cpp
 service_directory().lookup(timestamp_service, service);
-SacAbortIfNot(service.proto == udp_proto, false);
+FswAbortIfNot(service.proto == udp_proto, false);
 ...
 service_directory().lookup(Satellite::alert_buffer_output_service, alerts_service);
-SacAbortIf(alerts_service.proto != udp_proto, false);
+FswAbortIf(alerts_service.proto != udp_proto, false);
 output_connection->open(alerts_service.host_name, alerts_service.port);
 ```
 
@@ -387,7 +387,7 @@ LATE (per string):
  13. channel_manager.flush_inputs
 ```
 
-Non-synced nodes that skip step 5 instead `sxsleep(ds_parallel_sleep_time)` to
+Non-synced nodes that skip step 5 instead `fswsleep(ds_parallel_sleep_time)` to
 stay phase-aligned with peers that *do* share — preserving lockstep timing even
 across asymmetric node types.
 

@@ -8,7 +8,7 @@
 #include "src/bullwinkle/all/SlateBuilder.h"
 #include "src/bullwinkle/all/UniqueIdGenerator.h"
 #include "src/bullwinkle/all/async/DeferredCallbackQueue.h"
-#include "src/bullwinkle/all/core/sxtime.h"
+#include "src/bullwinkle/all/core/fswtime.h"
 #include "src/bullwinkle/all/grpc/gRPC_endpoint.h"
 #include "src/bullwinkle/all/grpc/gRPC_util.h"
 #include "src/bullwinkle/all/hsm/SslPrivateKeyMethod.h"
@@ -84,7 +84,7 @@ namespace Drone
         virtual bool async(const TRequest &request, TCallback callback) = 0;
         /**
          * Set a new gRPC client timeout.
-         * This is an optional function that will Sac if not implemented in the
+         * This is an optional function that will Fsw if not implemented in the
          * inherited class.
          *
          * @param new_timeout New gRPC client timeout.
@@ -93,7 +93,7 @@ namespace Drone
          */
         virtual bool set_timeout(const nano_t new_timeout)
         {
-            SacAbort("Unimplemented optional function. Add functionality to "
+            FswAbort("Unimplemented optional function. Add functionality to "
                      "inherited class.",
                      false);
         }
@@ -176,8 +176,8 @@ namespace Drone
             Handle<GrpcClient> client(new GrpcClient(
                 _endpoint_provider, _stub_factory, _callback_queue,
                 std::move(_method), _timeout, _max_outstanding_calls));
-            SacAbortIfNot(client, Handle<GrpcClient>());
-            SacAbortIfNot(client->init(builder, flow), Handle<GrpcClient>());
+            FswAbortIfNot(client, Handle<GrpcClient>());
+            FswAbortIfNot(client->init(builder, flow), Handle<GrpcClient>());
             return client;
         }
         /**
@@ -201,7 +201,7 @@ namespace Drone
          */
         bool async(const TRequest &request, TCallback callback) override
         {
-            SacAbortIfNot(callback, false);
+            FswAbortIfNot(callback, false);
             /*
              * Create a new stub on the first call to `async`.
              *
@@ -217,7 +217,7 @@ namespace Drone
             /*
              * Bail out if no stub is provided.
              */
-            SacAbortIfNot(stub, false);
+            FswAbortIfNot(stub, false);
             /*
              * Bail out if we already have the max number of calls in flight.
              */
@@ -232,8 +232,8 @@ namespace Drone
             std::unique_ptr<Call> call = std::make_unique<Call>(
                 stub.get(), timeout, request, completion_queue, method,
                 std::move(callback));
-            SacAbortIfNot(call, false);
-            SacAbortIfNot(call->rpc, false);
+            FswAbortIfNot(call, false);
+            FswAbortIfNot(call->rpc, false);
             /*
              * Start the RPC.
              */
@@ -258,7 +258,7 @@ namespace Drone
          */
         bool set_timeout(const nano_t new_timeout) override
         {
-            SacMsgAbortIf(
+            FswMsgAbortIf(
                 new_timeout < billion, false, 64,
                 "gRPC timeout is less than the allowed minimum of 1s.");
             timeout = new_timeout;
@@ -337,7 +337,7 @@ namespace Drone
              * manipulates reference counts on referenced SignalHandlers without
              * locking, so copying it outside of the main thread is unsafe.
              */
-            SX_DISALLOW_COPY_AND_ASSIGN(Call);
+            FSW_DISALLOW_COPY_AND_ASSIGN(Call);
         };
         /**
          * Constructor.
@@ -371,7 +371,7 @@ namespace Drone
          */
         bool init(SlateBuilder &builder, GroundNumericFlow *flow)
         {
-            SacAbortIfNot(is_rpc_initialized(), false);
+            FswAbortIfNot(is_rpc_initialized(), false);
             /*
              * Throughput metrics.
              */
@@ -380,39 +380,39 @@ namespace Drone
                 count_builder.sub_slate("completed");
             SlateBuilder count_failed_builder =
                 count_builder.sub_slate("failed");
-            SacAbortIfNot(count_builder.create("started.total", shard_nonsync,
+            FswAbortIfNot(count_builder.create("started.total", shard_nonsync,
                                                slate_read_only,
                                                metric_count_started_tok),
                           false);
-            SacAbortIfNot(count_builder.create("skipped.total", shard_nonsync,
+            FswAbortIfNot(count_builder.create("skipped.total", shard_nonsync,
                                                slate_read_only,
                                                metric_count_skipped_tok),
                           false);
-            SacAbortIfNot(count_builder.create("outstanding.total",
+            FswAbortIfNot(count_builder.create("outstanding.total",
                                                shard_nonsync, slate_read_only,
                                                metric_count_outstanding_tok),
                           false);
-            SacAbortIfNot(count_builder.create("new_stub", shard_nonsync,
+            FswAbortIfNot(count_builder.create("new_stub", shard_nonsync,
                                                slate_read_only,
                                                metric_count_new_stub_tok),
                           false);
-            SacAbortIfNot(count_completed_builder.create(
+            FswAbortIfNot(count_completed_builder.create(
                               "total", shard_nonsync, slate_read_only,
                               metric_count_completed_tok),
                           false);
-            SacAbortIfNot(count_completed_builder.create(
+            FswAbortIfNot(count_completed_builder.create(
                               "succeeded", shard_nonsync, slate_read_only,
                               metric_count_succeeded_tok),
                           false);
-            SacAbortIfNot(count_failed_builder.create("total", shard_nonsync,
+            FswAbortIfNot(count_failed_builder.create("total", shard_nonsync,
                                                       slate_read_only,
                                                       metric_count_failed_tok),
                           false);
-            SacAbortIfNot(count_failed_builder.create("timeout", shard_nonsync,
+            FswAbortIfNot(count_failed_builder.create("timeout", shard_nonsync,
                                                       slate_read_only,
                                                       metric_count_timeout_tok),
                           false);
-            SacAbortIfNot(count_failed_builder.create("error", shard_nonsync,
+            FswAbortIfNot(count_failed_builder.create("error", shard_nonsync,
                                                       slate_read_only,
                                                       metric_count_error_tok),
                           false);
@@ -420,11 +420,11 @@ namespace Drone
              * Latency metrics.
              */
             SlateBuilder latency_builder = builder.sub_slate("latency");
-            SacAbortIfNot(latency_builder.create("last_nanos", shard_nonsync,
+            FswAbortIfNot(latency_builder.create("last_nanos", shard_nonsync,
                                                  slate_read_only,
                                                  metric_latency_last_nanos_tok),
                           false);
-            SacAbortIfNot(latency_builder.create(
+            FswAbortIfNot(latency_builder.create(
                               "total_nanos", shard_nonsync, slate_read_only,
                               metric_latency_total_nanos_tok),
                           false);
@@ -432,11 +432,11 @@ namespace Drone
              * Status metrics.
              */
             SlateBuilder status_builder = builder.sub_slate("status");
-            SacAbortIfNot(status_builder.create("last", shard_nonsync,
+            FswAbortIfNot(status_builder.create("last", shard_nonsync,
                                                 slate_read_only,
                                                 metric_status_last_tok),
                           false);
-            SacAbortIfNot(status_builder.create("last_error", shard_nonsync,
+            FswAbortIfNot(status_builder.create("last_error", shard_nonsync,
                                                 slate_read_only,
                                                 metric_status_last_error_tok),
                           false);
@@ -449,32 +449,32 @@ namespace Drone
              */
             if (flow)
             {
-                SacAbortIfNot(flow->add_slate_element(metric_count_started_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_count_started_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(metric_count_skipped_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_count_skipped_tok),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_count_outstanding_tok),
                     false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_count_completed_tok), false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_count_succeeded_tok), false);
-                SacAbortIfNot(flow->add_slate_element(metric_count_failed_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_count_failed_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(metric_count_timeout_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_count_timeout_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(metric_count_error_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_count_error_tok),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_latency_last_nanos_tok),
                     false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_latency_total_nanos_tok),
                     false);
-                SacAbortIfNot(flow->add_slate_element(metric_status_last_tok),
+                FswAbortIfNot(flow->add_slate_element(metric_status_last_tok),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(metric_status_last_error_tok),
                     false);
             }
@@ -482,10 +482,10 @@ namespace Drone
             {
                 stub_factory = GrpcStubFactory<TService>::create();
             }
-            SacAbortIfNot(stub_factory, false);
+            FswAbortIfNot(stub_factory, false);
             return true;
         }
-        SX_DISALLOW_COPY_AND_ASSIGN(GrpcClient);
+        FSW_DISALLOW_COPY_AND_ASSIGN(GrpcClient);
         /**
          * Worker thread entry point.
          */
@@ -504,7 +504,7 @@ namespace Drone
                 const auto end = std::chrono::system_clock::now();
                 if (!ok)
                 {
-                    SacIfNot(ok);
+                    FswIfNot(ok);
                     continue;
                 }
                 /*
@@ -526,7 +526,7 @@ namespace Drone
              * Grab a pointer to this call.
              */
             auto it = outstanding_calls.find(tag);
-            if (SacIf(it == outstanding_calls.end()))
+            if (FswIf(it == outstanding_calls.end()))
             {
                 return;
             }
@@ -576,7 +576,7 @@ namespace Drone
             /*
              * Run the callback.
              */
-            SacIfNot(call->callback(std::move(call->status),
+            FswIfNot(call->callback(std::move(call->status),
                                     std::move(call->response)));
         }
         /**

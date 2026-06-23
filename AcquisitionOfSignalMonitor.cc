@@ -23,8 +23,8 @@ namespace Drone
         Handle<AcquisitionOfSignalMonitor> empty;
         Handle<AcquisitionOfSignalMonitor> aos_monitor(
             new AcquisitionOfSignalMonitor(aos_threshold));
-        SacAbortIfNot(aos_monitor, empty);
-        SacAbortIfNot(aos_monitor->init(builder), empty);
+        FswAbortIfNot(aos_monitor, empty);
+        FswAbortIfNot(aos_monitor->init(builder), empty);
         return aos_monitor;
     }
     /**
@@ -37,14 +37,14 @@ namespace Drone
      */
     bool AcquisitionOfSignalMonitor::init(SlateBuilder &builder)
     {
-        SacAbortIfNot(
+        FswAbortIfNot(
             builder.bind("loss_of_comm_fdir.bidirectional_comm_age_ns",
                          bidirectional_comm_age_tok),
             false);
-        SacAbortIfNot(builder.bind("out_of_contact_threshold",
+        FswAbortIfNot(builder.bind("out_of_contact_threshold",
                                    out_of_contact_threshold_tok),
                       false);
-        SacAbortIfNot(builder.create("retry_on_connection", false, shard_sync,
+        FswAbortIfNot(builder.create("retry_on_connection", false, shard_sync,
                                      slate_read_only, retry_on_connection_tok),
                       false);
         slate = builder.slate(slate_no_validation);

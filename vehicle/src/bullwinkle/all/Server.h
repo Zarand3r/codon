@@ -128,21 +128,21 @@ namespace Drone
     template <class T>
     bool Server::get_connection(uint index, Handle<T> &connection)
     {
-        SacAbortIf(connection, false);
-        SacAbortOutsideRangeUint(index, 0, connections.size(), false);
+        FswAbortIf(connection, false);
+        FswAbortOutsideRangeUint(index, 0, connections.size(), false);
         /*
          * First we retrieve the connection at the specified index as
          * a ServerFd.
          */
         Handle<ServerFd> temp = connections[index];
-        SacAbortIfNot(temp, false);
+        FswAbortIfNot(temp, false);
         /*
          * Then we do a casting assignment and check the result to make
          * sure a cast from ServerFd to T was possible.
          */
         if (!connection.assign_casted(temp))
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Dynamic cast from ServerFd to subclass failed!\n");
             return false;
         }

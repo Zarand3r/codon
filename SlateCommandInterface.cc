@@ -3,7 +3,7 @@
  * @date 02/07/2017
  */
 #include "src/bullwinkle/all/SlateCommandInterface.h"
-#include "src/bullwinkle/all/core/math/sxmath.h"
+#include "src/bullwinkle/all/core/math/fswmath.h"
 #include "src/bullwinkle/all/core/stl_util.h"
 #include <limits>
 namespace Drone
@@ -84,7 +84,7 @@ namespace Drone
      */
     bool SlateCommandInterface::init(SlateBuilder builder)
     {
-        SacAbortIfNot(init(builder, ""), false);
+        FswAbortIfNot(init(builder, ""), false);
         return true;
     }
     /**
@@ -103,18 +103,18 @@ namespace Drone
     bool SlateCommandInterface::init(SlateBuilder builder,
                                      const std::string &prefix)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * The prefix should match the end of the builder path.
          */
         const std::string &subtree = builder.get_subtree_path();
-        SacAbortIfNot(strsuffix(subtree, prefix), false);
+        FswAbortIfNot(strsuffix(subtree, prefix), false);
         /*
          * Make sure this is a built super SlateBuilder. This is to enforce that
          * all elements are created and we can write to all of them.
          */
-        SacAbortIfNot(builder.is_built(), false);
-        SacAbortIfNot(builder.is_super_slate(), false);
+        FswAbortIfNot(builder.is_built(), false);
+        FswAbortIfNot(builder.is_super_slate(), false);
         /*
          * Get the runtime Slate.
          */
@@ -158,15 +158,15 @@ namespace Drone
                     continue;
                 }
                 slate_element_t element_id;
-                SacAbortIfNot(layout.build_element_id(
+                FswAbortIfNot(layout.build_element_id(
                                   path, metadata, slate_read_write, element_id),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     insert_element(element_id, metadata.type_id, rel_path),
                     false);
                 if (!prefix.empty())
                 {
-                    SacAbortIfNot(
+                    FswAbortIfNot(
                         insert_element(element_id, metadata.type_id, path),
                         false);
                 }
@@ -186,12 +186,12 @@ namespace Drone
             const size_t bucket_size = elements.bucket_size(i);
             max_bucket_size = std::max(max_bucket_size, bucket_size);
         }
-        SacAbortIf(elements.size() == 0, false);
+        FswAbortIf(elements.size() == 0, false);
         const size_t max_allowed_bucket_size =
-            std::max(static_cast<size_t>(sx_floor(sx_log2(100.0))),
-                     static_cast<size_t>(sx_floor(
-                         sx_log2(static_cast<double>(elements.size())))));
-        SacAbortIfNotOpUint(max_bucket_size, <=, max_allowed_bucket_size,
+            std::max(static_cast<size_t>(fsw_floor(fsw_log2(100.0))),
+                     static_cast<size_t>(fsw_floor(
+                         fsw_log2(static_cast<double>(elements.size())))));
+        FswAbortIfNotOpUint(max_bucket_size, <=, max_allowed_bucket_size,
                             false);
         is_init = true;
         return true;
@@ -213,7 +213,7 @@ namespace Drone
                                                 const INT64 value,
                                                 bool &success) RUNTIME
     {
-        SacAbortIfNot(set(name, value, success), false);
+        FswAbortIfNot(set(name, value, success), false);
         return true;
     }
     /**
@@ -233,7 +233,7 @@ namespace Drone
         const external_command_name_hash_t &hash, const INT64 value,
         bool &success) RUNTIME
     {
-        SacAbortIfNot(set(hash, value, success), false);
+        FswAbortIfNot(set(hash, value, success), false);
         return true;
     }
     /**
@@ -253,7 +253,7 @@ namespace Drone
                                                const double value,
                                                bool &success) RUNTIME
     {
-        SacAbortIfNot(set(name, value, success), false);
+        FswAbortIfNot(set(name, value, success), false);
         return true;
     }
     /**
@@ -273,7 +273,7 @@ namespace Drone
         const external_command_name_hash_t &hash, const double value,
         bool &success) RUNTIME
     {
-        SacAbortIfNot(set(hash, value, success), false);
+        FswAbortIfNot(set(hash, value, success), false);
         return true;
     }
     /**
@@ -295,7 +295,7 @@ namespace Drone
         const external_command_name_hash_t &hash, bool &success,
         INT64 &value) const
     {
-        SacAbortIfNot(get(hash, success, value), false);
+        FswAbortIfNot(get(hash, success, value), false);
         return true;
     }
     /**
@@ -317,7 +317,7 @@ namespace Drone
         const external_command_name_hash_t &hash, bool &success,
         double &value) const
     {
-        SacAbortIfNot(get(hash, success, value), false);
+        FswAbortIfNot(get(hash, success, value), false);
         return true;
     }
     /**
@@ -441,7 +441,7 @@ namespace Drone
                 /*
                  * We should never get here, but if we do, break and roll back.
                  */
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(
                     200,
                     ": Received an invalid command type. Must be Int (%d) "
@@ -509,7 +509,7 @@ namespace Drone
             else
             {
                 rollback_successful = false;
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(
                     500,
                     ": Failed to reset an element of the multi command, while "
@@ -534,7 +534,7 @@ namespace Drone
                                     external_command_name_hash_t hash,
                                     INT64 value) RUNTIME
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         if (elem.type == bool_type)
         {
             return validate_int_element_bounds<bool>(value, hash) &&
@@ -617,10 +617,10 @@ namespace Drone
                                external_command_name_hash_t hash,
                                const double value) RUNTIME
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         if (elem.type == double_type)
         {
-            if (!sx_isfinite(value))
+            if (!fsw_isfinite(value))
             {
                 dbnprintf(200,
                           "Slate Command Error: '%08llx' - Non-finite double "
@@ -633,7 +633,7 @@ namespace Drone
         else if (elem.type == float_type)
         {
             const float float_value = static_cast<float>(value);
-            if (!sx_isfinite(float_value))
+            if (!fsw_isfinite(float_value))
             {
                 dbnprintf(200,
                           "Slate Command Error: '%08llx' - Non-finite float "
@@ -664,7 +664,7 @@ namespace Drone
                                     external_command_name_hash_t hash,
                                     INT64 &value) const
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         if (elem.type == bool_type)
         {
             value = slate.load<bool>(elem.id);
@@ -728,7 +728,7 @@ namespace Drone
                                     external_command_name_hash_t hash,
                                     double &value) const
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         if (elem.type == double_type)
         {
             value = slate.load<double>(elem.id);
@@ -757,7 +757,7 @@ namespace Drone
     bool SlateCommandInterface::lookup(const std::string &name,
                                        element_t &elem) const
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         const external_command_name_hash_t hash(name);
         if (!map_find(elements, hash.value, elem))
         {
@@ -778,7 +778,7 @@ namespace Drone
     bool SlateCommandInterface::lookup(const external_command_name_hash_t &hash,
                                        element_t &elem) const
     {
-        SacDebugAssert(is_init);
+        FswDebugAssert(is_init);
         if (!map_find(elements, hash.value, elem))
         {
             dbnprintf(200,
@@ -832,15 +832,15 @@ namespace Drone
                                                const slate_type_t type,
                                                std::string_view name)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIf(name.empty(), false);
+        FswAbortIf(is_init, false);
+        FswAbortIf(name.empty(), false);
         const external_command_name_hash_t hash(name);
         bool inserted =
             elements.insert({hash.value, element_t{.id = id, .type = type}})
                 .second;
         if (!inserted)
         {
-            SacMsgAbort(false, 200,
+            FswMsgAbort(false, 200,
                         "'%.*s' has the same hash '0x%llx' as another element.",
                         (int)name.size(), name.data(), hash.value);
         }

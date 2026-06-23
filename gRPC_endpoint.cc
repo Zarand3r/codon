@@ -128,7 +128,7 @@ namespace Drone
          * Don't index off the end of the array if using information from
          * DNS.
          */
-        SacAbortIf(slate[target_index_tok] >= MAX_TARGETS, _endpoint);
+        FswAbortIf(slate[target_index_tok] >= MAX_TARGETS, _endpoint);
         /*
          * Use the override parameters if desired, otherwise use information
          * from DNS.
@@ -245,19 +245,19 @@ namespace Drone
          * Slate elements for this specific dynamic endpoint.
          */
         SlateBuilder endpoint_builder = instance_builder.sub_slate("endpoint");
-        SacAbortIfNot(endpoint_builder.create("zero_targets_total",
+        FswAbortIfNot(endpoint_builder.create("zero_targets_total",
                                               shard_nonsync, slate_read_write,
                                               zero_targets_tok),
                       false);
-        SacAbortIfNot(endpoint_builder.create("target_index", shard_nonsync,
+        FswAbortIfNot(endpoint_builder.create("target_index", shard_nonsync,
                                               slate_read_write,
                                               target_index_tok),
                       false);
-        SacAbortIfNot(endpoint_builder.create("endpoint_created_at",
+        FswAbortIfNot(endpoint_builder.create("endpoint_created_at",
                                               shard_nonsync, slate_read_write,
                                               endpoint_created_at_tok),
                       false);
-        SacAbortIfNot(endpoint_builder.create("target_index_cooldown_s", 900.0,
+        FswAbortIfNot(endpoint_builder.create("target_index_cooldown_s", 900.0,
                                               shard_nonsync, slate_read_only,
                                               target_index_cooldown_s_tok),
                       false);
@@ -268,15 +268,15 @@ namespace Drone
         {
             SlateBuilder override_builder =
                 endpoint_builder.sub_slate("override");
-            SacAbortIfNot(override_builder.create("use", false, shard_nonsync,
+            FswAbortIfNot(override_builder.create("use", false, shard_nonsync,
                                                   slate_read_only,
                                                   use_override_tok),
                           false);
-            SacAbortIfNot(override_builder.create(
+            FswAbortIfNot(override_builder.create(
                               "force_use", false, shard_nonsync,
                               slate_read_only, force_use_override_tok),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 override_builder.create("port", override_port, shard_nonsync,
                                         slate_read_only, override_target.port),
                 false);
@@ -284,19 +284,19 @@ namespace Drone
              * The default override IP address is the ipv6 address of
              * cplane-server. [2620:134:b000::1:0:0]
              */
-            SacAbortIfNot(override_builder.create(
+            FswAbortIfNot(override_builder.create(
                               "ip.0", htonl(0x26200134), shard_nonsync,
                               slate_read_only, override_target.ip[0]),
                           false);
-            SacAbortIfNot(override_builder.create(
+            FswAbortIfNot(override_builder.create(
                               "ip.1", htonl(0xb0000000), shard_nonsync,
                               slate_read_only, override_target.ip[1]),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 override_builder.create("ip.2", htonl(0x1), shard_nonsync,
                                         slate_read_only, override_target.ip[2]),
                 false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 override_builder.create("ip.3", htonl(0x0), shard_nonsync,
                                         slate_read_only, override_target.ip[3]),
                 false);
@@ -307,7 +307,7 @@ namespace Drone
         SlateBuilder service_info_builder =
             dns_info_builder.sub_slate("service_target_info");
         SlateBuilder service_builder = service_info_builder.sub_slate(service);
-        SacAbortIfNot(service_builder.bind("occupied", num_targets_tok), false);
+        FswAbortIfNot(service_builder.bind("occupied", num_targets_tok), false);
         SlateBuilder targets_builder = service_builder.sub_slate("targets");
         /*
          * Initialize all the slate tokens for each of the targets.
@@ -316,14 +316,14 @@ namespace Drone
         {
             SlateBuilder target_builder =
                 targets_builder.sub_slate(std::to_string(t));
-            SacAbortIfNot(target_builder.bind("port", targets[t].port), false);
+            FswAbortIfNot(target_builder.bind("port", targets[t].port), false);
             /*
              * Initialize all the slate tokens for the IP address.
              */
             for (size_t dw = 0; dw < 4; dw++)
             {
                 SlateBuilder ip_builder = target_builder.sub_slate("ip");
-                SacAbortIfNot(
+                FswAbortIfNot(
                     ip_builder.bind(std::to_string(dw), targets[t].ip[dw]),
                     false);
             }

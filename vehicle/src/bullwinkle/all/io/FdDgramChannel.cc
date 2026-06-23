@@ -5,7 +5,7 @@
 #include "src/bullwinkle/all/io/FdDgramChannel.h"
 #include "src/bullwinkle/all/AutoReset.h"
 #include "src/bullwinkle/all/ReturnAccumulatorLatchFalse.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/bullwinkle/all/net.h"
 #include <unistd.h>
 namespace Drone
@@ -156,19 +156,19 @@ namespace Drone
                                    const bool is_nonblocking,
                                    const std::string &mode)
     {
-        SacAbortIfNot(_fes, false);
-        SacAbortIf(_fes->is_closed(), false);
-        SacAbortIf(fes, false);
+        FswAbortIfNot(_fes, false);
+        FswAbortIf(_fes->is_closed(), false);
+        FswAbortIf(fes, false);
         /*
          * Verify fd type.
          */
-        SacAbortIfEqInt(_fd_type, dgram_fd_none, false);
+        FswAbortIfEqInt(_fd_type, dgram_fd_none, false);
         /*
          * Verify mode string.
          */
         if (mode != "r" && mode != "w" && mode != "rw")
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(100, ": Allowed modes are 'r', 'w', 'rw', got '%s'\n",
                       mode.c_str());
             return false;
@@ -183,7 +183,7 @@ namespace Drone
          */
         if (can_read_flag)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 _fes->add_events(
                     fd_read_ev,
                     make_slot(*this, &FdDgramChannel::handle_fd_read)),
@@ -191,13 +191,13 @@ namespace Drone
         }
         if (can_write_flag)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 _fes->add_events(
                     fd_write_ev,
                     make_slot(*this, &FdDgramChannel::handle_fd_write)),
                 false);
         }
-        SacAbortIfNot(_fes->add_events(
+        FswAbortIfNot(_fes->add_events(
                           fd_close_ev,
                           make_slot(*this, &FdDgramChannel::handle_fd_close)),
                       false);
@@ -241,18 +241,18 @@ namespace Drone
     bool FdDgramChannel::get_address(sockaddr *const addr,
                                      socklen_t *const addr_len) const
     {
-        SacAbortIfNot(dgrams_avail(), false);
-        SacAbortIfNeqInt(dgram_fd_uconn_socket, fd_type, false);
+        FswAbortIfNot(dgrams_avail(), false);
+        FswAbortIfNeqInt(dgram_fd_uconn_socket, fd_type, false);
         const B2c dgram = output.get_b2c();
-        SacAbortIfNot(dgram.buf(), false);
-        SacAssert(dgram.len() >= sizeof(sockhead_t));
+        FswAbortIfNot(dgram.buf(), false);
+        FswAssert(dgram.len() >= sizeof(sockhead_t));
         sockhead_t head = {};
         memcpy(&head, dgram.buf(), sizeof(head));
         /*
          * Copy our sockaddr. Return false if the user can't fit
          * our sockaddr.
          */
-        SacAbortIfNotOpInt(*addr_len, >=, head.length, false);
+        FswAbortIfNotOpInt(*addr_len, >=, head.length, false);
         memcpy(addr, &head.addr, head.length);
         *addr_len = head.length;
         return true;
@@ -276,7 +276,7 @@ namespace Drone
     {
         if (is_empty())
             return true;
-        SacAbortIfNot(channel_clear(), false);
+        FswAbortIfNot(channel_clear(), false);
         /*
          * If we are closed and have just drained the channel, emit
          * a close signal.
@@ -287,7 +287,7 @@ namespace Drone
              * There's not a lot we can do if this fails. We've already
              * successfully closed the channel and cleared the data.
              */
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -383,20 +383,20 @@ namespace Drone
      */
     bool FdDgramChannel::commit_dataframe(DataFrame &frame)
     {
-        SacAbortIf(is_closed(), false);
+        FswAbortIf(is_closed(), false);
         if (dgram_fd_uconn_socket == fd_type)
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": A destination is required for unconnected sockets.\n");
             return false;
         }
-        SacAbortIfNot(frame.body.get_data_len() <= max_input_dgram_len, false);
+        FswAbortIfNot(frame.body.get_data_len() <= max_input_dgram_len, false);
         /*
          * Write zeroes into the header.
          */
-        SacAbortIfNot(frame.unmask(sizeof(sockhead_t)), false);
+        FswAbortIfNot(frame.unmask(sizeof(sockhead_t)), false);
         frame.header.fill_with_zeros(frame.header.space_left());
-        SacAbortIfNot(channel_commit_dataframe(frame), false);
+        FswAbortIfNot(channel_commit_dataframe(frame), false);
         return true;
     }
     /**
@@ -417,30 +417,30 @@ namespace Drone
                                              const sockaddr *const addr,
                                              const socklen_t addr_len)
     {
-        SacAbortIf(is_closed(), false);
-        SacAbortIfNot(addr, false);
-        SacAbortIf(0 == addr_len, false);
-        SacAbortIfNotOpInt(sizeof(sockhead_t::safe_sockaddr_t), >=, addr_len,
+        FswAbortIf(is_closed(), false);
+        FswAbortIfNot(addr, false);
+        FswAbortIf(0 == addr_len, false);
+        FswAbortIfNotOpInt(sizeof(sockhead_t::safe_sockaddr_t), >=, addr_len,
                            false);
         if (dgram_fd_uconn_socket != fd_type)
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": A destination is forbidden for connected sockets "
                      "and non-sockets.\n");
             return false;
         }
-        SacAbortIfNotOpInt(frame.body.get_data_len(), <=, max_input_dgram_len,
+        FswAbortIfNotOpInt(frame.body.get_data_len(), <=, max_input_dgram_len,
                            false);
         /*
          * Write the sockaddr into the header.
          */
-        SacAbortIfNot(frame.unmask(sizeof(sockhead_t)), false);
+        FswAbortIfNot(frame.unmask(sizeof(sockhead_t)), false);
         sockhead_t head;
         head.length = addr_len;
         memcpy(&head.addr, addr, addr_len);
-        SacAbortIfNot(frame.header.push_back((char *)&head, sizeof(head)),
+        FswAbortIfNot(frame.header.push_back((char *)&head, sizeof(head)),
                       false);
-        SacAbortIfNot(channel_commit_dataframe(frame), false);
+        FswAbortIfNot(channel_commit_dataframe(frame), false);
         return true;
     }
     /**
@@ -463,8 +463,8 @@ namespace Drone
         DataFrame &df = get_dataframe(data_len);
         if (df.body.space_left() < data_len)
             return false;
-        SacAbortIfNot(df.body.push_back(data, data_len), false);
-        SacAbortIfNot(commit_dataframe_to(df, addr, addr_len), false);
+        FswAbortIfNot(df.body.push_back(data, data_len), false);
+        FswAbortIfNot(commit_dataframe_to(df, addr, addr_len), false);
         return true;
     }
     /**
@@ -482,7 +482,7 @@ namespace Drone
     bool FdDgramChannel::write_to(const B2c &data, const sockaddr *const addr,
                                   const socklen_t addr_len)
     {
-        SacAbortIfNot(write_to(data.buf(), data.len(), addr, addr_len), false);
+        FswAbortIfNot(write_to(data.buf(), data.len(), addr, addr_len), false);
         return true;
     }
     /**
@@ -499,7 +499,7 @@ namespace Drone
         const B2c temp = output.get_b2c();
         if (NULL == temp.buf() || 0 == temp.len())
             return B2c(NULL, 0);
-        SacAssert(temp.len() >= sizeof(sockhead_t));
+        FswAssert(temp.len() >= sizeof(sockhead_t));
         return B2c(temp.buf() + sizeof(sockhead_t),
                    temp.len() - sizeof(sockhead_t));
     }
@@ -511,7 +511,7 @@ namespace Drone
     bool FdDgramChannel::clear_signals()
     {
         firewall_signal.clear();
-        SacAbortIfNot(DgramChannel::clear_signals(), false);
+        FswAbortIfNot(DgramChannel::clear_signals(), false);
         return true;
     }
     /**
@@ -524,8 +524,8 @@ namespace Drone
      */
     bool FdDgramChannel::pop_dgram()
     {
-        SacAbortIf(is_empty(), false);
-        SacAbortIfNot(channel_pop_dgram(), false);
+        FswAbortIf(is_empty(), false);
+        FswAbortIfNot(channel_pop_dgram(), false);
         has_popped = true;
         /*
          * If someone removes data from our channel, switch on
@@ -533,14 +533,14 @@ namespace Drone
          */
         if (!is_closed() && can_read_flag)
         {
-            SacAbortIfNot(fes->add_events(fd_read_ev), false);
+            FswAbortIfNot(fes->add_events(fd_read_ev), false);
         }
         /*
          * If we have just drained the channel, emit a close signal.
          */
         else if (is_drained())
         {
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -554,14 +554,14 @@ namespace Drone
      */
     bool FdDgramChannel::channel_commit_dataframe(DataFrame &frame)
     {
-        SacAbortIfNot(can_write_flag, false);
-        SacAbortIfNot(input.commit_dataframe(frame), false);
+        FswAbortIfNot(can_write_flag, false);
+        FswAbortIfNot(input.commit_dataframe(frame), false);
         /*
          * If someone wrote data to our channel, switch on write events
          * to start pushing it down the file descriptor.
          */
-        SacAbortIfNot(fes, false);
-        SacAbortIfNot(fes->add_events(fd_write_ev), false);
+        FswAbortIfNot(fes, false);
+        FswAbortIfNot(fes->add_events(fd_write_ev), false);
         return true;
     }
     /*
@@ -577,7 +577,7 @@ namespace Drone
          */
         if (!fes)
         {
-            SacAbortIfNot(input.clear(), false);
+            FswAbortIfNot(input.clear(), false);
             return true;
         }
         else if (fes->is_closed())
@@ -586,13 +586,13 @@ namespace Drone
              * Don't return just yet, we still need to clear
              * the fes.
              */
-            SacAbortIfNot(input.clear(), false);
+            FswAbortIfNot(input.clear(), false);
         }
         /*
          * Stop listening for read events. We only keep the fd open
          * to drain the input buffer.
          */
-        SacAbortIfNot(fes->remove_events(fd_read_ev), false);
+        FswAbortIfNot(fes->remove_events(fd_read_ev), false);
         /*
          * If there is still data left to flush to the descriptor, we have
          * to wait.
@@ -624,14 +624,14 @@ namespace Drone
      */
     bool FdDgramChannel::channel_clear()
     {
-        SacAbortIfNot(output.clear(), false);
+        FswAbortIfNot(output.clear(), false);
         /*
          * If someone removes data from our channel, switch on
          * read events to start consuming more from the fd.
          */
         if (!is_closed() && can_read_flag)
         {
-            SacAbortIfNot(fes->add_events(fd_read_ev), false);
+            FswAbortIfNot(fes->add_events(fd_read_ev), false);
         }
         return true;
     }
@@ -640,7 +640,7 @@ namespace Drone
      */
     bool FdDgramChannel::channel_pop_dgram()
     {
-        SacAbortIfNot(output.pop_dgram(), false);
+        FswAbortIfNot(output.pop_dgram(), false);
         return true;
     }
     /**
@@ -655,8 +655,8 @@ namespace Drone
      */
     bool FdDgramChannel::handle_fd_read(FdEventSink &_fes, FdEvent &fev)
     {
-        SacAbortIfNot(fes == &_fes, false);
-        SacAbortIfNot(fes->get_fd() == fev.fd, false);
+        FswAbortIfNot(fes == &_fes, false);
+        FswAbortIfNot(fes->get_fd() == fev.fd, false);
         /*
          * We reserve one more byte than we need in order to detect
          * truncated datagrams.
@@ -676,7 +676,7 @@ namespace Drone
          */
         if (output.space_left() < reserve_len)
         {
-            SacAbortIfNot(signal_read(), false);
+            FswAbortIfNot(signal_read(), false);
         }
         /*
          * Read at least once, but only keep reading until exhaustion if
@@ -694,7 +694,7 @@ namespace Drone
              */
             if (df.body.space_left() < reserve_len)
             {
-                SacAbortIfNot(fes->remove_events(fd_read_ev), false);
+                FswAbortIfNot(fes->remove_events(fd_read_ev), false);
                 break;
             }
             /*
@@ -702,7 +702,7 @@ namespace Drone
              */
             sockhead_t head = {};
             char *raw_head = df.get_raw();
-            SacAbortIfNot(raw_head, false);
+            FswAbortIfNot(raw_head, false);
             char *const body = df.get_raw() + sizeof(sockhead_t);
             const size_t bodylen = df.space_left_raw() - sizeof(sockhead_t);
             ssize_t retval = -1;
@@ -721,7 +721,7 @@ namespace Drone
                 /*
                  * Read from the fd.
                  */
-                retval = sx_recvfrom(fev.fd, body, bodylen, 0,
+                retval = fsw_recvfrom(fev.fd, body, bodylen, 0,
                                      (sockaddr *)&head.addr, &head.length);
                 /*
                  * If we were returned a sockaddr which is larger than we were
@@ -761,7 +761,7 @@ namespace Drone
             }
             else
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(100, ": unsupported socket type %d\n", (int)fd_type);
                 return false;
             }
@@ -770,7 +770,7 @@ namespace Drone
             {
                 if (is_fd_broken(retval, "FdDgramChannel read error"))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100, ": Read failed: size=%zu, fd=%d\n", bodylen,
                               fev.fd);
                     return false;
@@ -796,15 +796,15 @@ namespace Drone
              * If this is a socket, all nonnegative lengths (even 0) less
              * than the maximum are legitimate. Commit the bytes.
              */
-            SacAbortIfNot(df.commit_raw(sizeof(sockhead_t) + retval), false);
-            SacAbortIfNot(output.commit_dataframe(df), false);
+            FswAbortIfNot(df.commit_raw(sizeof(sockhead_t) + retval), false);
+            FswAbortIfNot(output.commit_dataframe(df), false);
             dgrams_read++;
             /*
              * If configured to only keep the last dgram, pop any other dgrams.
              */
             if (keep_only_last_dgram && output.dgrams_avail() > 1)
             {
-                SacAbortIfNot(output.pop_dgram(), false);
+                FswAbortIfNot(output.pop_dgram(), false);
             }
         }
         /*
@@ -816,7 +816,7 @@ namespace Drone
          */
         if (dgrams_read)
         {
-            SacAbortIfNot(signal_read(), false);
+            FswAbortIfNot(signal_read(), false);
         }
         /*
          * Return true in the blocking fd case.
@@ -839,16 +839,16 @@ namespace Drone
          * Set handling_write to true for the duration of this method
          * and automatically reset it back to false wherever we return.
          */
-        SacAbortIf(handling_write, false);
+        FswAbortIf(handling_write, false);
         AutoReset<bool> resetter(handling_write, true);
-        SacAbortIfNot(fes == &_fes, false);
-        SacAbortIfNot(fes->get_fd() == fev.fd, false);
+        FswAbortIfNot(fes == &_fes, false);
+        FswAbortIfNot(fes->get_fd() == fev.fd, false);
         /*
          * If we are empty, ask for more datagrams.
          */
         if (!is_closed() && input.empty())
         {
-            SacAbortIfNot(signal_write(), false);
+            FswAbortIfNot(signal_write(), false);
         }
         do
         {
@@ -860,7 +860,7 @@ namespace Drone
                  * We must have at least a header. If not, something went
                  * wrong in the read routine.
                  */
-                SacAssert(data.len() >= sizeof(sockhead_t));
+                FswAssert(data.len() >= sizeof(sockhead_t));
                 /*
                  * Compute head and body offsets.
                  */
@@ -874,7 +874,7 @@ namespace Drone
                     /*
                      * Write the datagram to the fd.
                      */
-                    retval = sx_sendto(fev.fd, body, bodylen, send_flags,
+                    retval = fsw_sendto(fev.fd, body, bodylen, send_flags,
                                        (sockaddr *)&head.addr, head.length);
                 }
                 else if (dgram_fd_conn_socket == fd_type ||
@@ -889,7 +889,7 @@ namespace Drone
                 }
                 else
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": unsupported socket type!\n");
                     return false;
                 }
@@ -940,7 +940,7 @@ namespace Drone
                             /*
                              * Note that inet_ntoa() uses a static buffer
                              */
-                            SacPrefix();
+                            FswPrefix();
                             dbnprintf(100,
                                       ": Write failed: size=%zu, fd=%d, "
                                       "dest=%s:%d\n",
@@ -952,7 +952,7 @@ namespace Drone
                                  head.length >= sizeof(sockaddr_in6) &&
                                  head.addr.in6.sin6_family == AF_INET6)
                         {
-                            SacPrefix();
+                            FswPrefix();
                             /*
                              * Note that inet_ntop() requires passing in a
                              * buffer, and can return null.
@@ -969,7 +969,7 @@ namespace Drone
                         }
                         else
                         {
-                            SacPrefix();
+                            FswPrefix();
                             dbnprintf(100, ": Write failed: size=%zu, fd=%d\n",
                                       bodylen, fev.fd);
                         }
@@ -977,8 +977,8 @@ namespace Drone
                     }
                     return true;
                 }
-                SacAbortIfNeq(retval, bodylen, false);
-                SacAbortIfNot(input.pop_dgram(), false);
+                FswAbortIfNeq(retval, bodylen, false);
+                FswAbortIfNot(input.pop_dgram(), false);
             }
             if (!is_closed())
             {
@@ -989,7 +989,7 @@ namespace Drone
                  */
                 if (input.dgrams_avail() < orig_dgrams_avail && !is_low_latency)
                 {
-                    SacAbortIfNot(signal_write(), false);
+                    FswAbortIfNot(signal_write(), false);
                 }
             }
             /*
@@ -1006,7 +1006,7 @@ namespace Drone
                 if (orig_dgrams_avail == 0 ||
                     (!is_low_latency && input.empty()))
                 {
-                    SacAbortIfNot(fes->remove_events(fd_write_ev), false);
+                    FswAbortIfNot(fes->remove_events(fd_write_ev), false);
                     break;
                 }
             }
@@ -1040,26 +1040,26 @@ namespace Drone
     {
         if (!input.empty())
         {
-            SacAbortIfNot(input.clear(), false);
+            FswAbortIfNot(input.clear(), false);
             if (is_closed())
             {
                 /*
                  * Call channel_close to close the fd and finish cleaning up.
                  */
-                SacAbortIfNot(channel_close(), false);
+                FswAbortIfNot(channel_close(), false);
             }
             else if (space_left())
             {
                 /*
                  * Request more data.
                  */
-                SacAbortIfNot(signal_write(), false);
+                FswAbortIfNot(signal_write(), false);
                 if (input.empty())
                 {
                     /*
                      * Switch off write events until we get more data.
                      */
-                    SacAbortIfNot(fes->remove_events(fd_write_ev), false);
+                    FswAbortIfNot(fes->remove_events(fd_write_ev), false);
                 }
             }
         }
@@ -1094,12 +1094,12 @@ namespace Drone
          * to emit a close signal. Thus we complain here, but do
          * not abort.
          */
-        SacIfNot2(fes == &_fes, ret);
+        FswIfNot2(fes == &_fes, ret);
         if (fes)
-            SacIfNot2(fes->get_fd() == fev.fd, ret);
-        SacIfNot2(channel_close(), ret);
+            FswIfNot2(fes->get_fd() == fev.fd, ret);
+        FswIfNot2(channel_close(), ret);
         if (is_drained())
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         return ret;
     }
 } /* end namespace Drone */

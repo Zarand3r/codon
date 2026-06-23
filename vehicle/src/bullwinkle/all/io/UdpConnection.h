@@ -20,7 +20,7 @@ namespace Drone
      * new socket if it goes down for any reason.
      *
      * This class supports IPv4 and IPv6, with the current caveats:
-     * - Multicast support for IPv6 has not been added yet and will Sac if
+     * - Multicast support for IPv6 has not been added yet and will Fsw if
      *   initialized so.
      */
     class UdpConnection : public DgramConnection

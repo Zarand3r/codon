@@ -5,7 +5,7 @@
 
 #include "src/bullwinkle/all/core/AlignedBuffer.h"
 
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 
 #include <cstdint>
 #include <cstring>
@@ -57,11 +57,11 @@ namespace Drone
                              char *&ptr,
                              char *&aligned_ptr)
     {
-        SacAbortIf(ptr, false);
-        SacAbortIf(aligned_ptr, false);
+        FswAbortIf(ptr, false);
+        FswAbortIf(aligned_ptr, false);
 
         ptr = new char[size + alignment - 1];
-        SacAbortIfNot(ptr, false);
+        FswAbortIfNot(ptr, false);
 
         aligned_ptr = reinterpret_cast<char *>(
             (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & -alignment);
@@ -161,7 +161,7 @@ namespace Drone
         /*
          * Alignment must be positive and a power of 2.
          */
-        SacAbortIfNot((alignment != 0) &&
+        FswAbortIfNot((alignment != 0) &&
                           ((alignment & -alignment) == alignment),
                       false);
 
@@ -169,7 +169,7 @@ namespace Drone
          * The current implementation always allocates a pre-aligned buffer to
          * keep the implementation simple.
          */
-        SacAbortIf(alignment > max_alignment, false);
+        FswAbortIf(alignment > max_alignment, false);
 
         /*
          * Do nothing if the buffer is already big enough.
@@ -194,7 +194,7 @@ namespace Drone
 
         char *new_ptr = nullptr;
         char *new_aligned_ptr = nullptr;
-        SacAbortIfNot(
+        FswAbortIfNot(
             alloc_buffer(new_total, max_alignment, new_ptr, new_aligned_ptr),
             false);
 
@@ -229,7 +229,7 @@ namespace Drone
         {
             char *new_ptr = nullptr;
             char *new_aligned_ptr = nullptr;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 alloc_buffer(length, max_alignment, new_ptr, new_aligned_ptr),
                 result);
 

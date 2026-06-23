@@ -5,7 +5,7 @@
 
 #include "src/bullwinkle/all/SlateLayout.h"
 
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 
 #include <limits>
 
@@ -58,18 +58,18 @@ namespace Drone
         element_id = slate_element_default;
         mem = NULL;
 
-        SacAbortIfEqUint64(value_size, 0U, false);
+        FswAbortIfEqUint64(value_size, 0U, false);
 
         /*
          * Alignment must be positive and a power of 2.
          */
-        SacAbortIfNot((alignment != 0) &&
+        FswAbortIfNot((alignment != 0) &&
                           ((alignment & -alignment) == alignment),
                       false);
-        SacAbortIf(alignment > AlignedBuffer::max_alignment, false);
-        SacAbortIf(alignment > value_size, false);
+        FswAbortIf(alignment > AlignedBuffer::max_alignment, false);
+        FswAbortIf(alignment > value_size, false);
 
-        SacAbortIfNot(shard < num_slate_shard_t, false);
+        FswAbortIfNot(shard < num_slate_shard_t, false);
 
         /*
          * Check that the access policy does not exceed the maximum for
@@ -90,7 +90,7 @@ namespace Drone
             const std::string shard_name =
                 slate_shard_t_sym.get(shard).substr(strlen("shard_"));
 
-            SacPrefix();
+            FswPrefix();
             dbnprintf(500,
                       ": Access policy '%s' exceeds the maximum policy "
                       "level of '%s' for shard '%s'. Consult "
@@ -127,12 +127,12 @@ namespace Drone
                 std::numeric_limits<slate_offset_t>::max();
             static_assert(AlignedBuffer::max_alignment + 1 <= max_offset);
 
-            SacAbortIfOpUint64(shard_size[shard],
+            FswAbortIfOpUint64(shard_size[shard],
                                >,
                                max_offset - AlignedBuffer::max_alignment + 1,
                                false);
             value_offset = (shard_size[shard] + alignment - 1) & -alignment;
-            SacDebugAssert(value_offset >= shard_size[shard]);
+            FswDebugAssert(value_offset >= shard_size[shard]);
             free_offset = shard_size[shard];
             free_size = value_offset - free_offset;
 
@@ -140,12 +140,12 @@ namespace Drone
              * Grow the shard and make sure it does not overflow.
              */
 #if __SIZEOF_SIZE_T__ > 4
-            SacAbortIfOpUint64(value_size, >, max_offset, false);
+            FswAbortIfOpUint64(value_size, >, max_offset, false);
 #endif
             shard_size[shard] =
                 static_cast<slate_offset_t>(value_offset + value_size);
-            SacAbortIfOpUint64(value_offset, >=, shard_size[shard], false);
-            SacAbortIfNot(initial_values[shard].ensure(shard_size[shard],
+            FswAbortIfOpUint64(value_offset, >=, shard_size[shard], false);
+            FswAbortIfNot(initial_values[shard].ensure(shard_size[shard],
                                                        alignment),
                           false);
         }
@@ -157,7 +157,7 @@ namespace Drone
          */
         if (free_size)
         {
-            SacAbortIfNot(free_size < AlignedBuffer::max_alignment, false);
+            FswAbortIfNot(free_size < AlignedBuffer::max_alignment, false);
             slate_offset_t size = 1;
             while (size <= free_size)
             {
@@ -178,13 +178,13 @@ namespace Drone
              * counting up in powers of two (moving from "less aligned" to "more
              * aligned" offsets).
              */
-            SacAbortIfNeqUint64(free_size, 0, false);
+            FswAbortIfNeqUint64(free_size, 0, false);
         }
 
         /*
          * Create and register the element.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             add_element_and_build_id(
                 path,
                 SlateElementMetadata(type_id,
@@ -235,28 +235,28 @@ namespace Drone
                                      const slate_subsystem_id_t subsystem_id,
                                      slate_element_t &view_element_id)
     {
-        SacAbortIfEqUint64(value_size, 0U, false);
+        FswAbortIfEqUint64(value_size, 0U, false);
 
         /*
          * Alignment must be positive and a power of 2.
          */
-        SacAbortIfNot((alignment != 0) &&
+        FswAbortIfNot((alignment != 0) &&
                           ((alignment & -alignment) == alignment),
                       false);
-        SacAbortIf(alignment > AlignedBuffer::max_alignment, false);
+        FswAbortIf(alignment > AlignedBuffer::max_alignment, false);
 
         /*
          * Look up parent element.
          */
         std::string_view parent_path;
         const SlateElementMetadata *parent_metadata;
-        SacAbortIfNot(get_element(parent_id,
+        FswAbortIfNot(get_element(parent_id,
                                   parent_type_id,
                                   parent_path,
                                   parent_metadata),
                       false);
 
-        SacMsgAbortIf(
+        FswMsgAbortIf(
             idx_to_validator.count(slate_id_index(parent_id)) &&
                 parent_metadata->access_policy > slate_read_only,
             false,
@@ -269,18 +269,18 @@ namespace Drone
             int(parent_path.size()),
             parent_path.data());
 
-        SacAbortIfOpUint64(element_offset,
+        FswAbortIfOpUint64(element_offset,
                            >
                            , parent_metadata->value_size, false);
-        SacAbortIfOpUint64(value_size, >, parent_metadata->value_size, false);
-        SacAbortIfOpUint64(element_offset + value_size,
+        FswAbortIfOpUint64(value_size, >, parent_metadata->value_size, false);
+        FswAbortIfOpUint64(element_offset + value_size,
                            >
                            , parent_metadata->value_size, false);
 
         /*
          * Verify alignment is compatible with parent's alignment.
          */
-        SacMsgAbortIf(
+        FswMsgAbortIf(
             (parent_metadata->value_offset + element_offset) & (alignment - 1),
             false,
             500,
@@ -301,7 +301,7 @@ namespace Drone
          * Copy the access policy the parent. Note that the parent cannot have a
          * validator, which is checked above.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             add_element_and_build_id(
                 path,
                 SlateElementMetadata(type_id,
@@ -343,13 +343,13 @@ namespace Drone
                                   std::string_view &path,
                                   const SlateElementMetadata *&metadata) const
     {
-        SacAbortIfNot(slate_id_is_valid(element_id), false);
-        SacAbortIfEqUint64(type_id, slate_type_invalid, false);
+        FswAbortIfNot(slate_id_is_valid(element_id), false);
+        FswAbortIfEqUint64(type_id, slate_type_invalid, false);
 
         const slate_index_t idx = slate_id_index(element_id);
         const SlatePathMap::const_iterator it = elements.id_to_iterator(idx);
-        SacAbortIf(it == elements.end(), false);
-        SacMsgAbortIfNot(it->second.type_id == type_id,
+        FswAbortIf(it == elements.end(), false);
+        FswMsgAbortIfNot(it->second.type_id == type_id,
                          false,
                          200,
                          "Could not find Slate element ID 0x%016llx with type "
@@ -375,7 +375,7 @@ namespace Drone
     {
         const auto i = elements.find(path);
 
-        SacMsgAbortIf(i == elements.end(),
+        FswMsgAbortIf(i == elements.end(),
                       false,
                       500,
                       "Element '%.*s' does not exist.",
@@ -399,7 +399,7 @@ namespace Drone
                                      const slate_type_t type_id,
                                      slate_element_t &element_id) const
     {
-        SacAbortIfNot(get_element_id(path, type_id, slate_private, element_id),
+        FswAbortIfNot(get_element_id(path, type_id, slate_private, element_id),
                       false);
         return true;
     }
@@ -424,21 +424,21 @@ namespace Drone
         element_id = slate_element_default;
 
         const SlateElementMetadata *metadata = nullptr;
-        SacAbortIfNot(get_element(path, metadata), false);
+        FswAbortIfNot(get_element(path, metadata), false);
 
         if (metadata->type_id != type_id)
         {
             const slate_type_info_t *actual_type_info = nullptr;
-            SacAbortIfNot(slate_type_info_utils::get_type_info(
+            FswAbortIfNot(slate_type_info_utils::get_type_info(
                               metadata->type_id, actual_type_info),
                           false);
 
             const slate_type_info_t *expected_type_info = nullptr;
-            SacAbortIfNot(slate_type_info_utils::get_type_info(
+            FswAbortIfNot(slate_type_info_utils::get_type_info(
                               type_id, expected_type_info),
                           false);
 
-            SacPrefix();
+            FswPrefix();
             dbnprintf(500,
                       ": Element '%s' is not the requested type. Expected "
                       "%hu (%s), got %hu (%s)\n",
@@ -450,7 +450,7 @@ namespace Drone
             return false;
         }
 
-        SacAbortIfNot(
+        FswAbortIfNot(
             build_element_id(path, *metadata, access_elevation, element_id),
             false);
         return true;
@@ -477,14 +477,14 @@ namespace Drone
     {
         element_id = slate_element_default;
         SlatePathMap::const_iterator it = elements.find(path);
-        SacAbortIf(it == elements.end(), false);
+        FswAbortIf(it == elements.end(), false);
         const slate_index_t idx = elements.iterator_to_id(it);
 
         const slate_elem_access_t access =
             std::max(metadata.access_policy, access_elevation);
 
         slate_element_t id;
-        SacAbortIfNot(slate_id_buildup(id,
+        FswAbortIfNot(slate_id_buildup(id,
                                        false /* may_write */,
                                        false /* has_vaidator */,
                                        metadata.shard,
@@ -496,7 +496,7 @@ namespace Drone
         switch (access)
         {
         case slate_private:
-            SacPrefix();
+            FswPrefix();
             dbnprintf(500,
                       ": Element '%.*s' is private.\n",
                       int(path.size()),
@@ -504,7 +504,7 @@ namespace Drone
             return false;
 
         case slate_read_only:
-            SacAbortIfNot(slate_id_buildup(element_id,
+            FswAbortIfNot(slate_id_buildup(element_id,
                                            false,
                                            has_validator,
                                            metadata.shard,
@@ -514,7 +514,7 @@ namespace Drone
             return true;
 
         case slate_read_write:
-            SacAbortIfNot(slate_id_buildup(element_id,
+            FswAbortIfNot(slate_id_buildup(element_id,
                                            true,
                                            has_validator,
                                            metadata.shard,
@@ -524,7 +524,7 @@ namespace Drone
             return true;
 
         default:
-            SacPrefix();
+            FswPrefix();
             dbnprintf(500,
                       ": Element '%.*s' invalid access policy.\n",
                       int(path.size()),
@@ -551,7 +551,7 @@ namespace Drone
 
         std::string_view path;
         const SlateElementMetadata *metadata;
-        SacAbortIfNot(get_element(element_id, type_id, path, metadata), false);
+        FswAbortIfNot(get_element(element_id, type_id, path, metadata), false);
 
         access_policy = metadata->access_policy;
 
@@ -572,7 +572,7 @@ namespace Drone
         type_id = slate_type_invalid;
 
         const SlateElementMetadata *metadata = nullptr;
-        SacAbortIfNot(get_element(path, metadata), false);
+        FswAbortIfNot(get_element(path, metadata), false);
 
         type_id = metadata->type_id;
 
@@ -591,11 +591,11 @@ namespace Drone
     bool SlateLayout::get_element_path(const slate_element_t element_id,
                                        std::string_view &path) const
     {
-        SacAbortIfNot(slate_id_is_valid(element_id), false);
+        FswAbortIfNot(slate_id_is_valid(element_id), false);
 
         const slate_index_t idx = slate_id_index(element_id);
         const SlatePathMap::const_iterator it = elements.id_to_iterator(idx);
-        SacAbortIf(it == elements.end(), false);
+        FswAbortIf(it == elements.end(), false);
         path = it->first;
 
         return true;
@@ -618,7 +618,7 @@ namespace Drone
                                              std::string_view &path) const
     {
         const SlateElementMetadata *metadata;
-        SacAbortIfNot(get_element(element_id, type_id, path, metadata), false);
+        FswAbortIfNot(get_element(element_id, type_id, path, metadata), false);
 
         return true;
     }
@@ -641,7 +641,7 @@ namespace Drone
 
         std::string_view path;
         const SlateElementMetadata *metadata;
-        SacAbortIfNot(get_element(element_id, type_id, path, metadata), false);
+        FswAbortIfNot(get_element(element_id, type_id, path, metadata), false);
 
         data =
             B2c(initial_values[metadata->shard].data() + metadata->value_offset,
@@ -743,7 +743,7 @@ namespace Drone
     bool
     SlateLayout::get_shard_size(const slate_shard_t shard, size_t &size) const
     {
-        SacAbortIfNot(shard < num_slate_shard_t, false);
+        FswAbortIfNot(shard < num_slate_shard_t, false);
 
         size = shard_size[shard];
 
@@ -780,7 +780,7 @@ namespace Drone
     {
         std::string_view result;
 
-        SacMsgAbortIf(_path.empty(),
+        FswMsgAbortIf(_path.empty(),
                       result,
                       500,
                       "Cannot create element '%.*s', it is reserved as the "
@@ -788,14 +788,14 @@ namespace Drone
                       int(_path.size()),
                       _path.data());
 
-        SacAbortIfNot(validate_slate_path(_path), result);
+        FswAbortIfNot(validate_slate_path(_path), result);
 
         /*
          * Allocate memory for the Slate path and initialize std::string_view.
          * The pointed memory will be cleaned up in the destructor.
          */
         char *ptr = (char *)string_pool.allocate(_path.size(), 1);
-        SacAbortIfNot(ptr, result);
+        FswAbortIfNot(ptr, result);
         memcpy(ptr, _path.data(), _path.size());
 
         return std::string_view(ptr, _path.size());
@@ -819,7 +819,7 @@ namespace Drone
                                           slate_element_t &element_id)
     {
         const auto copied_path = allocate_path(path);
-        SacAbortIf(copied_path.empty(), false);
+        FswAbortIf(copied_path.empty(), false);
 
         dbvnprintf(4,
                    250,
@@ -832,7 +832,7 @@ namespace Drone
          */
         const auto &[it, inserted] =
             elements.insert(std::make_pair(copied_path, std::move(metadata)));
-        SacMsgAbortIfNot(inserted,
+        FswMsgAbortIfNot(inserted,
                          false,
                          500,
                          "Element '%.*s' already exists.\n",
@@ -845,21 +845,21 @@ namespace Drone
          * the static shard.
          */
         slate_element_t id;
-        SacAbortIfNot(slate_id_buildup(id,
+        FswAbortIfNot(slate_id_buildup(id,
                                        metadata.shard != shard_static,
                                        !validator.is_noop(),
                                        metadata.shard,
                                        metadata.value_offset,
                                        idx),
                       false);
-        SacAbortIfNot(slate_id_is_valid(id), false);
+        FswAbortIfNot(slate_id_is_valid(id), false);
 
         /*
          * Register the validator.
          */
         if (!validator.is_noop())
         {
-            SacAbortIfNot(idx_to_validator.emplace(idx, validator).second,
+            FswAbortIfNot(idx_to_validator.emplace(idx, validator).second,
                           false);
         }
 

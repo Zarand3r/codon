@@ -155,7 +155,7 @@ the build/test harness for everything after.
 - A build smoke test: the L0 `cc_library` compiles; **an include-resolution test**
   (a script) asserts 0 unresolved internal includes *within L0*.
 
-**Implement (Green):** `core/{sac,drone_types,sxtime,util}.h`, `hash/{Hash128,xxh}.h`,
+**Implement (Green):** `core/{fsw,drone_types,fswtime,util}.h`, `hash/{Hash128,xxh}.h`,
 `static_vector.h`, `runtime.h` (annotation macros), real `B2`/`B2c`, `enum/auto_enum.h`
 + the codegen for `*.enum.h`, BUILD targets. Fix the 18 path-mismatch include roots.
 
@@ -163,7 +163,7 @@ the build/test harness for everything after.
 primitive tests green.
 
 **Extension check:** every macro/type traces to a present usage site (e.g.
-`SacAbortIfNot` in `Slate.cc:65`, `UINT8` in `SlateCombiner.cc:281`). The enum members
+`FswAbortIfNot` in `Slate.cc:65`, `UINT8` in `SlateCombiner.cc:281`). The enum members
 come from present usage (`num_slate_shard_t==7`, etc.) — do not add enum values no
 call site uses.
 
