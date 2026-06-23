@@ -27,7 +27,7 @@ namespace Drone
           memory(_memory),
           last_slate_default_token_count(0)
      {
-          SacAssert(memory);
+          FswAssert(memory);
      }
 
      /**
@@ -62,15 +62,15 @@ namespace Drone
       */
      bool Slate::roll_frame()
      {
-          SacAbortIfNot(memory, false);
-          SacAbortIfNot(memory->roll_frame(), false);
+          FswAbortIfNot(memory, false);
+          FswAbortIfNot(memory->roll_frame(), false);
           
           /**
            * Complain if unbound tokens have suddenly appeared. 
            */
           if (_slate_deafult_token_count > last_slate_default_token_count)
           {
-               SacPrefix();
+               FswPrefix();
                dbnprintf(200,
                          ": WARNING %zu leaked token(s) detected!\n",
                          _slate_default_token_count);
@@ -90,8 +90,8 @@ namespace Drone
       */
      bool Slate::get_shard_memory(const slate_shard_t shard, B2c &mem) const
      {
-          SacAbortIfNot(memory, false);
-          SacAbortIfNot(memory->get_shard_memory(shard, mem), false);
+          FswAbortIfNot(memory, false);
+          FswAbortIfNot(memory->get_shard_memory(shard, mem), false);
           return true;
      }
 
@@ -105,8 +105,8 @@ namespace Drone
       */
      bool Slate::get_shard_memory(const slate_shard_t shard, B2 &mem)
      {
-          SacAbortIfNot(memory, false);
-          SacAbortIfNot(memory->get_shard_memory(shard, mem), false);
+          FswAbortIfNot(memory, false);
+          FswAbortIfNot(memory->get_shard_memory(shard, mem), false);
           return true;
      }
 
@@ -120,8 +120,8 @@ namespace Drone
       */
      bool Slate::set_shard_memory(const slate_shard_t shard, const B2c &mem)
      {
-          SacAbortIfNot(memory, false);
-          SacAbortIfNot(memory->set_shard_memory(shard, mem), false);
+          FswAbortIfNot(memory, false);
+          FswAbortIfNot(memory->set_shard_memory(shard, mem), false);
           return true;
      }
 
@@ -136,7 +136,7 @@ namespace Drone
      bool
      Slate::compute_hash(const slate_shard_t shard, UINT64 &shard_hash) const
      {
-          SacAbortIfNot(memory, false);
+          FswAbortIfNot(memory, false);
           
           if (memory->is_shard_empty(shard))
           {
@@ -146,11 +146,11 @@ namespace Drone
 
           B2c shard_memory;
           Hash128 shard_layout_hash;
-          SacAbortIfNot(memory->get_shard_memory(shard, shard_memory), false);
-          SacAbortIfNot(memory->get_shard_layout_hash(shard, shard_layout_hash),
+          FswAbortIfNot(memory->get_shard_memory(shard, shard_memory), false);
+          FswAbortIfNot(memory->get_shard_layout_hash(shard, shard_layout_hash),
                         false);
 
-          SacAbortIfNot(shard_memory.buf(), false);
+          FswAbortIfNot(shard_memory.buf(), false);
           const Hash128 hash = digest_xxh128(shard_memory.buf(),
                                              shard_memory.len(),
                                              shard_layout_hash /* seed */);
@@ -179,18 +179,18 @@ namespace Drone
                                 shard_delta_v &deltas,
                                 const int max_deltas) const
      {
-          SacAbortIfNot(memory, false);
+          FswAbortIfNot(memory, false);
           if (memory->is_shard_empty(shard) && mem1.len() == 0 && mem2.len() == 0)
           {
                /**
                 * Similarly to SlateMemory::compute_shard_deltas(), return false
                 * if deltas array is not empty.
                 */
-               SacAbortIfNot(deltas.empty(), false);
+               FswAbortIfNot(deltas.empty(), false);
                return true;
           }
           
-          SacAbortIfNot(
+          FswAbortIfNot(
                memory->compute_shard_deltas(shard, mem1, mem2, deltas, max_deltas),
                false);
 

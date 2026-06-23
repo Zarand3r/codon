@@ -61,7 +61,7 @@ the Slate *is* the layout; get it dense and pointer-free first.
   contended words to kill false sharing.
 - **Branchless on unpredictable, data-dependent hot branches; explicit failure
   signals.** (*control_flow_and_branchless.md*.) Prefer `Result`/`[[nodiscard]] bool`
-  (the repo's `SacAbortIfNot`/`result_t` idiom) over exceptions; no exceptions for
+  (the repo's `FswAbortIfNot`/`result_t` idiom) over exceptions; no exceptions for
   control flow.
 - **Ownership is visible in the type.** (*SKILL.md*; the repo's `Handle<T>` =
   shared, `SlateBuilder` value = build handle, `B2c` = borrowed const span,
@@ -92,7 +92,7 @@ this order. "(sat)" marks layers with satellite-specific content needing a drone
 replacement (Track B, §6).
 
 ```
-L0  Core primitives        sac, drone_types, sxtime, util, Hash128/xxh, static_vector,
+L0  Core primitives        fsw, drone_types, fswtime, util, Hash128/xxh, static_vector,
                            B2/B2c (real), runtime.h macros, enum/auto_enum + *.enum.h, BUILD
 L1  Slate completion       SlateElement, SlatePathMap, SlateBuilderStore, slate_info,
                            EnumRegistry, ReflectionManager, SlateDump
@@ -133,16 +133,16 @@ tie-in. Full call-site evidence exists for every signature (reverse-engineered f
 construction/dispatch sites in the present code). Path is the missing include path.
 
 ### L0 — Core primitives
-- **`core/sac.h`** — assertion / early-return / debug-print vocabulary used in every
-  function. *`SacAbortIfNot(cond,ret)`, `SacAbortIf`, `SacMsgAbortIfNot`, typed
-  `SacAbortIfNeq*`/`SacAbortOutsideRange*`, predicate `SacIf*`, `SacAssert`/
-  `SacDebugAssert` (compiled out in flight), `dbnprintf`/`dbvnprintf`, `SacPrefix`,
-  `report_abort`, `SacStackFrame::get_current_stack_frame()`.* — infrastructure for
+- **`core/fsw.h`** — assertion / early-return / debug-print vocabulary used in every
+  function. *`FswAbortIfNot(cond,ret)`, `FswAbortIf`, `FswMsgAbortIfNot`, typed
+  `FswAbortIfNeq*`/`FswAbortOutsideRange*`, predicate `FswIf*`, `FswAssert`/
+  `FswDebugAssert` (compiled out in flight), `dbnprintf`/`dbvnprintf`, `FswPrefix`,
+  `report_abort`, `FswStackFrame::get_current_stack_frame()`.* — infrastructure for
   "validate every message, fail closed" isolation.
 - **`core/drone_types.h`** — fixed-width typedefs + copy-suppression. *`UINT8..64`,
-  `INT8..64`, `uint`, `SX_DISALLOW_COPY_AND_ASSIGN`.* — pointer-free fixed layout.
-- **`core/sxtime.h`** — time vocabulary. *`nano_t` (signed 64-bit ns), `nano_t_min`/
-  `nano_t_max`, `get_rel_time()`, `sxsleep(nano_t)`.* — control cadence (Time
+  `INT8..64`, `uint`, `FSW_DISALLOW_COPY_AND_ASSIGN`.* — pointer-free fixed layout.
+- **`core/fswtime.h`** — time vocabulary. *`nano_t` (signed 64-bit ns), `nano_t_min`/
+  `nano_t_max`, `get_rel_time()`, `fswsleep(nano_t)`.* — control cadence (Time
   alignment).
 - **`core/util.h`** — `MonotonicPool` (build-phase arena: `allocate(size,align)`,
   `release()`), `join(str_v)`, container typedefs (`str_v`, `str_s`, …). — arena
@@ -228,7 +228,7 @@ construction/dispatch sites in the present code). Path is the missing include pa
   1 s→32 s jittered; `timer_sig`, `connect_sig`). — auto-reconnect.
 - **`net.h`/`sock_util.h`/`multicast_utils.h`/`net_multicast.h`/`net_interface_utils.h`/
   `Crc.h`** — protocol constants (`udp_proto`/`tcp_proto`, `fd_*_ev`), addr/socket
-  syscall wrappers (`sx_recvfrom/sendto`, keepalive, bufsizes), multicast group ops,
+  syscall wrappers (`fsw_recvfrom/sendto`, keepalive, bufsizes), multicast group ops,
   CRC. — transport substrate.
 
 ### L3 — Naming + config
@@ -364,7 +364,7 @@ construction/dispatch sites in the present code). Path is the missing include pa
   constant. — time-domain telemetry coherence.
 - **`time_slave_preload.h`** — sim hooks `time_slave_control_begin/end()`,
   `time_slave_ds_dispatch_begin(is_synced)`. — SIL timing; bracket the synced step
-  and the no-input-sync `sxsleep`.
+  and the no-input-sync `fswsleep`.
 - **`AdcScaler.h`** — raw→engineering scaling. `init(raw, scaled[, median], boards,
   bank_select[, exclude])`, `read_scaled()` (step 5), static `select_all_banks`. Per
   string: `adc_scaler_shared_{a,b,c}` scale each `slate_shared.{a,b,c}`. — input
@@ -424,7 +424,7 @@ are binary (a grep returns empty / a test exits 0 / a number meets a bound), per
 `data-oriented-design` measurement protocol and the existing `scripts/check.sh`.
 
 ### M0 — Build spine + core primitives (L0)
-- **Do:** author `core/{sac,drone_types,sxtime,util}.h`, `hash/{Hash128,xxh}.h`,
+- **Do:** author `core/{fsw,drone_types,fswtime,util}.h`, `hash/{Hash128,xxh}.h`,
   `static_vector.h`, `runtime.h` (annotation macros, possibly no-ops), real `B2`/`B2c`,
   the enum codegen + the present `*.enum.h` set; fix the **include-root layout** (the
   18 path-mismatch includes — decide one include root and move/rename files or set

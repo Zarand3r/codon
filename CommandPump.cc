@@ -3,7 +3,7 @@
  * @date   2018-09-05
  */
 #include "src/flight/sat/all/fleet_client/command/CommandPump.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 namespace Drone
 {
     const std::string CommandPump::accepted_seq_num_name = "accepted_seq_num";
@@ -30,18 +30,18 @@ namespace Drone
     bool CommandPump::init(SlateBuilder &feedback_builder,
                            SlateBuilder &builder)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(
             feedback_builder.bind(accepted_seq_num_name, accepted_seq_num_tok),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             feedback_builder.bind(rejected_seq_num_name, rejected_seq_num_tok),
             false);
-        SacAbortIfNot(builder.create("command_pump.last_accepted_seq_num", 0,
+        FswAbortIfNot(builder.create("command_pump.last_accepted_seq_num", 0,
                                      shard_nonsync, slate_read_only,
                                      last_accepted_seq_num_tok),
                       false);
-        SacAbortIfNot(builder.create("command_pump.last_rejected_seq_num", 0,
+        FswAbortIfNot(builder.create("command_pump.last_rejected_seq_num", 0,
                                      shard_nonsync, slate_read_only,
                                      last_rejected_seq_num_tok),
                       false);
@@ -54,13 +54,13 @@ namespace Drone
      */
     nano_t CommandPump::dispatch(nano_t control_time)
     {
-        SacAbortIfNot(is_init, nano_t_max);
+        FswAbortIfNot(is_init, nano_t_max);
         if (slate[last_accepted_seq_num_tok] != slate[accepted_seq_num_tok] ||
             slate[last_rejected_seq_num_tok] != slate[rejected_seq_num_tok])
         {
             dbnprintf(100, "command pump: accepted: %u rejected %u\n",
                       slate[accepted_seq_num_tok], slate[rejected_seq_num_tok]);
-            SacIfNot(start_pump(slate[accepted_seq_num_tok],
+            FswIfNot(start_pump(slate[accepted_seq_num_tok],
                                 slate[rejected_seq_num_tok]));
             slate[last_accepted_seq_num_tok] = slate[accepted_seq_num_tok];
             slate[last_rejected_seq_num_tok] = slate[rejected_seq_num_tok];

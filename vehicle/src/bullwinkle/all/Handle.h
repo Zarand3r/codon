@@ -6,7 +6,7 @@
 #ifndef HANDLE_H
 #define HANDLE_H
 
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 
 #include <functional>
 #include <memory>
@@ -73,7 +73,7 @@ namespace Drone
         static Handle create(Ts &&...args)
         {
             Handle res;
-            SacAbortIfNot(res.assume_ownership(
+            FswAbortIfNot(res.assume_ownership(
                               new (std::nothrow) T(std::forward<Ts>(args)...)),
                           Handle());
 
@@ -153,7 +153,7 @@ namespace Drone
              * expensive. We still want to get a nice stack trace in debug
              * builds.
              */
-            SacDebugAssert(internal);
+            FswDebugAssert(internal);
 
             return *internal;
         }
@@ -170,7 +170,7 @@ namespace Drone
              * expensive. We still want to get a nice stack trace in debug
              * builds.
              */
-            SacDebugAssert(internal);
+            FswDebugAssert(internal);
 
             return internal.get();
         }
@@ -325,7 +325,7 @@ namespace Drone
      */
 
     /**
-     * Neq function for Handle<> used by Sac(Abort)IfNeq.
+     * Neq function for Handle<> used by Fsw(Abort)IfNeq.
      *
      * @tparam v1_t The first Handle<>'s type.
      * @tparam v2_t The second Handle<>'s type.
@@ -335,22 +335,22 @@ namespace Drone
      * @param value_2 The second value.
      * @param str_1 String representation of the first value.
      * @param str_2 String representation of the second value.
-     * @param file The file the Sac is in.
-     * @param line The line number of the Sac.
+     * @param file The file the Fsw is in.
+     * @param line The line number of the Fsw.
      *
      * @return True if value_1 != value_2.
      */
     template <typename v1_t, typename v2_t>
-    inline bool sac_if_neq(const char *abort_type, const Handle<v1_t> &value_1,
+    inline bool fsw_if_neq(const char *abort_type, const Handle<v1_t> &value_1,
                            const Handle<v2_t> &value_2, const char *str_1,
                            const char *str_2, const char *file, int line)
     {
         if (value_1 != value_2)
         {
-            SacOnVerbose(Drone::report_abort(abort_type, str_1, str_2, file,
+            FswOnVerbose(Drone::report_abort(abort_type, str_1, str_2, file,
                                               line, false));
-            SacOnVerbose(SacArg((UINT64)value_1.get()));
-            SacOnVerbose(SacArg((UINT64)value_2.get()));
+            FswOnVerbose(FswArg((UINT64)value_1.get()));
+            FswOnVerbose(FswArg((UINT64)value_2.get()));
 
             return true;
         }

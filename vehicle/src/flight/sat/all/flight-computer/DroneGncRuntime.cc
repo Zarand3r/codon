@@ -47,15 +47,15 @@ namespace Drone
      */
     bool DroneGncFtRuntime::init_runtime_pre_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Initialize the AlertManagerRuntime.
          */
-        SacAbortIf(alert_mgr_runtime, false);
-        SacAbortIfNot(
+        FswAbortIf(alert_mgr_runtime, false);
+        FswAbortIfNot(
             alert_mgr_runtime.assume_ownership(new AlertManagerRuntime()),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_mgr_runtime->init(configs, alert_info_groups_config_key,
                                     alert_info_alerts_config_key,
                                     slate_control_read_only, *telem_relay),
@@ -64,7 +64,7 @@ namespace Drone
          * Create the alert buffer manager. This needs to bind to control
          * elements created by AlertManagerControl.
          */
-        SacAbortIfNot(create_alert_buffer_manager(), false);
+        FswAbortIfNot(create_alert_buffer_manager(), false);
         /*
          * Bind to the element in the control slate that determines whether
          * SlateSyncer should enable hotsyncing with only one peer connected.
@@ -74,7 +74,7 @@ namespace Drone
          * This is currently only provided for testing purposes and should not
          * be used due to the bug identified in TRAC-28869.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_control_read_only.bind("satfc1.single_peer_hotsync_enabled",
                                          single_peer_hotsync_enabled_tok),
             false);
@@ -82,7 +82,7 @@ namespace Drone
          * Create the element in the control slate that determines whether
          * SlateSyncer should disable transfer.
          */
-        SacAbortIfNot(slate_control_sync_only.create(
+        FswAbortIfNot(slate_control_sync_only.create(
                           "force_disable_transfer", false, shard_sync,
                           slate_read_write, force_disable_transfer_tok),
                       false);
@@ -95,13 +95,13 @@ namespace Drone
      */
     bool DroneGncFtRuntime::init_runtime_post_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Enable data transfer and hotsync.
          */
-        SacAbortIfNot(slate_syncer->enable_transfer(), false);
-        SacAbortIfNot(slate_syncer->enable_hotsync(), false);
-        SacAbortIfNot(
+        FswAbortIfNot(slate_syncer->enable_transfer(), false);
+        FswAbortIfNot(slate_syncer->enable_hotsync(), false);
+        FswAbortIfNot(
             alert_mgr_runtime->finalize(smoketest_config, *telem_relay), false);
         return true;
     }
@@ -142,7 +142,7 @@ namespace Drone
             FtBootstrapper::establish_input_sync,
             FtBootstrapper::no_output_sync, FtBootstrapper::use_slate_syncer,
             delays);
-        SacAbortIfNot(_bootstrapper, false);
+        FswAbortIfNot(_bootstrapper, false);
         return true;
     }
     /**
@@ -158,7 +158,7 @@ namespace Drone
         Handle<ExternalCommandTimeFilter> &time_filter,
         Handle<ExternalCommandFilter> &cmd_filter)
     {
-        SacAbortIfNot(
+        FswAbortIfNot(
             time_filter.assume_ownership(new ExternalCommandTimeFilterNull),
             false);
         /*
@@ -168,16 +168,16 @@ namespace Drone
          * sufficiently configurable through config and isn't really vehicle
          * specific.
          */
-        SacAbortIfNot(command_filter_nonsynced.assume_ownership(
+        FswAbortIfNot(command_filter_nonsynced.assume_ownership(
                           new CommonCommandFilter("command_filter_nonsynced")),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             command_filter_nonsynced->init_storage(
                 configs, slate_local, shard_nonsync, true /* enable_at_init */),
             false);
         Handle<ExternalCommandFilterCommon> common_cmd_filter(
             new ExternalCommandFilterCommon);
-        SacAbortIfNot(common_cmd_filter->init(command_filter_nonsynced), false);
+        FswAbortIfNot(common_cmd_filter->init(command_filter_nonsynced), false);
         cmd_filter = common_cmd_filter;
         return true;
     }
@@ -198,13 +198,13 @@ namespace Drone
          * case we have to buffer.
          */
         constexpr size_t num_dgrams = 10;
-        SacAbortIfNot(alert_telem_channel.assume_ownership(
+        FswAbortIfNot(alert_telem_channel.assume_ownership(
                           new DataDgramChannel(num_dgrams, bwp_mtu)),
                       false);
         Handle<BwpChannelWriter> writer;
-        SacAbortIfNot(writer.assume_ownership(new BwpChannelWriter()), false);
-        SacAbortIfNot(writer->assign_channel(alert_telem_channel), false);
-        SacAbortIfNot(relay.redirect_service(
+        FswAbortIfNot(writer.assume_ownership(new BwpChannelWriter()), false);
+        FswAbortIfNot(writer->assign_channel(alert_telem_channel), false);
+        FswAbortIfNot(relay.redirect_service(
                           Satellite::alert_buffer_input_service, writer),
                       false);
         return true;
@@ -222,14 +222,14 @@ namespace Drone
          * Set the single peer hotsync enable flag based on the value in the
          * control slate.
          */
-        SacIfNot(slate_syncer->set_single_peer_hotsync(
+        FswIfNot(slate_syncer->set_single_peer_hotsync(
             slate[single_peer_hotsync_enabled_tok]));
         /*
          * Force disable transfer if the flag on the control slate is high.
          */
         if (slate[force_disable_transfer_tok])
         {
-            SacIfNot(slate_syncer->disable_transfer());
+            FswIfNot(slate_syncer->disable_transfer());
         }
     }
     /**
@@ -247,16 +247,16 @@ namespace Drone
          * Create our output channel into the alerts buffer.
          */
         Service alerts_service;
-        SacAbortIfNot(
+        FswAbortIfNot(
             service_directory().lookup(Satellite::alert_buffer_output_service,
                                        alerts_service),
             false);
-        SacAbortIf(alerts_service.proto != udp_proto, false);
+        FswAbortIf(alerts_service.proto != udp_proto, false);
         Handle<AnyDgramConnection> output_connection;
-        SacAbortIfNot(output_connection.assume_ownership(
+        FswAbortIfNot(output_connection.assume_ownership(
                           new AnyDgramConnection(upkeep_list, eloop.fds)),
                       false);
-        SacAbortIfNot(output_connection->open(alerts_service.host_name,
+        FswAbortIfNot(output_connection->open(alerts_service.host_name,
                                               alerts_service.port),
                       false);
         /*
@@ -272,17 +272,17 @@ namespace Drone
         const UINT64 recharge_bits_per_sec = 200000;
         const UINT64 max_quota = recharge_bits_per_sec / 8 / 10;
         const UINT64 signal_threshold = bwp_mtu;
-        SacAbortIfNot(alert_buffer_output.assume_ownership(new ByteQuotaFramer(
+        FswAbortIfNot(alert_buffer_output.assume_ownership(new ByteQuotaFramer(
                           output_connection, max_quota, recharge_bits_per_sec,
                           signal_threshold)),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_buffer_output->init(alert_buffer_builder, "framer_dgrams"),
             false);
         /*
          * Create the buffer manager.
          */
-        SacAbortIfNot(alert_buffer_manager = AlertBufferManager::create(
+        FswAbortIfNot(alert_buffer_manager = AlertBufferManager::create(
                           configs, "alert_buffers", "alerts",
                           get_telemetry_config_file_name(),
                           Satellite::alert_buffer_input_service, ident,

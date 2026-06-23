@@ -6,10 +6,10 @@
 //
 // Interface is exactly what present call sites use (R1 — no extension):
 //   default ctor (empty) · size() · push_back(const T&) · operator[] (const + mutable).
-// Overflow is a broken invariant: fail-fast via SacAssert (the codebase's assert
+// Overflow is a broken invariant: fail-fast via FswAssert (the codebase's assert
 // doctrine / domain failure policy).
 
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 
 #include <cstddef>
 
@@ -25,20 +25,20 @@ namespace Drone
 
         void push_back(const T &value)
         {
-            SacAssert(m_size < N); // overflow is a programmer error — fail fast
+            FswAssert(m_size < N); // overflow is a programmer error — fail fast
             m_data[m_size] = value;
             ++m_size;
         }
 
         T &operator[](std::size_t i)
         {
-            SacAssert(i < m_size);
+            FswAssert(i < m_size);
             return m_data[i];
         }
 
         const T &operator[](std::size_t i) const
         {
-            SacAssert(i < m_size);
+            FswAssert(i < m_size);
             return m_data[i];
         }
 

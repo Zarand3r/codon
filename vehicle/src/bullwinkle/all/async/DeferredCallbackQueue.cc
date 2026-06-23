@@ -17,8 +17,8 @@ namespace Drone
     {
         Handle<DeferredCallbackQueue> callback_queue(
             new DeferredCallbackQueue());
-        SacAbortIfNot(callback_queue, Handle<DeferredCallbackQueue>());
-        SacAbortIfNot(callback_queue->init(fd_bag),
+        FswAbortIfNot(callback_queue, Handle<DeferredCallbackQueue>());
+        FswAbortIfNot(callback_queue->init(fd_bag),
                       Handle<DeferredCallbackQueue>());
         return callback_queue;
     }
@@ -39,9 +39,9 @@ namespace Drone
          * Initialize the eventfd. Set EFD_NONBLOCK so we don't block the main
          * thread if on_ready() is called without any callbacks enqueued.
          */
-        SacAbortOnErrno(ready_fd = eventfd(0, EFD_NONBLOCK), false);
+        FswAbortOnErrno(ready_fd = eventfd(0, EFD_NONBLOCK), false);
         Handle<FdEventSink> fes = fd_bag.fd(AutoFd(ready_fd));
-        SacAbortIfNot(
+        FswAbortIfNot(
             fes->add_events(fd_read_ev,
                             make_slot(*this, &DeferredCallbackQueue::on_ready)),
             false);

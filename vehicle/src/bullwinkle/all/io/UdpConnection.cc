@@ -79,10 +79,10 @@ namespace Drone
         /*
          * Do not allow double connections.
          */
-        SacAbortIfNot(fd_channel.is_closed(), false);
+        FswAbortIfNot(fd_channel.is_closed(), false);
         if (timer)
         {
-            SacAbortIf(timer->is_enabled(), false);
+            FswAbortIf(timer->is_enabled(), false);
         }
         requested_port = my_port;
         /*
@@ -94,7 +94,7 @@ namespace Drone
             sockaddr_in6 *local_addr_ipv6 = to_sockaddr_in6(&local_addr);
             local_addr_ipv6->sin6_family = AF_INET6;
             local_addr_ipv6->sin6_port = htons(requested_port);
-            SacAbortIfNeqInt(
+            FswAbortIfNeqInt(
                 1,
                 inet_pton(AF_INET6, (my_addr.empty() ? "::" : my_addr.c_str()),
                           &local_addr_ipv6->sin6_addr),
@@ -105,7 +105,7 @@ namespace Drone
             sockaddr_in *local_addr_ipv4 = to_sockaddr_in(&local_addr);
             local_addr_ipv4->sin_family = AF_INET;
             local_addr_ipv4->sin_port = htons(requested_port);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 inet_aton((my_addr.empty() ? "0.0.0.0" : my_addr.c_str()),
                           &local_addr_ipv4->sin_addr),
                 false);
@@ -121,16 +121,16 @@ namespace Drone
         /*
          * Open up the socket.
          */
-        SacAbortIfNot(open_socket(), false);
+        FswAbortIfNot(open_socket(), false);
         /*
          * Call create_timer() to set up the timer in case we disconnect.
          */
-        SacAbortIfNot(create_timer(), false);
-        SacAbortIfNot(timer, false);
+        FswAbortIfNot(create_timer(), false);
+        FswAbortIfNot(timer, false);
         is_closed_flag = false;
         is_disconnected_flag = false;
         if (!signal_connect())
-            SacIfNot(close());
+            FswIfNot(close());
         return true;
     }
     /**
@@ -146,11 +146,11 @@ namespace Drone
     bool UdpConnection::set_remote_addr(const std::string &host_port,
                                         const in_port_t default_port)
     {
-        SacAbortIf(is_closed(), false);
+        FswAbortIf(is_closed(), false);
         /*
          * Store remote host sockaddr.
          */
-        SacAbortIfNot(string_to_address(host_port.c_str(), default_port,
+        FswAbortIfNot(string_to_address(host_port.c_str(), default_port,
                                         to_sockaddr(&remote_addr),
                                         sizeof(remote_addr), is_ipv6),
                       false);
@@ -159,7 +159,7 @@ namespace Drone
          */
         if (connected_socket)
         {
-            SacAbortIfNot(connect_socket(), false);
+            FswAbortIfNot(connect_socket(), false);
         }
         return true;
     }
@@ -197,16 +197,16 @@ namespace Drone
         /*
          * Do not allow double connections.
          */
-        SacAbortIfNot(fd_channel.is_closed(), false);
+        FswAbortIfNot(fd_channel.is_closed(), false);
         connected_socket = _connected_socket;
         /*
          * Open local socket.
          */
-        SacAbortIfNot(open(my_port, _reuse_addr, my_addr), false);
+        FswAbortIfNot(open(my_port, _reuse_addr, my_addr), false);
         /*
          * Store remote host sockaddr.
          */
-        SacAbortIfNot(set_remote_addr(host_port, default_port), false);
+        FswAbortIfNot(set_remote_addr(host_port, default_port), false);
         return true;
     }
     /**
@@ -218,7 +218,7 @@ namespace Drone
      */
     bool UdpConnection::set_reconnect_timer(const ExponentialBackoff &_timer)
     {
-        SacAbortIfNot(timer, false);
+        FswAbortIfNot(timer, false);
         timer->backoff = _timer;
         return true;
     }
@@ -239,10 +239,10 @@ namespace Drone
     bool UdpConnection::multicast_write_bind(const net_interface_t &interface,
                                              bool loop, UINT8 ttl)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         Handle<FdEventSink> fes;
-        SacAbortIfNot(fd_channel.get_fd(fes), false);
+        FswAbortIfNot(fd_channel.get_fd(fes), false);
         if (dbverbose() >= 2)
         {
             dbnprintf(300, "Binding FD %d to interface %s\n", fes->get_fd(),
@@ -252,9 +252,9 @@ namespace Drone
         multicast_bind.loop = loop;
         multicast_bind.ttl = ttl;
         multicast_bind.is_init = true;
-        SacAbortIfNot(multicast_set_interface(fes->get_fd(), interface, loop),
+        FswAbortIfNot(multicast_set_interface(fes->get_fd(), interface, loop),
                       false);
-        SacAbortIfNot(multicast_set_ttl(fes->get_fd(), ttl), false);
+        FswAbortIfNot(multicast_set_ttl(fes->get_fd(), ttl), false);
         return true;
     }
     /**
@@ -275,14 +275,14 @@ namespace Drone
     UdpConnection::multicast_group_join(const std::string &multicast_address,
                                         const net_interface_t &interface)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         /*
          * Store this subscription.
          */
         multicast_subscription subscription;
         subscription.interface = interface;
-        SacAbortIfNot(string_to_address(multicast_address.c_str(), 0U,
+        FswAbortIfNot(string_to_address(multicast_address.c_str(), 0U,
                                         &subscription.group,
                                         sizeof(subscription.group)),
                       false);
@@ -290,8 +290,8 @@ namespace Drone
         if (is_connected())
         {
             Handle<FdEventSink> fes;
-            SacAbortIfNot(fd_channel.get_fd(fes), false);
-            SacAbortIfNot(multicast_subscribe(fes->get_fd(), subscription.group,
+            FswAbortIfNot(fd_channel.get_fd(fes), false);
+            FswAbortIfNot(multicast_subscribe(fes->get_fd(), subscription.group,
                                               interface),
                           false);
         }
@@ -312,11 +312,11 @@ namespace Drone
         const std::string &multicast_address,
         const std::vector<net_interface_t> &interfaces)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         for (size_t i = 0; i < interfaces.size(); i++)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 multicast_group_join(multicast_address, interfaces[i]), false);
         }
         return true;
@@ -335,10 +335,10 @@ namespace Drone
     UdpConnection::multicast_group_leave(const std::string &multicast_address,
                                          const net_interface_t &interface)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         struct sockaddr_in group;
-        SacAbortIfNot(string_to_address(multicast_address.c_str(), 0U, &group,
+        FswAbortIfNot(string_to_address(multicast_address.c_str(), 0U, &group,
                                         sizeof(group)),
                       false);
         /*
@@ -362,8 +362,8 @@ namespace Drone
         if (is_connected())
         {
             Handle<FdEventSink> fes;
-            SacAbortIfNot(fd_channel.get_fd(fes), false);
-            SacAbortIfNot(multicast_unsubscribe(fes->get_fd(),
+            FswAbortIfNot(fd_channel.get_fd(fes), false);
+            FswAbortIfNot(multicast_unsubscribe(fes->get_fd(),
                                                 multicast_address, interface),
                           false);
         }
@@ -385,11 +385,11 @@ namespace Drone
         const std::string &multicast_address,
         const std::vector<net_interface_t> &interfaces)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         for (size_t i = 0; i < interfaces.size(); i++)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 multicast_group_leave(multicast_address, interfaces[i]), false);
         }
         return true;
@@ -410,7 +410,7 @@ namespace Drone
      */
     bool UdpConnection::multicast_recv_all(bool all)
     {
-        SacMsgAbortIf(is_ipv6, false, 200,
+        FswMsgAbortIf(is_ipv6, false, 200,
                       "IPv6 multicast is currently not supported.");
         /*
          * This #if is required to maintain compatibility with
@@ -423,9 +423,9 @@ namespace Drone
 #endif
 #ifdef IP_MULTICAST_ALL_SUPPORTED
         Handle<FdEventSink> fes;
-        SacAbortIfNot(fd_channel.get_fd(fes), false);
+        FswAbortIfNot(fd_channel.get_fd(fes), false);
         int all_int = static_cast<int>(all);
-        SacAbortOnErrno(sx_setsockopt(fes->get_fd(), IPPROTO_IP,
+        FswAbortOnErrno(fsw_setsockopt(fes->get_fd(), IPPROTO_IP,
                                       IP_MULTICAST_ALL, &all_int,
                                       sizeof(all_int)),
                         false);
@@ -448,10 +448,10 @@ namespace Drone
     bool UdpConnection::bind_interface(const std::string &interface)
     {
         Handle<FdEventSink> fes;
-        SacAbortIfNot(fd_channel.get_fd(fes), false);
-        SacAbortIfNot(fes, false);
-        SacAbortOnErrno(
-            sx_setsockopt(fes->get_fd(), SOL_SOCKET, SO_BINDTODEVICE,
+        FswAbortIfNot(fd_channel.get_fd(fes), false);
+        FswAbortIfNot(fes, false);
+        FswAbortOnErrno(
+            fsw_setsockopt(fes->get_fd(), SOL_SOCKET, SO_BINDTODEVICE,
                           (void *)interface.c_str(), interface.size()),
             false);
         return true;
@@ -461,7 +461,7 @@ namespace Drone
      */
     bool UdpConnection::bind_interface(const net_interface_t &interface)
     {
-        SacAbortIfNot(bind_interface(interface.name), false);
+        FswAbortIfNot(bind_interface(interface.name), false);
         return true;
     }
     /**
@@ -475,10 +475,10 @@ namespace Drone
     bool UdpConnection::set_broadcast(bool broadcast)
     {
         Handle<FdEventSink> fes;
-        SacAbortIfNot(fd_channel.get_fd(fes), false);
-        SacAbortIfNot(fes, false);
+        FswAbortIfNot(fd_channel.get_fd(fes), false);
+        FswAbortIfNot(fes, false);
         int tmp = static_cast<int>(broadcast);
-        SacAbortOnErrno(sx_setsockopt(fes->get_fd(), SOL_SOCKET, SO_BROADCAST,
+        FswAbortOnErrno(fsw_setsockopt(fes->get_fd(), SOL_SOCKET, SO_BROADCAST,
                                       &tmp, sizeof(tmp)),
                         false);
         return true;
@@ -495,9 +495,9 @@ namespace Drone
         is_disconnected_flag = true;
         if (timer)
         {
-            SacAbortIfNot(timer->disable(), false);
+            FswAbortIfNot(timer->disable(), false);
         }
-        SacAbortIfNot(fd_channel.close(), false);
+        FswAbortIfNot(fd_channel.close(), false);
         return true;
     }
     /**
@@ -519,7 +519,7 @@ namespace Drone
     bool UdpConnection::set_socket_kernel_receive_size(
         int _socket_receive_buffer_size)
     {
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         socket_receive_buf_size = _socket_receive_buffer_size;
         return true;
     }
@@ -542,7 +542,7 @@ namespace Drone
     bool
     UdpConnection::set_socket_kernel_send_size(int _socket_send_buffer_size)
     {
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         socket_send_buf_size = _socket_send_buffer_size;
         return true;
     }
@@ -580,7 +580,7 @@ namespace Drone
      */
     in_port_t UdpConnection::get_port() const
     {
-        SacAbortIf(is_closed(), 0);
+        FswAbortIf(is_closed(), 0);
         if (is_ipv6)
         {
             return ntohs(to_sockaddr_in6(&local_addr)->sin6_port);
@@ -607,14 +607,14 @@ namespace Drone
         {
             if (is_ipv6)
             {
-                SacAbortIfNotOpUint(*addr_len, >=, sizeof(sockaddr_in6), false);
+                FswAbortIfNotOpUint(*addr_len, >=, sizeof(sockaddr_in6), false);
                 sockaddr_in6 *const addr_in6 = to_sockaddr_in6(addr);
                 *addr_in6 = *to_sockaddr_in6(&remote_addr);
                 *addr_len = sizeof(sockaddr_in6);
             }
             else
             {
-                SacAbortIfNotOpUint(*addr_len, >=, sizeof(sockaddr_in), false);
+                FswAbortIfNotOpUint(*addr_len, >=, sizeof(sockaddr_in), false);
                 sockaddr_in *const addr_in = to_sockaddr_in(addr);
                 *addr_in = *to_sockaddr_in(&remote_addr);
                 *addr_len = sizeof(sockaddr_in);
@@ -622,7 +622,7 @@ namespace Drone
         }
         else
         {
-            SacAbortIfNot(fd_channel.get_address(addr, addr_len), false);
+            FswAbortIfNot(fd_channel.get_address(addr, addr_len), false);
         }
         return true;
     }
@@ -640,8 +640,8 @@ namespace Drone
     bool UdpConnection::get_address(sockaddr_in *const addr,
                                     socklen_t *const addr_len) const
     {
-        SacAbortIf(is_ipv6, false);
-        SacAbortIfNot(get_address(to_sockaddr(addr), addr_len), false);
+        FswAbortIf(is_ipv6, false);
+        FswAbortIfNot(get_address(to_sockaddr(addr), addr_len), false);
         return true;
     }
     /**
@@ -657,7 +657,7 @@ namespace Drone
     bool UdpConnection::get_multicast_write_interface(
         net_interface_t &interface) const
     {
-        SacAbortIfNot(multicast_bind.is_init, false);
+        FswAbortIfNot(multicast_bind.is_init, false);
         interface = multicast_bind.interface;
         return true;
     }
@@ -680,15 +680,15 @@ namespace Drone
                                             const sockaddr_in *const addr,
                                             const socklen_t addr_len)
     {
-        SacAbortIf(is_ipv6, false);
-        if (SacIf(connected_socket))
+        FswAbortIf(is_ipv6, false);
+        if (FswIf(connected_socket))
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Cannot use commit_dataframe_to() on a "
                      "connected socket.\n");
             return false;
         }
-        SacAbortIfNot(fd_channel.commit_dataframe_to(
+        FswAbortIfNot(fd_channel.commit_dataframe_to(
                           frame, (const sockaddr *)addr, addr_len),
                       false);
         return true;
@@ -714,13 +714,13 @@ namespace Drone
          * It is an error to try to specify a different host when writing to a
          * connected socket, so write_to() cannot be used.
          */
-        if (SacIf(connected_socket))
+        if (FswIf(connected_socket))
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Cannot use write_to() on a connected socket.\n");
             return false;
         }
-        SacAbortIfNot(fd_channel.write_to(data, data_len, addr, addr_len),
+        FswAbortIfNot(fd_channel.write_to(data, data_len, addr, addr_len),
                       false);
         return true;
     }
@@ -743,13 +743,13 @@ namespace Drone
          * It is an error to try to specify a different host when writing to a
          * connected socket, so write_to() cannot be used.
          */
-        if (SacIf(connected_socket))
+        if (FswIf(connected_socket))
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Cannot use write_to() on a connected socket.\n");
             return false;
         }
-        SacAbortIfNot(
+        FswAbortIfNot(
             fd_channel.write_to(data.buf(), data.len(), addr, addr_len), false);
         return true;
     }
@@ -771,8 +771,8 @@ namespace Drone
                                  const sockaddr_in *const addr,
                                  const socklen_t addr_len)
     {
-        SacAbortIf(is_ipv6, false);
-        SacAbortIfNot(write_to(data, data_len, to_sockaddr(addr), addr_len),
+        FswAbortIf(is_ipv6, false);
+        FswAbortIfNot(write_to(data, data_len, to_sockaddr(addr), addr_len),
                       false);
         return true;
     }
@@ -792,8 +792,8 @@ namespace Drone
     bool UdpConnection::write_to(const B2c &data, const sockaddr_in *const addr,
                                  const socklen_t addr_len)
     {
-        SacAbortIf(is_ipv6, false);
-        SacAbortIfNot(write_to(data, to_sockaddr(addr), addr_len), false);
+        FswAbortIf(is_ipv6, false);
+        FswAbortIfNot(write_to(data, to_sockaddr(addr), addr_len), false);
         return true;
     }
     /*
@@ -847,7 +847,7 @@ namespace Drone
     bool UdpConnection::channel_close()
     {
         is_closed_flag = true;
-        SacAbortIfNot(disconnect(), false);
+        FswAbortIfNot(disconnect(), false);
         return true;
     }
     /*
@@ -855,7 +855,7 @@ namespace Drone
      */
     bool UdpConnection::channel_clear()
     {
-        SacAbortIfNot(fd_channel.clear(), false);
+        FswAbortIfNot(fd_channel.clear(), false);
         return true;
     }
     /**
@@ -888,19 +888,19 @@ namespace Drone
         }
         if (no_remote_address)
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": no remote address specified.\n");
             return false;
         }
         if (connected_socket)
         {
-            SacAbortIfNot(fd_channel.commit_dataframe(frame), false);
+            FswAbortIfNot(fd_channel.commit_dataframe(frame), false);
         }
         else
         {
             const socklen_t remote_addr_len =
                 (is_ipv6 ? sizeof(sockaddr_in6) : sizeof(sockaddr_in));
-            SacAbortIfNot(
+            FswAbortIfNot(
                 fd_channel.commit_dataframe_to(frame, to_sockaddr(&remote_addr),
                                                remote_addr_len),
                 false);
@@ -912,7 +912,7 @@ namespace Drone
      */
     bool UdpConnection::channel_pop_dgram()
     {
-        SacAbortIfNot(fd_channel.get_dgram().pop(), false);
+        FswAbortIfNot(fd_channel.get_dgram().pop(), false);
         return true;
     }
     /**
@@ -928,26 +928,26 @@ namespace Drone
          */
         if (!timer)
         {
-            SacAbortIfNot(timer.assume_ownership(new ExponentialBackoffTimer(
+            FswAbortIfNot(timer.assume_ownership(new ExponentialBackoffTimer(
                               billion, 16 * billion, 3 * billion, false)),
                           false);
-            SacAbortIfNot(timer, false);
-            SacAbortIfNot(timer->timer_sig.connect(
+            FswAbortIfNot(timer, false);
+            FswAbortIfNot(timer->timer_sig.connect(
                               make_slot(*this, &UdpConnection::handle_timer)),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 install_dispatch(
                     elist,
                     make_slot(*timer, &ExponentialBackoffTimer::dispatch)),
                 false);
         }
-        SacAbortIfNot(timer->backoff.reset(), false);
+        FswAbortIfNot(timer->backoff.reset(), false);
         return true;
     }
     /**
      * Open a new UDP socket with local_addr.
      *
-     * Will replace the contents of local_addr with sx_getsockanme if the
+     * Will replace the contents of local_addr with fsw_getsockanme if the
      * socket was successfully created.
      *
      * @return True on success.
@@ -957,25 +957,25 @@ namespace Drone
         /**
          * Do not allow double connections.
          */
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         /*
          * Create unconnected dgram socket.
          */
         AutoFd fd;
-        SacAbortOnErrno(fd = socket(local_addr.ss_family, SOCK_DGRAM, 0),
+        FswAbortOnErrno(fd = socket(local_addr.ss_family, SOCK_DGRAM, 0),
                         false);
         /*
          * Use non-blocking sockets so that FdDgramChannel will attempt
          * multiple writes per wakeup.
          */
-        SacAbortIfNot(sx_set_nonblock(fd.get()), false);
+        FswAbortIfNot(fsw_set_nonblock(fd.get()), false);
         const bool is_nonblocking = true;
         /*
          * Set buffer sizes if requested.
          */
         if (socket_receive_buf_size > 0)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 set_socket_receive_buf_size(fd.get(), socket_receive_buf_size),
                 false);
         }
@@ -984,7 +984,7 @@ namespace Drone
          */
         if (socket_send_buf_size > 0)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 set_socket_send_buf_size(fd.get(), socket_send_buf_size),
                 false);
         }
@@ -994,7 +994,7 @@ namespace Drone
         if (reuse_addr)
         {
             int state = 1;
-            SacAbortOnErrno(sx_setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR,
+            FswAbortOnErrno(fsw_setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR,
                                           (void *)&state, sizeof(state)),
                             false);
         }
@@ -1002,7 +1002,7 @@ namespace Drone
          * Re-set sin_port in the address structure.  This handles the case
          * where the user asked for an ephemeral port (requested_port == 0),
          * but we later filled in the structure with the actual port (see
-         * sx_getsockname() below) so that get_port() works.
+         * fsw_getsockname() below) so that get_port() works.
          *
          * In short, we do not want to request the same ephemeral port if
          * we need to re-open the socket.  That could fail if another
@@ -1027,7 +1027,7 @@ namespace Drone
              * will change it.
              */
             int errno_saved = errno;
-            SacPrefix();
+            FswPrefix();
             char addr_string[1024];
             if (!address_to_string(&local_addr, sizeof(local_addr), addr_string,
                                    sizeof(addr_string)))
@@ -1044,19 +1044,19 @@ namespace Drone
          * we received via the get_port() method.
          */
         socklen_t local_addr_len = sizeof(local_addr);
-        SacAbortOnErrno(
-            sx_getsockname(fd.get(), to_sockaddr(&local_addr), &local_addr_len),
+        FswAbortOnErrno(
+            fsw_getsockname(fd.get(), to_sockaddr(&local_addr), &local_addr_len),
             false);
         /*
          * Re-configure any multicast settings.
          */
         if (multicast_bind.is_init)
         {
-            SacAbortIfNot(multicast_set_interface(fd.get(),
+            FswAbortIfNot(multicast_set_interface(fd.get(),
                                                   multicast_bind.interface,
                                                   multicast_bind.loop),
                           false);
-            SacAbortIfNot(multicast_set_ttl(fd.get(), multicast_bind.ttl),
+            FswAbortIfNot(multicast_set_ttl(fd.get(), multicast_bind.ttl),
                           false);
         }
         if (!multicast_all)
@@ -1066,7 +1066,7 @@ namespace Drone
              * default behavior for sockets.
              */
             int all_int = static_cast<int>(multicast_all);
-            SacAbortOnErrno(sx_setsockopt(fd.get(), IPPROTO_IP,
+            FswAbortOnErrno(fsw_setsockopt(fd.get(), IPPROTO_IP,
                                           IP_MULTICAST_ALL, &all_int,
                                           sizeof(all_int)),
                             false);
@@ -1074,30 +1074,30 @@ namespace Drone
         for (size_t i = 0; i < multicast_subscriptions.size(); i++)
         {
             const multicast_subscription &ms = multicast_subscriptions[i];
-            SacAbortIfNot(multicast_subscribe(fd.get(), ms.group, ms.interface),
+            FswAbortIfNot(multicast_subscribe(fd.get(), ms.group, ms.interface),
                           false);
         }
         Handle<FdEventSink> fes = fd_bag.fd(std::move(fd));
-        SacAbortIfNot(fes, false);
+        FswAbortIfNot(fes, false);
         /*
          * Hand the socket to the fd_channel.
          */
         bool success = true;
         dgram_fd_type_t socket_type =
             connected_socket ? dgram_fd_conn_socket : dgram_fd_uconn_socket;
-        SacIfNot2(fd_channel.assign_fd(fes, socket_type, is_nonblocking),
+        FswIfNot2(fd_channel.assign_fd(fes, socket_type, is_nonblocking),
                   success);
         /*
          * Connect our event handlers.
          */
-        SacIfNot2(
+        FswIfNot2(
             fes->add_events(fd_close_ev,
                             make_slot(*this, &UdpConnection::handle_fd_close)),
             success);
-        SacIfNot2(fd_channel.read_sig.connect(
+        FswIfNot2(fd_channel.read_sig.connect(
                       make_slot(*this, &UdpConnection::handle_read)),
                   success);
-        SacIfNot2(fd_channel.write_sig.connect(
+        FswIfNot2(fd_channel.write_sig.connect(
                       make_slot(*this, &UdpConnection::handle_write)),
                   success);
         return success;
@@ -1114,7 +1114,7 @@ namespace Drone
         /*
          * Make sure this is a connected socket.
          */
-        SacAbortIfNot(connected_socket, false);
+        FswAbortIfNot(connected_socket, false);
         /*
          * Make sure the remote address has been set.
          */
@@ -1133,7 +1133,7 @@ namespace Drone
         }
         if (no_remote_address)
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Socket connect failed. "
                      "No remote address specified.\n");
             return false;
@@ -1142,9 +1142,9 @@ namespace Drone
          * Connect the socket.
          */
         Handle<FdEventSink> fes;
-        SacAbortIfNot(fd_channel.get_fd(fes), false);
-        SacAbortIfNot(fes, false);
-        SacMsgAbortOnErrno(
+        FswAbortIfNot(fd_channel.get_fd(fes), false);
+        FswAbortIfNot(fes, false);
+        FswMsgAbortOnErrno(
             ::connect(fes->get_fd(), to_sockaddr(&remote_addr),
                       sizeof(remote_addr)),
             false, 200, "Failed to connect to %s",
@@ -1161,10 +1161,10 @@ namespace Drone
      */
     bool UdpConnection::handle_timer(ExponentialBackoffTimer &_timer)
     {
-        SacAbortIfNot(timer == &_timer, false);
+        FswAbortIfNot(timer == &_timer, false);
         if (is_closed())
         {
-            SacAbortIfNot(timer->disable(), false);
+            FswAbortIfNot(timer->disable(), false);
             return true;
         }
         if (!is_connected())
@@ -1185,16 +1185,16 @@ namespace Drone
             {
                 if (!connect_socket())
                 {
-                    SacIfNot(fd_channel.close());
+                    FswIfNot(fd_channel.close());
                     return true;
                 }
             }
         }
         if (!signal_connect())
         {
-            SacIfNot(close());
+            FswIfNot(close());
         }
-        SacAbortIfNot(timer->disable(), false);
+        FswAbortIfNot(timer->disable(), false);
         return true;
     }
     /**
@@ -1211,10 +1211,10 @@ namespace Drone
          * The fd_channel's handle_fd_close function should have run
          * before us.
          */
-        SacAssert(fd_channel.is_closed());
+        FswAssert(fd_channel.is_closed());
         if (!signal_connect())
         {
-            SacAbortIfNot(close(), false);
+            FswAbortIfNot(close(), false);
             return true;
         }
         else if (is_drained())
@@ -1224,14 +1224,14 @@ namespace Drone
              * data to be read, then emit the close signal. Otherwise, the
              * signal will be emitted after all the data is read.
              */
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         /*
          * Start reconnecting, unless we were explicitly told to disconnect.
          */
         if (!is_disconnected_flag)
         {
-            SacAbortIfNot(timer->enable(), false);
+            FswAbortIfNot(timer->enable(), false);
         }
         return true;
     }
@@ -1244,8 +1244,8 @@ namespace Drone
      */
     bool UdpConnection::handle_read(DgramChannel &channel)
     {
-        SacAbortIfNot(&channel == &fd_channel, false);
-        SacAbortIfNot(signal_read(), false);
+        FswAbortIfNot(&channel == &fd_channel, false);
+        FswAbortIfNot(signal_read(), false);
         return true;
     }
     /**
@@ -1257,8 +1257,8 @@ namespace Drone
      */
     bool UdpConnection::handle_write(Channel &channel)
     {
-        SacAbortIfNot(&channel == &fd_channel, false);
-        SacAbortIfNot(signal_write(), false);
+        FswAbortIfNot(&channel == &fd_channel, false);
+        FswAbortIfNot(signal_write(), false);
         return true;
     }
 } /* end namespace Drone */

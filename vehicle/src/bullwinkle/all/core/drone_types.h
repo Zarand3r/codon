@@ -5,7 +5,7 @@
 // requirement). Defined at global scope to match present unqualified usage
 // (`UINT8`, `INT64`, `uint`) across the tree.
 //
-// Contract from usage: `UINT8..64`, `INT8..64`, `uint`, `SX_DISALLOW_COPY_AND_ASSIGN`.
+// Contract from usage: `UINT8..64`, `INT8..64`, `uint`, `FSW_DISALLOW_COPY_AND_ASSIGN`.
 
 #include <cstdint>
 
@@ -25,6 +25,6 @@ using uint = unsigned int;
 
 // Delete the copy constructor and copy-assignment of a class (place in the
 // class body). Used by move-only/owning types (AlignedBuffer, SlateMemory, …).
-#define SX_DISALLOW_COPY_AND_ASSIGN(ClassName)                                 \
+#define FSW_DISALLOW_COPY_AND_ASSIGN(ClassName)                                 \
     ClassName(const ClassName &) = delete;                                     \
     ClassName &operator=(const ClassName &) = delete

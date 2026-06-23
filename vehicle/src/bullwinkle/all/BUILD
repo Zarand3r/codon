@@ -12,8 +12,8 @@ cc_library(
         "B2.h",
         "B2c.h",
         "core/drone_types.h",
-        "core/sac.h",
-        "core/sxtime.h",
+        "core/fsw.h",
+        "core/fswtime.h",
         "runtime.h",
         "static_vector.h",
     ],
@@ -22,8 +22,8 @@ cc_library(
 
 _L0_TESTS = {
     "drone_types_test": "core/drone_types_test.cc",
-    "sac_test": "core/sac_test.cc",
-    "sxtime_test": "core/sxtime_test.cc",
+    "fsw_test": "core/fsw_test.cc",
+    "fswtime_test": "core/fswtime_test.cc",
     "b2_test": "b2_test.cc",
     "runtime_test": "runtime_test.cc",
     "static_vector_test": "static_vector_test.cc",

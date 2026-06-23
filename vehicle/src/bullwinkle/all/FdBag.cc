@@ -5,7 +5,7 @@
 #include "src/bullwinkle/all/FdBag.h"
 #include "src/bullwinkle/all/Clock.h"
 #include "src/bullwinkle/all/core/math/math_util.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/bullwinkle/all/sock_util.h"
 #include <errno.h>
 #include <mutex>
@@ -146,10 +146,10 @@ namespace Drone
              * Allow FdEventSink() to be allocated at runtime. TRAC-15319 tracks
              * removing this allocation.
              */
-            SacAbortIfNot(fes.assume_ownership(new FdEventSink(std::move(_fd))),
+            FswAbortIfNot(fes.assume_ownership(new FdEventSink(std::move(_fd))),
                           error_fes);
         }
-        SacAbortIfNot(attach_fes(fes), error_fes);
+        FswAbortIfNot(attach_fes(fes), error_fes);
         return fes;
     }
     /**
@@ -188,12 +188,12 @@ namespace Drone
      */
     bool FdBag::attach_fes(Handle<FdEventSink> fes)
     {
-        SacAbortIf(fes->is_closed(), false);
-        SacAbortIfNot(fes->owner == NULL, false);
-#if SX_DEBUG == 1
-        SacAbortIf(get_fd(fes->get_fd()), false);
+        FswAbortIf(fes->is_closed(), false);
+        FswAbortIfNot(fes->owner == NULL, false);
+#if FSW_DEBUG == 1
+        FswAbortIf(get_fd(fes->get_fd()), false);
 #endif
-        SacAbortIf(fes_count >= max_fds, false);
+        FswAbortIf(fes_count >= max_fds, false);
         const int _fd = fes->get_fd();
         fesv.push_back(fes);
         fes->owner = this;
@@ -207,7 +207,7 @@ namespace Drone
          */
         if (fes_count != fesv.size())
         {
-            SacDebugAssert(dispatch_in_progress);
+            FswDebugAssert(dispatch_in_progress);
             std::swap(fesv.back(), fesv[fes->idx]);
         }
         fes->epoll_events.data.ptr = fes.get();
@@ -226,7 +226,7 @@ namespace Drone
         if (res == -1 && errno == EPERM)
         {
             int efd;
-            SacAbortOnErrno((efd = eventfd(1, 0)), false);
+            FswAbortOnErrno((efd = eventfd(1, 0)), false);
             Handle<FdEventSink> efd_fes = fd(AutoFd(efd));
             fes->non_pollable_standin = efd_fes;
             /*
@@ -246,7 +246,7 @@ namespace Drone
              */
             epoll_ctl(epoll_fd.get(), EPOLL_CTL_DEL, _fd, NULL);
         }
-        SacAbortIfNot(update_epoll(*fes), false);
+        FswAbortIfNot(update_epoll(*fes), false);
         return true;
     }
     /**
@@ -259,16 +259,16 @@ namespace Drone
      */
     bool FdBag::detach_fes(Handle<FdEventSink> fes)
     {
-        SacAbortIf(fes->is_closed(), false);
-        SacAbortIfNot(fes->owner == this, false);
+        FswAbortIf(fes->is_closed(), false);
+        FswAbortIfNot(fes->owner == this, false);
         /*
          * Sanity checks.
          */
-        SacAbortOutsideRange(fes->idx, static_cast<size_t>(0), fes_count,
+        FswAbortOutsideRange(fes->idx, static_cast<size_t>(0), fes_count,
                              false);
-        SacAbortIfNot(fesv[fes->idx] == fes, false);
+        FswAbortIfNot(fesv[fes->idx] == fes, false);
         Handle<FdEventSink> _fes;
-        SacAbortIfNot(remove_fes(fes->get_fd(), fes.get(), _fes), false);
+        FswAbortIfNot(remove_fes(fes->get_fd(), fes.get(), _fes), false);
         return true;
     }
     /**
@@ -346,7 +346,7 @@ namespace Drone
          */
         if (fd_event_mask != fd_all_ev)
         {
-            SacAbortIfNot(wakeup == nano_t_min, select_error);
+            FswAbortIfNot(wakeup == nano_t_min, select_error);
         }
         const nano_t start_time = Clock::get_monotonic_time();
         time_used = 0;
@@ -361,7 +361,7 @@ namespace Drone
         /*
          * Dispatch events if successful.
          */
-        SacAbortIfNot(dispatch_epoll(epoll_scratch.data(), epoll_event_count,
+        FswAbortIfNot(dispatch_epoll(epoll_scratch.data(), epoll_event_count,
                                      fd_event_mask),
                       select_error);
         if (epoll_event_count > 0)
@@ -402,7 +402,7 @@ namespace Drone
                 events_out_count = 0;
                 return select_success;
             }
-            SacErrnoAbort("epoll_wait", select_error);
+            FswErrnoAbort("epoll_wait", select_error);
         }
         events_out_count = res;
         return select_success;
@@ -439,7 +439,7 @@ namespace Drone
         {
             FdEventSink *fesp =
                 reinterpret_cast<FdEventSink *>(events[i].data.ptr);
-            SacDebugAssert(fesp->epoll_events.data.ptr == fesp);
+            FswDebugAssert(fesp->epoll_events.data.ptr == fesp);
             /*
              * Skip dispatching events if the FES has been removed.
              */
@@ -481,14 +481,14 @@ namespace Drone
              */
             if (ev)
             {
-                SacAssert(fesp != nullptr);
-                SacAssert(fesp->owner == this);
-                SacAssert(fesp->idx < fesv.size());
+                FswAssert(fesp != nullptr);
+                FswAssert(fesp->owner == this);
+                FswAssert(fesp->idx < fesv.size());
                 /*
                  * FdEventSink detaches itself from FdBag when closed. All valid
                  * FdEventSinks should be opened.
                  */
-                SacAssert(!fesp->is_closed());
+                FswAssert(!fesp->is_closed());
                 FdEvent fev(fesp->get_fd(), ev);
                 /*
                  * Store a Handle to the current FdEventSink. We will use
@@ -563,7 +563,7 @@ namespace Drone
     select_code_t FdBag::select_once()
     {
         const select_code_t ret = select_absolute(nano_t_min);
-        SacAssert(ret != select_wouldblock);
+        FswAssert(ret != select_wouldblock);
         return ret;
     }
     /**
@@ -620,7 +620,7 @@ namespace Drone
         {
             nano_t single_time = 0;
             select_code_t ret;
-            SacAbortOnSelectError(ret = select_absolute(end_time, single_time),
+            FswAbortOnSelectError(ret = select_absolute(end_time, single_time),
                                   ret);
             if (single_time > 0)
             {
@@ -662,7 +662,7 @@ namespace Drone
                 return select_error;
             }
             select_code_t ret;
-            SacAbortOnSelectError(ret = select_absolute(end_time), ret);
+            FswAbortOnSelectError(ret = select_absolute(end_time), ret);
             total_reads += read_event_count;
         }
         return select_success;
@@ -700,7 +700,7 @@ namespace Drone
                 return select_error;
             }
             select_code_t ret;
-            SacAbortOnSelectError(ret = select_absolute(end_time), ret);
+            FswAbortOnSelectError(ret = select_absolute(end_time), ret);
             total_writes += write_event_count;
         }
         return select_success;
@@ -766,10 +766,10 @@ namespace Drone
     {
         struct pollfd pfd[8];
         size_t active_count = 0;
-        SacAbortIfNot(fdbag_count < DIM(pfd), select_error);
+        FswAbortIfNot(fdbag_count < DIM(pfd), select_error);
         for (size_t i = 0; i < fdbag_count; ++i)
         {
-            SacAbortIfNot(fdbags[i], select_error);
+            FswAbortIfNot(fdbags[i], select_error);
             const FdBag *bag = fdbags[i];
             active_count += bag->active_count;
             pfd[i].fd = bag->epoll_fd.get();
@@ -790,7 +790,7 @@ namespace Drone
             ts.tv_sec = delta_timeout_ns / billion;
             ts_p = &ts;
         }
-        SacAbortOnErrno(ppoll(pfd, fdbag_count, ts_p, NULL), select_error);
+        FswAbortOnErrno(ppoll(pfd, fdbag_count, ts_p, NULL), select_error);
         select_code_t raw_result = select_success;
         for (size_t i = 0; i < fdbag_count; ++i)
         {
@@ -837,13 +837,13 @@ namespace Drone
                 {
                     op = EPOLL_CTL_MOD;
                 }
-                SacAbortOnErrno(
+                FswAbortOnErrno(
                     epoll_ctl(epoll_fd.get(), op, _fd, &fes.epoll_events),
                     false);
             }
             else
             {
-                SacAbortIfNot(
+                FswAbortIfNot(
                     fes.non_pollable_standin->set_events(new_state & fd_rw_ev),
                     false);
             }
@@ -883,11 +883,11 @@ namespace Drone
      */
     bool FdBag::remove_fes(int fd, FdEventSink *fesp, Handle<FdEventSink> &fes)
     {
-        SacAbortIfNot(fesp, false);
-        SacAbortOutsideRange(fesp->idx, static_cast<size_t>(0), fes_count,
+        FswAbortIfNot(fesp, false);
+        FswAbortOutsideRange(fesp->idx, static_cast<size_t>(0), fes_count,
                              false);
-        SacAbortIfNot(fesv[fesp->idx], false);
-        SacAbortIfNot(fesv[fesp->idx]->owner == this, false);
+        FswAbortIfNot(fesv[fesp->idx], false);
+        FswAbortIfNot(fesv[fesp->idx]->owner == this, false);
         fes = fesv[fesp->idx];
         if (fesp->epoll_events.events & fd_rw_ev)
         {
@@ -905,7 +905,7 @@ namespace Drone
              * we must use the passed argument, _not_ the AutoFD in the FES
              * itself.
              */
-            SacAbortOnErrno(epoll_ctl(epoll_fd.get(), EPOLL_CTL_DEL, fd, NULL),
+            FswAbortOnErrno(epoll_ctl(epoll_fd.get(), EPOLL_CTL_DEL, fd, NULL),
                             false);
         }
         /*

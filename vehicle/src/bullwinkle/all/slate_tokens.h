@@ -250,9 +250,9 @@ namespace Drone
         struct StackFrame
         {
             /**
-             * The context from the closest Sac macro, if any.
+             * The context from the closest Fsw macro, if any.
              */
-            std::string sac_context = {};
+            std::string fsw_context = {};
         };
 
         using element_stack_frame_m = std::map<slate_element_t, StackFrame>;
@@ -300,7 +300,7 @@ namespace Drone
         size_t valid_id_count = 0;
 
         /**
-         * Store the caller address and closest surrounding Sac macro for each
+         * Store the caller address and closest surrounding Fsw macro for each
          * token ID.
          */
         element_stack_frame_m id_frames;
@@ -366,7 +366,7 @@ namespace Drone
             slate_element_default != id)
         {
             const bool success = slate_token_accountant().dismiss_id(id);
-            SacAssert(success);
+            FswAssert(success);
         }
 
         if (slate_element_default == id)
@@ -410,7 +410,7 @@ namespace Drone
             if (!slate_id_is_valid(id) && slate_element_default != id)
             {
                 const bool success = slate_token_accountant().dismiss_id(id);
-                SacAssert(success);
+                FswAssert(success);
             }
 
             /*

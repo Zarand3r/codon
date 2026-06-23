@@ -107,10 +107,10 @@ namespace Drone::Perf
 #define DEBUG_BREAK() __asm__ volatile("bkpt")
 #endif
 #ifdef __FILE_NAME__
-#define SX_PERF_FILENAME __FILE_NAME__
+#define FSW_PERF_FILENAME __FILE_NAME__
 #else
     /// Extract filename from file path.
-    static constexpr inline const char *SxPerfGetFileName(const char *s)
+    static constexpr inline const char *FswPerfGetFileName(const char *s)
     {
         const char *o = s;
         while (const char c = *s++)
@@ -118,20 +118,20 @@ namespace Drone::Perf
         return o;
     }
 /// Extract filename from file path.
-#define SX_PERF_FILENAME SxPerfGetFileName(__FILE__)
+#define FSW_PERF_FILENAME FswPerfGetFileName(__FILE__)
 #endif
-#if defined(ENABLE_SX_ASSERTS)
+#if defined(ENABLE_FSW_ASSERTS)
 /// Enforce that asserts are off in production. You may freely remove this check
 /// as desired for local work, but do not check it in.
-#ifndef SX_TEST_TARGET
-#error SX_ASSERT enabled in production
+#ifndef FSW_TEST_TARGET
+#error FSW_ASSERT enabled in production
 #endif
 /// Assert.
-#define SX_ASSERT(a)                                                           \
+#define FSW_ASSERT(a)                                                           \
     do                                                                         \
         if (UNLIKELY(!(a)))                                                    \
         {                                                                      \
-            fprintf(stderr, "%s:%d|ASSERT FAILED: %s\n", SX_PERF_FILENAME,     \
+            fprintf(stderr, "%s:%d|ASSERT FAILED: %s\n", FSW_PERF_FILENAME,     \
                     __LINE__, #a);                                             \
             fflush(stdout);                                                    \
             fflush(stderr);                                                    \
@@ -139,31 +139,31 @@ namespace Drone::Perf
         }                                                                      \
     while (0)
 /// Assert and print.
-#define SX_ASSERTF(a, s, ...)                                                  \
+#define FSW_ASSERTF(a, s, ...)                                                  \
     do                                                                         \
         if (UNLIKELY(!(a)))                                                    \
         {                                                                      \
             fprintf(stderr, "%s:%d|ASSERT FAILED: %s. " s "\n",                \
-                    SX_PERF_FILENAME, __LINE__, #a, ##__VA_ARGS__);            \
+                    FSW_PERF_FILENAME, __LINE__, #a, ##__VA_ARGS__);            \
             fflush(stdout);                                                    \
             fflush(stderr);                                                    \
             DEBUG_BREAK();                                                     \
         }                                                                      \
     while (0)
 /// Halt.
-#define SX_HALT()                                                              \
+#define FSW_HALT()                                                              \
     do                                                                         \
     {                                                                          \
-        fprintf(stderr, "%s:%d|HALT\n", SX_PERF_FILENAME, __LINE__);           \
+        fprintf(stderr, "%s:%d|HALT\n", FSW_PERF_FILENAME, __LINE__);           \
         fflush(stdout);                                                        \
         fflush(stderr);                                                        \
         DEBUG_BREAK();                                                         \
     } while (0)
 /// Halt and print.
-#define SX_HALTF(s, ...)                                                       \
+#define FSW_HALTF(s, ...)                                                       \
     do                                                                         \
     {                                                                          \
-        fprintf(stderr, "%s:%d|HALT: " s "\n", SX_PERF_FILENAME, __LINE__,     \
+        fprintf(stderr, "%s:%d|HALT: " s "\n", FSW_PERF_FILENAME, __LINE__,     \
                 ##__VA_ARGS__);                                                \
         fflush(stdout);                                                        \
         fflush(stderr);                                                        \
@@ -171,22 +171,22 @@ namespace Drone::Perf
     } while (0)
 #else
 /// Assert (disabled).
-#define SX_ASSERT(a)                                                           \
+#define FSW_ASSERT(a)                                                           \
     do                                                                         \
     {                                                                          \
     } while (0)
 /// Assert and print (disabled).
-#define SX_ASSERTF(a, s, ...)                                                  \
+#define FSW_ASSERTF(a, s, ...)                                                  \
     do                                                                         \
     {                                                                          \
     } while (0)
 /// Halt (disabled).
-#define SX_HALT()                                                              \
+#define FSW_HALT()                                                              \
     do                                                                         \
     {                                                                          \
     } while (0)
 /// Halt and print (disabled).
-#define SX_HALTF(s, ...)                                                       \
+#define FSW_HALTF(s, ...)                                                       \
     do                                                                         \
     {                                                                          \
     } while (0)

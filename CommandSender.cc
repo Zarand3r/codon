@@ -5,7 +5,7 @@
 #include "src/flight/sat/all/fleet_client/command/CommandSender.h"
 #include "src/bullwinkle/all/TimestampFramedMessage.h"
 #include "src/bullwinkle/all/bin_util.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 namespace Drone
 {
     /**
@@ -29,28 +29,28 @@ namespace Drone
                              const std::string &client_node,
                              const node_name_channel_m &_relay_channels)
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(
             NodeIdentifier::node_name_to_node_id(client_node, client_node_id),
             false);
-        SacAbortIf(_relay_channels.empty(), false);
+        FswAbortIf(_relay_channels.empty(), false);
         for (const auto &key_value : _relay_channels)
         {
             const Handle<Channel> &channel = key_value.second;
-            SacAbortIfNot(channel, false);
+            FswAbortIfNot(channel, false);
         }
         relay_channels = _relay_channels;
-        SacAbortIfNot(builder.create("metrics.writes", shard_nonsync,
+        FswAbortIfNot(builder.create("metrics.writes", shard_nonsync,
                                      slate_private, metrics_writes_tok),
                       false);
-        SacAbortIfNot(builder.create("errors.translate_failed", shard_nonsync,
+        FswAbortIfNot(builder.create("errors.translate_failed", shard_nonsync,
                                      slate_read_only,
                                      errors_translate_failed_tok),
                       false);
-        SacAbortIfNot(builder.create("errors.invalid_node", shard_nonsync,
+        FswAbortIfNot(builder.create("errors.invalid_node", shard_nonsync,
                                      slate_read_only, errors_invalid_node_tok),
                       false);
-        SacAbortIfNot(builder.create("errors.write_failed", shard_nonsync,
+        FswAbortIfNot(builder.create("errors.write_failed", shard_nonsync,
                                      slate_read_only, errors_write_failed_tok),
                       false);
         slate = builder.slate(slate_no_validation);
@@ -62,7 +62,7 @@ namespace Drone
      * or write the command to the channel are relatively expected and tick
      * error counters and fails the command. This is so the command queue
      * doesn't get stuck retrying that failed command. (The failure to translate
-     * or write itself may Sac-print.)
+     * or write itself may Fsw-print.)
      *
      * @param      sequence_number  The command's sequence number.
      * @param      payload          The command's payload.
@@ -75,7 +75,7 @@ namespace Drone
                              const CommandPayload &payload, bool &issued)
     {
         issued = false;
-        SacAbortIfNot(is_init, false);
+        FswAbortIfNot(is_init, false);
         /*
          * Convert CommandPayload representation to a raw vehicle-format
          * command message and
@@ -87,7 +87,7 @@ namespace Drone
             ++slate[errors_translate_failed_tok];
             return true;
         }
-        SacAbortIfNot(vehicle_msg.prepare_transport(0, 0), false);
+        FswAbortIfNot(vehicle_msg.prepare_transport(0, 0), false);
         /*
          * Wrap into a timestamp-framed vehicle format message.
          * Ask for a receipt primarily for testing on the ground.
@@ -96,7 +96,7 @@ namespace Drone
         TimestampFramedMessage::flags_bits_t flags;
         flags.ack = true;
         TimestampFramedMessage ts_msg;
-        SacAbortIfNot(ts_msg.init(vehicle_msg, flags, 0 /* timestamp */,
+        FswAbortIfNot(ts_msg.init(vehicle_msg, flags, 0 /* timestamp */,
                                   client_node_id, sequence_number),
                       false);
         /*
@@ -130,11 +130,11 @@ namespace Drone
     bool CommandSender::for_each_counter(
         Slot<bool, WriteToken<uint32_t>> each_counter) const
     {
-        SacAbortIfNot(is_init, false);
-        SacAbortIfNot(each_counter(metrics_writes_tok), false);
-        SacAbortIfNot(each_counter(errors_translate_failed_tok), false);
-        SacAbortIfNot(each_counter(errors_invalid_node_tok), false);
-        SacAbortIfNot(each_counter(errors_write_failed_tok), false);
+        FswAbortIfNot(is_init, false);
+        FswAbortIfNot(each_counter(metrics_writes_tok), false);
+        FswAbortIfNot(each_counter(errors_translate_failed_tok), false);
+        FswAbortIfNot(each_counter(errors_invalid_node_tok), false);
+        FswAbortIfNot(each_counter(errors_write_failed_tok), false);
         return true;
     }
 } /* end namespace Drone */

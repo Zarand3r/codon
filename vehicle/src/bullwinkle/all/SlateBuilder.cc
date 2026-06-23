@@ -126,7 +126,7 @@ namespace Drone
     bool
     SlateBuilder::add_enum_registry(const Handle<EnumRegistry> &_enum_registry)
     {
-        SacMsgAbortIf(enum_registry,
+        FswMsgAbortIf(enum_registry,
                       false,
                       512,
                       "Attempted to add an EnumRegistry to SlateBuilder at '%s'"
@@ -149,7 +149,7 @@ namespace Drone
         const std::string &_enum_registry_relative_path)
     {
         enum_registry_relative_path = _enum_registry_relative_path;
-        SacAbortIfNot(add_enum_registry(_enum_registry), false);
+        FswAbortIfNot(add_enum_registry(_enum_registry), false);
 
         return true;
     }
@@ -257,12 +257,12 @@ namespace Drone
         const slate_permission_t parent_permission = store->get_permission();
         const str_s masked_paths = store->get_masked_paths();
 
-        if (SacIfNot(
+        if (FswIfNot(
                 slate_permission_is_superset(parent_permission, permission)))
         {
-            SacPrefix();
+            FswPrefix();
             dbstring(": Cannot elevate privileges in a sub-slate.\n");
-            SacAssert(false);
+            FswAssert(false);
         }
 
         /*
@@ -275,13 +275,13 @@ namespace Drone
             std::string_view stripped;
             if (slate_rel_path(*iter, rel_subtree_path, stripped))
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(500,
                           ": Cannot create sub-slate at '%s', path '%s' "
                           "is forbidden.\n",
                           rel_subtree_path.c_str(),
                           iter->c_str());
-                SacAssert(false);
+                FswAssert(false);
             }
         }
 
@@ -423,7 +423,7 @@ namespace Drone
     {
         const std::string channel_name =
             slate_join_path(enum_registry_relative_path, element_path);
-        SacMsgAbortIfNot(
+        FswMsgAbortIfNot(
             enum_registry,
             false,
             256,
@@ -431,7 +431,7 @@ namespace Drone
             "an EnumRegistry",
             enum_name.c_str(),
             subtree_path.c_str());
-        SacAbortIfNot(enum_registry->register_enum(
+        FswAbortIfNot(enum_registry->register_enum(
                           enum_name, symbol_table, channel_name, strip_prefix),
                       false);
         return true;
@@ -452,9 +452,9 @@ namespace Drone
     {
         const std::string full_path =
             slate_join_path(subtree_path, element_path);
-        SacAbortIfNot(require_permitted_path(full_path), false);
+        FswAbortIfNot(require_permitted_path(full_path), false);
 
-        SacAbortIfNot(store->get_element_id(full_path, type_id, element_id),
+        FswAbortIfNot(store->get_element_id(full_path, type_id, element_id),
                       false);
 
         return true;
@@ -473,7 +473,7 @@ namespace Drone
     {
         const std::string full_path =
             slate_join_path(subtree_path, element_path);
-        SacAbortIfNot(require_permitted_path(full_path), false);
+        FswAbortIfNot(require_permitted_path(full_path), false);
 
         return layout.get_element_type(full_path, type_id);
     }
@@ -495,7 +495,7 @@ namespace Drone
     {
         const std::string channel_name =
             slate_join_path(enum_registry_relative_path, element_path);
-        SacMsgAbortIfNot(
+        FswMsgAbortIfNot(
             enum_registry,
             false,
             256,
@@ -541,7 +541,7 @@ namespace Drone
                                               std::string &path) const
     {
         std::string_view first_path;
-        SacAbortIfNot(
+        FswAbortIfNot(
             layout.get_first_element_path(element_id, type_id, first_path),
             false);
 
@@ -699,7 +699,7 @@ namespace Drone
         }
 
         Handle<SlateBuilderStoreInterface> super_store = store->super_slate();
-        SacAssert(super_store);
+        FswAssert(super_store);
         return SlateBuilder(super_store);
     }
 
@@ -744,7 +744,7 @@ namespace Drone
                 continue;
             }
 
-            SacAbortIfNot(layout.build_element_id(
+            FswAbortIfNot(layout.build_element_id(
                               path, metadata, access, out_elem.element_id),
                           false);
 
@@ -778,7 +778,7 @@ namespace Drone
     bool
     SlateBuilder::names_distinct(const std::vector<SlateBuilder> &sudo_builders)
     {
-        SacAbortIf(sudo_builders.empty(), false);
+        FswAbortIf(sudo_builders.empty(), false);
 
         str_s names;
 
@@ -788,14 +788,14 @@ namespace Drone
              * Make sure this is a built super SlateBuilder. This is to enforce
              * that all elements are created and we can access all of them.
              */
-            SacAbortIfNot(builder.is_built(), false);
-            SacAbortIfNot(builder.is_super_slate(), false);
+            FswAbortIfNot(builder.is_built(), false);
+            FswAbortIfNot(builder.is_super_slate(), false);
 
             /*
              * Lookup all the elements in this builder.
              */
             slateelem_v path_set;
-            SacAbortIfNot(builder.compute_path_set(path_set), false);
+            FswAbortIfNot(builder.compute_path_set(path_set), false);
 
             /*
              * Iterate over every element and add its name to the set.
@@ -806,7 +806,7 @@ namespace Drone
 
                 if (!insert_ret.second)
                 {
-                    SacMsgAbort(false,
+                    FswMsgAbort(false,
                                 200,
                                 "Duplicate element name '%s' in subtree "
                                 "path '%s'.",
@@ -867,7 +867,7 @@ namespace Drone
             std::string_view stripped;
             if (slate_rel_path(*iter, full_path, stripped))
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(200,
                           ": Path '%s' is forbidden; masked by '%s'.\n",
                           full_path.c_str(),

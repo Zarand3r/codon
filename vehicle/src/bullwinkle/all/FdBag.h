@@ -6,16 +6,16 @@
 #define FD_BAG_H
 #include "src/bullwinkle/all/FdEventSink.h"
 #include "src/bullwinkle/all/Handle.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include <sys/epoll.h>
 #include <vector>
 /**
- * Sac if the select response code is not select_success. Does not
+ * Fsw if the select response code is not select_success. Does not
  * compile out.
  *
  * @param x An expression which returns a select_code_t.
  */
-#define SacOnSelectError(x) SacIfNeq((x), Drone::select_success)
+#define FswOnSelectError(x) FswIfNeq((x), Drone::select_success)
 /**
  * Return from the function with the supplied retval if the select
  * response code is not select_success. Does not compile out.
@@ -25,8 +25,8 @@
  * @param retval The value to return from the function if \a x is not
  *               select_success.
  */
-#define SacAbortOnSelectError(x, retval)                                       \
-    if (SacIfNeq((x), Drone::select_success))                                 \
+#define FswAbortOnSelectError(x, retval)                                       \
+    if (FswIfNeq((x), Drone::select_success))                                 \
     {                                                                          \
         return (retval);                                                       \
     }
@@ -39,8 +39,8 @@
  * @param retval The value to return from the function if \a x is not
  *               select_error.
  */
-#define SacAbortIfNotSelectError(x, retval)                                    \
-    if (SacIfNeq((x), Drone::select_error))                                   \
+#define FswAbortIfNotSelectError(x, retval)                                    \
+    if (FswIfNeq((x), Drone::select_error))                                   \
     {                                                                          \
         return (retval);                                                       \
     }
@@ -53,8 +53,8 @@
  * @param retval The value to return from the function if \a x is not
  *               select_wouldblock.
  */
-#define SacAbortIfNotSelectBlock(x, retval)                                    \
-    if (SacIfNeq((x), Drone::select_wouldblock))                              \
+#define FswAbortIfNotSelectBlock(x, retval)                                    \
+    if (FswIfNeq((x), Drone::select_wouldblock))                              \
     {                                                                          \
         return (retval);                                                       \
     }
@@ -68,12 +68,12 @@
  * @param retval The value to return from the function if \a x is not
  *               select_success.
  */
-#define SacAbortSilentOnSelectError(x, retval)                                 \
+#define FswAbortSilentOnSelectError(x, retval)                                 \
     {                                                                          \
         dbsilence(true);                                                       \
-        const Drone::select_code_t sac_success = (x);                         \
+        const Drone::select_code_t fsw_success = (x);                         \
         dbsilence(false);                                                      \
-        if (SacIfNeq((sac_success), Drone::select_success))                   \
+        if (FswIfNeq((fsw_success), Drone::select_success))                   \
         {                                                                      \
             return (retval);                                                   \
         }                                                                      \
@@ -88,12 +88,12 @@
  * @param retval The value to return from the function if \a x is not
  *               select_error.
  */
-#define SacAbortSilentIfNotSelectError(x, retval)                              \
+#define FswAbortSilentIfNotSelectError(x, retval)                              \
     {                                                                          \
         dbsilence(true);                                                       \
-        const Drone::select_code_t sac_success = (x);                         \
+        const Drone::select_code_t fsw_success = (x);                         \
         dbsilence(false);                                                      \
-        if (SacIfNeq((sac_success), Drone::select_error))                     \
+        if (FswIfNeq((fsw_success), Drone::select_error))                     \
         {                                                                      \
             return (retval);                                                   \
         }                                                                      \
@@ -108,12 +108,12 @@
  * @param retval The value to return from the function if \a x is not
  *               select_wouldblock.
  */
-#define SacAbortSilentIfNotSelectBlock(x, retval)                              \
+#define FswAbortSilentIfNotSelectBlock(x, retval)                              \
     {                                                                          \
         dbsilence(true);                                                       \
-        const Drone::select_code_t sac_success = (x);                         \
+        const Drone::select_code_t fsw_success = (x);                         \
         dbsilence(false);                                                      \
-        if (SacIfNeq((sac_success), Drone::select_wouldblock))                \
+        if (FswIfNeq((fsw_success), Drone::select_wouldblock))                \
         {                                                                      \
             return (retval);                                                   \
         }                                                                      \
@@ -127,8 +127,8 @@ namespace Drone
     {
         /**
          * select() was successful. The success code casts to boolean
-         * false to catch any accidental usage of SacAbortIfNot instead
-         * of SacAbortOnSelectError.
+         * false to catch any accidental usage of FswAbortIfNot instead
+         * of FswAbortOnSelectError.
          */
         select_success = 0,
         /**
@@ -254,7 +254,7 @@ namespace Drone
         int fd_bound;
 
     private:
-        SX_DISALLOW_COPY_AND_ASSIGN(FdBag);
+        FSW_DISALLOW_COPY_AND_ASSIGN(FdBag);
     };
     /**
      * Select on the file descriptors from multiple FdBags

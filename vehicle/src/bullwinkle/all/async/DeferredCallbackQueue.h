@@ -107,7 +107,7 @@ namespace Drone
              * but complain loudly.
              */
             static const uint64_t one = 1;
-            SacOnErrno(write(ready_fd, &one, sizeof(one)));
+            FswOnErrno(write(ready_fd, &one, sizeof(one)));
             return future;
         }
 
@@ -135,7 +135,7 @@ namespace Drone
                 promise->set_value(callback());
             };
         }
-        SX_DISALLOW_COPY_AND_ASSIGN(DeferredCallbackQueue);
+        FSW_DISALLOW_COPY_AND_ASSIGN(DeferredCallbackQueue);
         /**
          * The mutex that serializes access to the callback queue.
          */

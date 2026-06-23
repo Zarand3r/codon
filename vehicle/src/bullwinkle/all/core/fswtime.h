@@ -3,7 +3,7 @@
 // Time vocabulary for the fixed-cadence control loop.
 // Contract from usage: `nano_t` (signed 64-bit ns), `nano_t_min`/`nano_t_max`
 // (the immediate-callback / never sentinels), `billion` (ns per second),
-// `get_rel_time()` (monotonic now), `sxsleep(nano_t)` (sleep, used to phase-align
+// `get_rel_time()` (monotonic now), `fswsleep(nano_t)` (sleep, used to phase-align
 // non-sharing nodes).
 
 #include "src/bullwinkle/all/core/drone_types.h"
@@ -29,7 +29,7 @@ namespace Drone
     }
 
     // Sleep for the given duration. Non-positive durations return immediately.
-    inline void sxsleep(nano_t ns)
+    inline void fswsleep(nano_t ns)
     {
         if (ns <= 0)
         {

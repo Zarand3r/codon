@@ -6,7 +6,7 @@
 #ifndef SIGNAL_H
 #define SIGNAL_H
 
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/bullwinkle/all/core/drone_types.h"
 
 #include <functional>
@@ -56,7 +56,7 @@ namespace Drone
      *
      *     bool init(Signal<void, int> &sig)
      *     {
-     *         SacAbortIfNot(sig.connect(make_slot(*this, &Consumer::callback)),
+     *         FswAbortIfNot(sig.connect(make_slot(*this, &Consumer::callback)),
      *                       false);
      *         return true;
      *     }
@@ -73,10 +73,10 @@ namespace Drone
      *     Producer producer;
      *
      *     Consumer consumer1;
-     *     SacAbortIfNot(consumer1.init(producer.sig), false);
+     *     FswAbortIfNot(consumer1.init(producer.sig), false);
      *
      *     Consumer consumer2;
-     *     SacAbortIfNot(consumer2.init(producer.sig), false);
+     *     FswAbortIfNot(consumer2.init(producer.sig), false);
      * }
      */
 
@@ -115,7 +115,7 @@ namespace Drone
          * This object is only ever meant to be created inside a smart pointer,
          * so there is no reason to allow copying it.
          */
-        SX_DISALLOW_COPY_AND_ASSIGN(FunctionInvalidator);
+        FSW_DISALLOW_COPY_AND_ASSIGN(FunctionInvalidator);
     };
 
     /**
@@ -195,7 +195,7 @@ namespace Drone
         {
             for (const auto &fi : function_invalidators)
             {
-                SacDebugAssert(fi);
+                FswDebugAssert(fi);
 
                 if (fi)
                 {
@@ -239,7 +239,7 @@ namespace Drone
          * This is because the contents of function_invalidators must be unique
          * to this object and never associated with another object.
          */
-        SX_DISALLOW_COPY_AND_ASSIGN(SignalHandler);
+        FSW_DISALLOW_COPY_AND_ASSIGN(SignalHandler);
 
         /**
          * The list of function invalidators.
@@ -281,7 +281,7 @@ namespace Drone
             fsptr(),
             attached_handler(nullptr)
         {
-            SacAssert(init_non_member(non_member_f));
+            FswAssert(init_non_member(non_member_f));
         }
 
         /**
@@ -301,7 +301,7 @@ namespace Drone
             fsptr(),
             attached_handler(nullptr)
         {
-            SacAssert(init_member(handler, member_f));
+            FswAssert(init_member(handler, member_f));
         }
 
         /**
@@ -312,7 +312,7 @@ namespace Drone
             fsptr(),
             attached_handler(nullptr)
         {
-            SacAssert(init_member(handler, member_f));
+            FswAssert(init_member(handler, member_f));
         }
 
         /**
@@ -337,31 +337,31 @@ namespace Drone
         bool
         init_from_slot(const Slot<R, InArgs...> &slot, BindArgs... bindargs)
         {
-            SacAbortIf(fsptr, false);
-            SacAbortIf(attached_handler, false);
+            FswAbortIf(fsptr, false);
+            FswAbortIf(attached_handler, false);
 
-            SacAbortIfNot(slot, false);
-            SacAbortIfNot(slot.fsptr, false);
+            FswAbortIfNot(slot, false);
+            FswAbortIfNot(slot.fsptr, false);
 
             const std::function<R(InArgs...)> old_f = *slot.fsptr;
-            SacAbortIfNot(old_f, false);
+            FswAbortIfNot(old_f, false);
 
             const std::function<R(Args...)> new_f =
                 std::bind(old_f, bindargs...);
             const std::shared_ptr<std::function<R(Args...)>> new_fsptr(
                 new std::function<R(Args...)>(new_f));
 
-            SacAbortIfNot(new_fsptr, false);
-            SacAbortIfNot((*new_fsptr), false);
+            FswAbortIfNot(new_fsptr, false);
+            FswAbortIfNot((*new_fsptr), false);
 
             if (slot.attached_handler)
             {
                 std::unique_ptr<FunctionInvalidator> fi(
                     new FunctionWeakPointer<R, Args...>(new_fsptr));
-                SacAbortIfNot(fi, false);
+                FswAbortIfNot(fi, false);
 
                 attached_handler = slot.attached_handler;
-                SacAbortIfNot(attached_handler, false);
+                FswAbortIfNot(attached_handler, false);
 
                 attached_handler->register_function_invalidator(std::move(fi));
             }
@@ -371,8 +371,8 @@ namespace Drone
              * its validity stands in for the validity of the Slot.
              */
             fsptr = new_fsptr;
-            SacAbortIfNot(fsptr, false);
-            SacAbortIfNot((*fsptr), false);
+            FswAbortIfNot(fsptr, false);
+            FswAbortIfNot((*fsptr), false);
 
             return true;
         }
@@ -407,7 +407,7 @@ namespace Drone
             if (!fsptr)
             {
                 constexpr bool ptr_is_valid = false;
-                SacAssert(ptr_is_valid);
+                FswAssert(ptr_is_valid);
                 return R();
             }
 
@@ -416,7 +416,7 @@ namespace Drone
             if (!f)
             {
                 constexpr bool function_is_valid = false;
-                SacAssert(function_is_valid);
+                FswAssert(function_is_valid);
                 return R();
             }
 
@@ -444,10 +444,10 @@ namespace Drone
          */
         bool init_non_member(R (*non_member_f)(Args...))
         {
-            SacAbortIf(fsptr, false);
-            SacAbortIf(attached_handler, false);
+            FswAbortIf(fsptr, false);
+            FswAbortIf(attached_handler, false);
 
-            SacAbortIfNot(non_member_f, false);
+            FswAbortIfNot(non_member_f, false);
 
             /*
              * Setting the function should be the last action performed since
@@ -455,8 +455,8 @@ namespace Drone
              */
             fsptr = std::shared_ptr<std::function<R(Args...)>>(
                 new std::function<R(Args...)>(non_member_f));
-            SacAbortIfNot(fsptr, false);
-            SacAbortIfNot((*fsptr), false);
+            FswAbortIfNot(fsptr, false);
+            FswAbortIfNot((*fsptr), false);
 
             return true;
         }
@@ -477,7 +477,7 @@ namespace Drone
         bool
         init_member(HandlerType &handler, R (MemberType::*member_f)(Args...))
         {
-            SacAbortIfNot(member_f, false);
+            FswAbortIfNot(member_f, false);
 
             static_assert(std::is_base_of<MemberType, HandlerType>::value, "");
 
@@ -487,7 +487,7 @@ namespace Drone
                 return ((ptr)->*(member_f))(args...);
             };
 
-            SacAbortIfNot(init_member_common(handler, new_f), false);
+            FswAbortIfNot(init_member_common(handler, new_f), false);
 
             return true;
         }
@@ -499,7 +499,7 @@ namespace Drone
         bool init_member(HandlerType &handler,
                          R (MemberType::*member_f)(Args...) const)
         {
-            SacAbortIfNot(member_f, false);
+            FswAbortIfNot(member_f, false);
 
             static_assert(std::is_base_of<MemberType, HandlerType>::value, "");
 
@@ -509,7 +509,7 @@ namespace Drone
                 return ((ptr)->*(member_f))(args...);
             };
 
-            SacAbortIfNot(init_member_common(handler, new_f), false);
+            FswAbortIfNot(init_member_common(handler, new_f), false);
 
             return true;
         }
@@ -529,26 +529,26 @@ namespace Drone
         bool init_member_common(HandlerType &handler,
                                 const std::function<R(Args...)> &new_f)
         {
-            SacAbortIf(fsptr, false);
-            SacAbortIf(attached_handler, false);
+            FswAbortIf(fsptr, false);
+            FswAbortIf(attached_handler, false);
 
-            SacAbortIfNot(new_f, false);
+            FswAbortIfNot(new_f, false);
 
             const std::shared_ptr<std::function<R(Args...)>> new_fsptr(
                 new std::function<R(Args...)>(new_f));
 
-            SacAbortIfNot(new_fsptr, false);
-            SacAbortIfNot((*new_fsptr), false);
+            FswAbortIfNot(new_fsptr, false);
+            FswAbortIfNot((*new_fsptr), false);
 
             static_assert(std::is_base_of<SignalHandler, HandlerType>::value,
                           "A Slot can only be used with a member function of a "
                           "class that inherits from SignalHandler.");
             attached_handler = static_cast<SignalHandler *>(&handler);
-            SacAbortIfNot(attached_handler, false);
+            FswAbortIfNot(attached_handler, false);
 
             std::unique_ptr<FunctionInvalidator> fi(
                 new FunctionWeakPointer<R, Args...>(new_fsptr));
-            SacAbortIfNot(fi, false);
+            FswAbortIfNot(fi, false);
 
             attached_handler->register_function_invalidator(std::move(fi));
 
@@ -557,8 +557,8 @@ namespace Drone
              * its validity stands in for the validity of the Slot.
              */
             fsptr = new_fsptr;
-            SacAbortIfNot(fsptr, false);
-            SacAbortIfNot((*fsptr), false);
+            FswAbortIfNot(fsptr, false);
+            FswAbortIfNot((*fsptr), false);
 
             return true;
         }
@@ -649,7 +649,7 @@ namespace Drone
 
         Slot<R> empty_slot;
         Slot<R> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot, bindarg), empty_slot);
+        FswAbortIfNot(new_slot.init_from_slot(slot, bindarg), empty_slot);
         return new_slot;
     }
 
@@ -668,7 +668,7 @@ namespace Drone
 
         Slot<R, Arg1> empty_slot;
         Slot<R, Arg1> new_slot;
-        SacAbortIfNot(
+        FswAbortIfNot(
             new_slot.init_from_slot(slot, std::placeholders::_1, bindarg),
             empty_slot);
         return new_slot;
@@ -690,7 +690,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2> empty_slot;
         Slot<R, Arg1, Arg2> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               bindarg),
@@ -721,7 +721,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2, Arg3> empty_slot;
         Slot<R, Arg1, Arg2, Arg3> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               std::placeholders::_3,
@@ -755,7 +755,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2, Arg3, Arg4> empty_slot;
         Slot<R, Arg1, Arg2, Arg3, Arg4> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               std::placeholders::_3,
@@ -797,7 +797,7 @@ namespace Drone
 
         Slot<R> empty_slot;
         Slot<R> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot, bindarg1, bindarg2),
+        FswAbortIfNot(new_slot.init_from_slot(slot, bindarg1, bindarg2),
                       empty_slot);
         return new_slot;
     }
@@ -826,7 +826,7 @@ namespace Drone
 
         Slot<R, Arg1> empty_slot;
         Slot<R, Arg1> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(
+        FswAbortIfNot(new_slot.init_from_slot(
                           slot, std::placeholders::_1, bindarg1, bindarg2),
                       empty_slot);
         return new_slot;
@@ -859,7 +859,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2> empty_slot;
         Slot<R, Arg1, Arg2> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               bindarg1,
@@ -909,7 +909,7 @@ namespace Drone
 
         Slot<R> empty_slot;
         Slot<R> new_slot;
-        SacAbortIfNot(
+        FswAbortIfNot(
             new_slot.init_from_slot(slot, bindarg1, bindarg2, bindarg3),
             empty_slot);
         return new_slot;
@@ -944,7 +944,7 @@ namespace Drone
 
         Slot<R, Arg1> empty_slot;
         Slot<R, Arg1> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               bindarg1,
                                               bindarg2,
@@ -984,7 +984,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2> empty_slot;
         Slot<R, Arg1, Arg2> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               bindarg1,
@@ -1027,7 +1027,7 @@ namespace Drone
 
         Slot<R, Arg1, Arg2, Arg3> empty_slot;
         Slot<R, Arg1, Arg2, Arg3> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               std::placeholders::_3,
@@ -1057,7 +1057,7 @@ namespace Drone
     {
         Slot<R, HideArg> empty_slot;
         Slot<R, HideArg> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot), empty_slot);
+        FswAbortIfNot(new_slot.init_from_slot(slot), empty_slot);
         return new_slot;
     }
 
@@ -1074,7 +1074,7 @@ namespace Drone
     {
         Slot<R, Arg1, HideArg> empty_slot;
         Slot<R, Arg1, HideArg> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot, std::placeholders::_1),
+        FswAbortIfNot(new_slot.init_from_slot(slot, std::placeholders::_1),
                       empty_slot);
         return new_slot;
     }
@@ -1093,7 +1093,7 @@ namespace Drone
     {
         Slot<R, Arg1, Arg2, HideArg> empty_slot;
         Slot<R, Arg1, Arg2, HideArg> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2),
                       empty_slot);
@@ -1116,7 +1116,7 @@ namespace Drone
     {
         Slot<R, Arg1, Arg2, Arg3, HideArg> empty_slot;
         Slot<R, Arg1, Arg2, Arg3, HideArg> new_slot;
-        SacAbortIfNot(new_slot.init_from_slot(slot,
+        FswAbortIfNot(new_slot.init_from_slot(slot,
                                               std::placeholders::_1,
                                               std::placeholders::_2,
                                               std::placeholders::_3),
@@ -1327,7 +1327,7 @@ namespace Drone
         bool connect(const SlotType &slot)
         {
             UINT64 id = 0;
-            SacAbortIfNot(insert(slot, id), false);
+            FswAbortIfNot(insert(slot, id), false);
 
             return true;
         }
@@ -1345,7 +1345,7 @@ namespace Drone
             SignalConnection empty_connection;
 
             UINT64 id = 0;
-            SacAbortIfNot(insert(slot, id), empty_connection);
+            FswAbortIfNot(insert(slot, id), empty_connection);
 
             return SignalConnection(
                 slot_bind(make_slot(*this, &Signal::remove), id),
@@ -1402,7 +1402,7 @@ namespace Drone
             if (locked)
             {
                 constexpr bool is_unlocked = false;
-                SacAssert(is_unlocked);
+                FswAssert(is_unlocked);
                 return R();
             }
 
@@ -1421,7 +1421,7 @@ namespace Drone
             {
                 slot_record_t &slot_record = *it;
 
-                SacDebugAssert(slot_record.fsptr);
+                FswDebugAssert(slot_record.fsptr);
 
                 const std::function<R(Args...)> &f = (*slot_record.fsptr);
 
@@ -1487,9 +1487,9 @@ namespace Drone
          */
         bool insert(const SlotType &slot, UINT64 &id)
         {
-            SacAbortIfNot(slot, false);
-            SacAbortIfNot(slot.fsptr, false);
-            SacAbortIfNot((*slot.fsptr), false);
+            FswAbortIfNot(slot, false);
+            FswAbortIfNot(slot.fsptr, false);
+            FswAbortIfNot((*slot.fsptr), false);
 
             id = next_id;
             next_id++;
@@ -1566,7 +1566,7 @@ namespace Drone
              */
             bool should_remove() const
             {
-                SacDebugAssert(fsptr);
+                FswDebugAssert(fsptr);
                 return request_removal || !(*fsptr);
             }
 

@@ -3,7 +3,7 @@
  * @date   04/09/11
  */
 #include "src/bullwinkle/all/io/StreamConnection.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 namespace Drone
 {
     StreamConnection::StreamConnection() : connect_sig() {}
@@ -25,7 +25,7 @@ namespace Drone
     bool StreamConnection::clear_signals()
     {
         connect_sig.clear();
-        SacAbortIfNot(StreamChannel::clear_signals(), false);
+        FswAbortIfNot(StreamChannel::clear_signals(), false);
         return true;
     }
     /**
@@ -42,8 +42,8 @@ namespace Drone
     {
         if (0 == bytes)
             return true;
-        SacAbortIf(is_empty(), false);
-        SacAbortIfNot(channel_pop_front(bytes), false);
+        FswAbortIf(is_empty(), false);
+        FswAbortIfNot(channel_pop_front(bytes), false);
         /*
          * If we have just drained the channel, emit a close signal.
          */
@@ -53,7 +53,7 @@ namespace Drone
              * There's not a lot we can do if this fails. We've already
              * successfully closed the channel and popped the data.
              */
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -62,8 +62,8 @@ namespace Drone
      */
     bool StreamConnection::commit_dataframe(DataFrame &frame)
     {
-        SacAbortIf(is_closed(), false);
-        SacAbortIfNot(channel_commit_dataframe(frame), false);
+        FswAbortIf(is_closed(), false);
+        FswAbortIfNot(channel_commit_dataframe(frame), false);
         return true;
     }
     /**
@@ -81,7 +81,7 @@ namespace Drone
         while (!is_empty())
         {
             has_popped = false;
-            if (SacIfNot(read_sig.emit(*this)))
+            if (FswIfNot(read_sig.emit(*this)))
                 return false;
             if (!has_popped)
                 break;

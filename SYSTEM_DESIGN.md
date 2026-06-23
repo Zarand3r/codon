@@ -295,11 +295,11 @@ concrete examples from `DroneFtRuntime.cc`:
 
 ```cpp
 const std::string timestamp_service = "satgps1" + ident.string + "_timestamp";
-SacAbortIfNot(service_directory().lookup(timestamp_service, service), false);
-SacAbortIfNot(service.proto == udp_proto, false);
+FswAbortIfNot(service_directory().lookup(timestamp_service, service), false);
+FswAbortIfNot(service.proto == udp_proto, false);
 ...
 service_directory().lookup(Satellite::alert_buffer_output_service, alerts_service);
-SacAbortIfNot(alerts_service.proto != udp_proto, false /* must be udp */);
+FswAbortIfNot(alerts_service.proto != udp_proto, false /* must be udp */);
 ```
 
 A separate `node_directory()` maps the redundant units to network addresses, and
@@ -311,7 +311,7 @@ segments = { vehicle_network_segment_ground, vehicle_network_segment_rf,
              vehicle_network_segment_satellite,
              vehicle_network_segment_satellite_utility,
              vehicle_network_segment_satellite_payload };
-SacAbortIfNot(verify_node_directory_segments(node_directory(), segments,
+FswAbortIfNot(verify_node_directory_segments(node_directory(), segments,
                                              true /* allow_192_168 */), false);
 ```
 
@@ -546,7 +546,7 @@ EARLY (per string, not yet voted):
   6. gnd_cmd_dispatcher_nonsynced  → apply private (non-synced) commands
   7. slate_sender_local.share      → broadcast my inputs to peers   ── UDP ──►
   8. data_sharer.dispatch          → exchange (share+reshare) + vote ◄── UDP ──
-       (non-sharing nodes instead sxsleep(ds_parallel_sleep_time))
+       (non-sharing nodes instead fswsleep(ds_parallel_sleep_time))
   9. SlateSyncer.dispatch_check    → desync detection
  10. bootstrapper.dispatch         → advance sync state machine
  11. FtSync.send_syncs (cond.)     → emit time-sync beacons         ── UDP ──►
@@ -573,7 +573,7 @@ of each unit's role:
 // share time and reshare time to keep them in phase with their counterparts…
 ds_parallel_sleep_time = share_time + reshare_time;
 ...
-sxsleep(ds_parallel_sleep_time);
+fswsleep(ds_parallel_sleep_time);
 ```
 
 ---
@@ -601,7 +601,7 @@ bool set_multi_by_hash(multi_command_v &cmds, bool &success) RUNTIME;
 ```
 
 Authentication is by **Ed25519 signature** verification, with two keystores —
-`noc_keystore` (operator) and `command_auth_keystore` — and a `require_signed_command`
+`operator_keystore` (operator) and `command_auth_keystore` — and a `require_signed_command`
 gate (`CommandQueueClient.h`). Name↔hash↔id resolution is backed by a
 `SymbolTable`: *"A map of strings to integers and back based off of the contents
 of a data file … maps in either direction, and has an optional fallback

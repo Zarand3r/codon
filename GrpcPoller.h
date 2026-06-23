@@ -5,7 +5,7 @@ src / flight / sat / all / common / grpc /
 #define GRPC_POLLER_H
 #include "src/bullwinkle/all/Signal.h"
 #include "src/bullwinkle/all/Slate.h"
-#include "src/bullwinkle/all/core/sxtime.h"
+#include "src/bullwinkle/all/core/fswtime.h"
 #include "src/bullwinkle/all/grpc/GrpcClient.h"
 #include <random>
 #include <string>
@@ -134,7 +134,7 @@ namespace Drone
         {
             Handle<GrpcPoller> empty;
             Handle<GrpcPoller> poller(new GrpcPoller(_name));
-            SacAbortIfNot(poller->init(builder, _config, queue, method,
+            FswAbortIfNot(poller->init(builder, _config, queue, method,
                                        _build_request, _cb, flow),
                           empty);
             return poller;
@@ -212,7 +212,7 @@ namespace Drone
              * blocking for 0 time between iterations of EventLoop, which calls
              * dispatch on all event sources at the rate of the fastest one.
              */
-            SacIf(slate[next_poll_time_tok] <= control_time);
+            FswIf(slate[next_poll_time_tok] <= control_time);
             return slate[next_poll_time_tok];
         }
         /**
@@ -259,9 +259,9 @@ namespace Drone
                                    const nano_t _max_retry_backoff,
                                    const bool should_poll_asap = true) override
         {
-            SacAbortIf(_min_retry_backoff <= 0, false);
-            SacAbortIf(_max_retry_backoff <= 0, false);
-            SacAbortIf(_min_retry_backoff > _max_retry_backoff, false);
+            FswAbortIf(_min_retry_backoff <= 0, false);
+            FswAbortIf(_max_retry_backoff <= 0, false);
+            FswAbortIf(_min_retry_backoff > _max_retry_backoff, false);
             if (_polling_period == config.grpc_polling_period &&
                 _min_retry_backoff == config.min_retry_backoff &&
                 _max_retry_backoff == config.max_retry_backoff)
@@ -349,23 +349,23 @@ namespace Drone
                   typename client_t::TCallback _cb,
                   GroundNumericFlow *flow = nullptr)
         {
-            SacAbortIfNot(is_rpc_initialized(), false);
+            FswAbortIfNot(is_rpc_initialized(), false);
             config = _config;
-            SacAbortIfNot(config.endpoint_provider, false);
-            SacAbortIf(config.min_retry_backoff <= 0, false);
-            SacAbortIf(config.max_retry_backoff <= 0, false);
-            SacAbortIf(config.grpc_polling_period < 0, false);
-            SacAbortIf(config.min_delay_between_successful_calls_nanos < 0,
+            FswAbortIfNot(config.endpoint_provider, false);
+            FswAbortIf(config.min_retry_backoff <= 0, false);
+            FswAbortIf(config.max_retry_backoff <= 0, false);
+            FswAbortIf(config.grpc_polling_period < 0, false);
+            FswAbortIf(config.min_delay_between_successful_calls_nanos < 0,
                        false);
-            SacAbortIf(config.min_delay_between_successful_calls_nanos >
+            FswAbortIf(config.min_delay_between_successful_calls_nanos >
                            config.grpc_polling_period,
                        false);
             build_request = _build_request;
             cb = _cb;
             SlateBuilder subslate = builder.sub_slate(name);
             slate = builder.slate(slate_no_validation);
-            SacAbortIf(config.min_retry_backoff <= 0, false);
-            SacAbortIf(config.max_retry_backoff <= 0, false);
+            FswAbortIf(config.min_retry_backoff <= 0, false);
+            FswAbortIf(config.max_retry_backoff <= 0, false);
             /*
              * Set up our random number generator.
              */
@@ -378,40 +378,40 @@ namespace Drone
                 config.endpoint_provider, *queue, method, subslate,
                 config.grpc_timeout, 1 /* max outstanding requests */, flow,
                 {});
-            SacAbortIfNot(grpc_client, false);
+            FswAbortIfNot(grpc_client, false);
             /*
              * Create slate tokens.
              */
             nano_t polling_period = config.grpc_polling_period;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 subslate.create(
                     "next_poll_time_ns",
                     polling_period == 0 || !config.start_enabled ? nano_t_max
                                                                  : 0,
                     shard_nonsync, slate_read_only, next_poll_time_tok),
                 false);
-            SacAbortIfNot(subslate.create("last_poll_time_ns", 0, shard_nonsync,
+            FswAbortIfNot(subslate.create("last_poll_time_ns", 0, shard_nonsync,
                                           slate_read_only, last_poll_time_tok),
                           false);
-            SacAbortIfNot(subslate.create("last_success_time_ns", nano_t_min,
+            FswAbortIfNot(subslate.create("last_success_time_ns", nano_t_min,
                                           shard_nonsync, slate_read_write,
                                           last_success_time_tok),
                           false);
-            SacAbortIfNot(subslate.create("polling_enabled",
+            FswAbortIfNot(subslate.create("polling_enabled",
                                           config.start_enabled, shard_nonsync,
                                           slate_read_only, polling_enabled_tok),
                           false);
-            SacAbortIfNot(subslate.create("waiting_on_response", false,
+            FswAbortIfNot(subslate.create("waiting_on_response", false,
                                           shard_nonsync, slate_read_only,
                                           waiting_on_response_tok),
                           false);
-            SacAbortIfNot(subslate.create("poll_asap_count", 0, shard_nonsync,
+            FswAbortIfNot(subslate.create("poll_asap_count", 0, shard_nonsync,
                                           slate_read_only, poll_asap_count_tok),
                           false);
-            SacAbortIfNot(subslate.create("retry_count", 0, shard_nonsync,
+            FswAbortIfNot(subslate.create("retry_count", 0, shard_nonsync,
                                           slate_read_only, retry_count_tok),
                           false);
-            SacAbortIfNot(subslate.create("hsm_type", config.auth.hsm_type,
+            FswAbortIfNot(subslate.create("hsm_type", config.auth.hsm_type,
                                           shard_nonsync, slate_read_only,
                                           hsm_type_tok),
                           false);
@@ -423,16 +423,16 @@ namespace Drone
                     polling_period - jitter, polling_period + jitter);
                 polling_period = dis(gen);
             }
-            SacAbortIfNot(subslate.create("polling_period_ns", polling_period,
+            FswAbortIfNot(subslate.create("polling_period_ns", polling_period,
                                           shard_nonsync, slate_read_write,
                                           polling_period_tok),
                           false);
-            SacAbortIfNot(subslate.create("reenable_polling_delay_ns",
+            FswAbortIfNot(subslate.create("reenable_polling_delay_ns",
                                           config.reenable_polling_delay,
                                           shard_nonsync, slate_read_write,
                                           reenable_polling_delay_tok),
                           false);
-            SacAbortIfNot(subslate.create("using_bogus_identity",
+            FswAbortIfNot(subslate.create("using_bogus_identity",
                                           config.auth.using_bogus_identity,
                                           shard_nonsync, slate_read_only,
                                           using_bogus_identity_tok),
@@ -442,25 +442,25 @@ namespace Drone
                           std::placeholders::_2);
             if (flow)
             {
-                SacAbortIfNot(flow->add_slate_element(next_poll_time_tok),
+                FswAbortIfNot(flow->add_slate_element(next_poll_time_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(last_poll_time_tok),
+                FswAbortIfNot(flow->add_slate_element(last_poll_time_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(last_success_time_tok),
+                FswAbortIfNot(flow->add_slate_element(last_success_time_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(polling_enabled_tok),
+                FswAbortIfNot(flow->add_slate_element(polling_enabled_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(waiting_on_response_tok),
+                FswAbortIfNot(flow->add_slate_element(waiting_on_response_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(poll_asap_count_tok),
+                FswAbortIfNot(flow->add_slate_element(poll_asap_count_tok),
                               false);
-                SacAbortIfNot(flow->add_slate_element(retry_count_tok), false);
-                SacAbortIfNot(flow->add_slate_element(hsm_type_tok), false);
-                SacAbortIfNot(flow->add_slate_element(polling_period_tok),
+                FswAbortIfNot(flow->add_slate_element(retry_count_tok), false);
+                FswAbortIfNot(flow->add_slate_element(hsm_type_tok), false);
+                FswAbortIfNot(flow->add_slate_element(polling_period_tok),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     flow->add_slate_element(reenable_polling_delay_tok), false);
-                SacAbortIfNot(flow->add_slate_element(using_bogus_identity_tok),
+                FswAbortIfNot(flow->add_slate_element(using_bogus_identity_tok),
                               false);
             }
             return true;
@@ -487,7 +487,7 @@ namespace Drone
             if (status.ok())
             {
                 slate[last_success_time_tok] = slate[last_poll_time_tok];
-                SacIfNot(cb(status, response));
+                FswIfNot(cb(status, response));
                 /*
                  * If LIFO, wait until callback invoked to reset this.
                  */

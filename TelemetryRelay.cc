@@ -50,7 +50,7 @@ namespace Drone
                      */
                     if (line + 2 >= file_lines.size())
                     {
-                        SacPrefix();
+                        FswPrefix();
                         dbstring(": Incomplete telemetry flow definition.\n");
                         return false;
                     }
@@ -59,53 +59,53 @@ namespace Drone
                      * Get header line.
                      */
                     const str_v &header_line = file_lines[line++];
-                    SacAbortIfNot(parse_header_line(header_line, info), false);
+                    FswAbortIfNot(parse_header_line(header_line, info), false);
                     /*
                      * Get type line.
                      */
                     const str_v &type_line = file_lines[line++];
-                    SacAbortIfNot(parse_type_line(type_line, info), false);
+                    FswAbortIfNot(parse_type_line(type_line, info), false);
                     /*
                      * Get destination.
                      */
                     const str_v &dest_line = file_lines[line++];
-                    SacAbortIfNot(parse_destination_line(dest_line, info),
+                    FswAbortIfNot(parse_destination_line(dest_line, info),
                                   false);
                     while (line < file_lines.size())
                     {
                         const str_v &buf_line = file_lines[line];
-                        SacAbortIfNot(buf_line.size() > 0, false);
+                        FswAbortIfNot(buf_line.size() > 0, false);
                         if (buf_line[0] == "bandwidth")
                         {
-                            SacAbortIfNot(parse_bandwidth_line(buf_line, info),
+                            FswAbortIfNot(parse_bandwidth_line(buf_line, info),
                                           false);
                         }
                         else if (buf_line[0] == "idle_timeout")
                         {
-                            SacAbortIfNot(parse_timeout_line(buf_line, info),
+                            FswAbortIfNot(parse_timeout_line(buf_line, info),
                                           false);
                         }
                         else if (buf_line[0] == "store_and_forward")
                         {
-                            SacAbortIfNot(parse_sf_line(buf_line, info), false);
+                            FswAbortIfNot(parse_sf_line(buf_line, info), false);
                         }
                         else if (buf_line[0] == "external_record")
                         {
-                            SacAbortIfNot(parse_er_line(buf_line, info), false);
+                            FswAbortIfNot(parse_er_line(buf_line, info), false);
                         }
                         else if (buf_line[0] == "buffer")
                         {
-                            SacAbortIfNot(parse_buffer_line(buf_line, info),
+                            FswAbortIfNot(parse_buffer_line(buf_line, info),
                                           false);
                         }
                         else if (buf_line[0] == "name")
                         {
-                            SacAbortIfNot(parse_name_line(buf_line, info),
+                            FswAbortIfNot(parse_name_line(buf_line, info),
                                           false);
                         }
                         else if (buf_line[0] == "disabled_destination")
                         {
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 parse_disabled_destination_line(buf_line, info),
                                 false);
                         }
@@ -113,29 +113,29 @@ namespace Drone
                                                      strlen("alt_destination_"),
                                                      "alt_destination_") == 0)
                         {
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 parse_alt_destination_lines(buf_line, info),
                                 false);
                         }
                         else if (buf_line[0] == "override_source_role_inst")
                         {
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 parse_override_source_role_inst(buf_line, info),
                                 false);
                         }
                         else if (buf_line[0] == "precomputed_annotation_file")
                         {
-                            SacAbortIfNeq(info.type, telem_annotated_dgram,
+                            FswAbortIfNeq(info.type, telem_annotated_dgram,
                                           false);
-                            SacAbortIfNot(parse_precomputed_annotation_file(
+                            FswAbortIfNot(parse_precomputed_annotation_file(
                                               buf_line, info),
                                           false);
                         }
                         else if (buf_line[0] == "timestamp_channel")
                         {
-                            SacAbortIfNeq(info.type, telem_annotated_dgram,
+                            FswAbortIfNeq(info.type, telem_annotated_dgram,
                                           false);
-                            SacAbortIfNot(
+                            FswAbortIfNot(
                                 parse_timestamp_channel(buf_line, info), false);
                         }
                         else
@@ -165,7 +165,7 @@ namespace Drone
                     while (line < file_lines.size())
                     {
                         const str_v &curr_line = file_lines[line];
-                        SacAbortIfNot(curr_line.size() > 0, false);
+                        FswAbortIfNot(curr_line.size() > 0, false);
                         /*
                          * "flow" lines start new flow definitions.
                          */
@@ -223,7 +223,7 @@ namespace Drone
             {
                 if (!(line.size() == 3) || line[0] != "flow")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"flow <id> <group>\".\n");
                     return false;
                 }
@@ -233,7 +233,7 @@ namespace Drone
                 uint temp_id;
                 if (!string_to_uint(line[1], temp_id))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100, ": \"%s\" is not a valid telemetry type.\n",
                               line[1].c_str());
                     return false;
@@ -246,12 +246,12 @@ namespace Drone
                 if (!telem_group_t_sym.raw_get("telem_group_" + line[2],
                                                temp_group))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100, ": \"%s\" is not a known telemetry name.\n",
                               line[2].c_str());
                     return false;
                 }
-                SacAbortOutsideRangeUint(temp_group, 0, last_telem_group_t,
+                FswAbortOutsideRangeUint(temp_group, 0, last_telem_group_t,
                                          false);
                 info.group = (telem_group_t)temp_group;
                 return true;
@@ -268,7 +268,7 @@ namespace Drone
             {
                 if (!(line.size() == 2) || line[0] != "type")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"type <type>\".\n");
                     return false;
                 }
@@ -278,12 +278,12 @@ namespace Drone
                 uint temp_type;
                 if (!telem_type_t_sym.raw_get("telem_" + line[1], temp_type))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100, ": \"%s\" is not a valid telemetry type.\n",
                               line[1].c_str());
                     return false;
                 }
-                SacAbortOutsideRangeUint(temp_type, 0, last_telem_type_t,
+                FswAbortOutsideRangeUint(temp_type, 0, last_telem_type_t,
                                          false);
                 info.type = (telem_type_t)temp_type;
                 return true;
@@ -301,7 +301,7 @@ namespace Drone
             {
                 if ((line.size() < 2) || line[0] != "destination")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"destination <host1>"
                              " [host2] ... [hostN]\".\n");
                     return false;
@@ -316,7 +316,7 @@ namespace Drone
                 for (size_t i = 1; i < line.size(); i++)
                 {
                     const std::string &host = line[i];
-                    SacAbortIfNot(hostnames.find(host) == hostnames.end(),
+                    FswAbortIfNot(hostnames.find(host) == hostnames.end(),
                                   false);
                     info.hosts[0].push_back(host);
                     hostnames.insert(host);
@@ -336,22 +336,22 @@ namespace Drone
             {
                 if ((line.size() != 3) || line[0] != "bandwidth")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"bandwidth <burst> <recharge>\".\n");
                     return false;
                 }
                 /*
                  * Get bandwidth burst.
                  */
-                SacAbortIfNot(string_to_size_t(line[1], info.bandwidth_burst),
+                FswAbortIfNot(string_to_size_t(line[1], info.bandwidth_burst),
                               false);
-                SacAbortIfEqInt(info.bandwidth_burst, 0, false);
+                FswAbortIfEqInt(info.bandwidth_burst, 0, false);
                 /*
                  * Get bandwidth recharge.
                  */
-                SacAbortIfNot(string_to_uint(line[2], info.bandwidth_recharge),
+                FswAbortIfNot(string_to_uint(line[2], info.bandwidth_recharge),
                               false);
-                SacAbortIfEqInt(info.bandwidth_recharge, 0, false);
+                FswAbortIfEqInt(info.bandwidth_recharge, 0, false);
                 return true;
             }
             /**
@@ -366,7 +366,7 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "idle_timeout")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"idle_timeout <timeout>\".\n");
                     return false;
                 }
@@ -374,7 +374,7 @@ namespace Drone
                  * Get idle timeout.
                  */
                 double idle_timeout_sec;
-                SacAbortIfNot(string_to_double(line[1], idle_timeout_sec),
+                FswAbortIfNot(string_to_double(line[1], idle_timeout_sec),
                               false);
                 info.idle_timeout = (nano_t)(idle_timeout_sec * dbillion);
                 return true;
@@ -392,7 +392,7 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "store_and_forward")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting 'store_and_forward external'.\n");
                     return false;
                 }
@@ -410,7 +410,7 @@ namespace Drone
                 }
                 else
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100,
                               ": store_and_forward flag must be 'external', "
                               "not '%s'\n",
@@ -431,16 +431,16 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "buffer")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"buffer <size>\".\n");
                     return false;
                 }
                 /*
                  * Get buffer size.
                  */
-                if (SacIfNot(string_to_size_t(line[1], info.buf_size)))
+                if (FswIfNot(string_to_size_t(line[1], info.buf_size)))
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(100, ": \"%s\" is not a valid buffer size.\n",
                               line[1].c_str());
                     return false;
@@ -459,7 +459,7 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "name")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"name <name>\".\n");
                     return false;
                 }
@@ -483,7 +483,7 @@ namespace Drone
             {
                 if ((line.size() <= 1) || line[0] != "disabled_destination")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"disabled_destination <host1>"
                              " [host2] ... [hostN]\".\n");
                     return false;
@@ -503,7 +503,7 @@ namespace Drone
                      alt_dest <= TelemetryFlowInfo::num_alt_destinations;
                      alt_dest++)
                 {
-                    SacMsgAbortIfNot(
+                    FswMsgAbortIfNot(
                         info.hosts[alt_dest].empty(), false, 200,
                         "Cannot specify disabled_destination when "
                         "alt_destination_%zu was already specified.",
@@ -515,7 +515,7 @@ namespace Drone
                 for (size_t i = 1; i < line.size(); i++)
                 {
                     const std::string &host = line[i];
-                    SacMsgAbortIfNot(
+                    FswMsgAbortIfNot(
                         hostnames.find(host) == hostnames.end(), false, 200,
                         "Duplicate disabled_destination \"%s\" in flow %i",
                         host.c_str(), info.id);
@@ -536,7 +536,7 @@ namespace Drone
             bool parse_alt_destination_lines(const str_v &line,
                                              TelemetryFlowInfo &info)
             {
-                SacAbortIf(line.empty(), false);
+                FswAbortIf(line.empty(), false);
                 const size_t prefix_len = strlen("alt_destination_");
                 /*
                  * 1-based index, because 0 means default.
@@ -548,7 +548,7 @@ namespace Drone
                     alt_dest == 0 ||
                     alt_dest > TelemetryFlowInfo::num_alt_destinations)
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(200,
                               ": Expecting \"alt_destination_N <host1> [host2] "
                               "... [hostM]\" (N can be 1 to %zu).\n",
@@ -561,7 +561,7 @@ namespace Drone
                  * destination of a flow and is not obvious what should happen
                  * if both are selected.
                  */
-                SacMsgAbortIfNot(info.disabled_hosts.empty(), false, 200,
+                FswMsgAbortIfNot(info.disabled_hosts.empty(), false, 200,
                                  "Cannot specify alt_destination_%zu when "
                                  "disabled_destination was already specified.",
                                  alt_dest);
@@ -576,7 +576,7 @@ namespace Drone
                 for (size_t i = 1; i < line.size(); i++)
                 {
                     const std::string &host = line[i];
-                    SacMsgAbortIfNot(
+                    FswMsgAbortIfNot(
                         hostnames.find(host) == hostnames.end(), false, 200,
                         "Duplicate alt_destination_%zu \"%s\" in flow %i",
                         alt_dest, host.c_str(), info.id);
@@ -600,7 +600,7 @@ namespace Drone
                 if ((line.size() != 2) ||
                     line[0] != "override_source_role_inst")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"override_source_role_inst "
                              "<override>\".\n");
                     return false;
@@ -623,7 +623,7 @@ namespace Drone
                 if ((line.size() != 2) ||
                     line[0] != "precomputed_annotation_file")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"precomputed_annotation_file "
                              "<precomputed_annotation_file_name>\".\n");
                     return false;
@@ -645,7 +645,7 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "timestamp_channel")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"timestamp_channel "
                              "<slate_channel_name>\".\n");
                     return false;
@@ -685,7 +685,7 @@ namespace Drone
             {
                 if ((line.size() != 2) || line[0] != "external_record")
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbstring(": Expecting \"external_record "
                              "<all/only_a/only_b/only_c/none>\".\n");
                     return false;
@@ -717,7 +717,7 @@ namespace Drone
                 }
                 else
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(200,
                               ": external_record flag must be "
                               "all/only_a/only_b/only_c/none not \"%s\"\n",
@@ -754,8 +754,8 @@ namespace Drone
     bool TelemetryAltDestinationValidator::validate(const UINT8 &new_value,
                                                     UINT8 &value) const
     {
-        SacAbortIfNotOpUint(new_value, <, dest_validity.size(), false);
-        SacAbortIfNot(dest_validity[new_value], false);
+        FswAbortIfNotOpUint(new_value, <, dest_validity.size(), false);
+        FswAbortIfNot(dest_validity[new_value], false);
         value = new_value;
         return true;
     }
@@ -789,13 +789,13 @@ namespace Drone
          * Parse telemetry configs to get a list of all flows.
          */
         std::string filename;
-        SacAbortIfNot(configs.config_file(config_key, filename), false);
+        FswAbortIfNot(configs.config_file(config_key, filename), false);
         str_v_v file_lines;
-        SacAbortIfNot(read_meta_str_v_v(configs, filename, file_lines), false);
+        FswAbortIfNot(read_meta_str_v_v(configs, filename, file_lines), false);
         /*
          * Create all necessary control elements for each flow.
          */
-        SacAbortIfNot(init(name, control_builder, file_lines, use_sync_shard),
+        FswAbortIfNot(init(name, control_builder, file_lines, use_sync_shard),
                       false);
         return true;
     }
@@ -821,13 +821,13 @@ namespace Drone
          */
         const std::set<telem_group_t> muxed_groups = {};
         std::vector<TelemetryFlowInfo> flow_info;
-        SacAbortIfNot(ControlFlowInfoParser().parse_file(
+        FswAbortIfNot(ControlFlowInfoParser().parse_file(
                           file_lines, muxed_groups, flow_info),
                       false);
         /*
          * Create all necessary control elements for each flow.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             init_internal(name, control_builder, flow_info, use_sync_shard),
             false);
         return true;
@@ -867,7 +867,7 @@ namespace Drone
             if (!flow.name.empty())
             {
                 int duplicate_id = 0;
-                SacMsgAbortIf(map_find(names, flow.name, duplicate_id), false,
+                FswMsgAbortIf(map_find(names, flow.name, duplicate_id), false,
                               200,
                               "Duplicate flow name \"%s\" on "
                               "flow %i and %i\n",
@@ -886,7 +886,7 @@ namespace Drone
                 SlateBuilder sub_builder =
                     internal_builder.sub_slate(flow.name);
                 ReadToken<bool> enabled_tok;
-                SacAbortIfNot(sub_builder.create("enabled", false, slate_shard,
+                FswAbortIfNot(sub_builder.create("enabled", false, slate_shard,
                                                  slate_read_write, enabled_tok),
                               false);
             }
@@ -915,7 +915,7 @@ namespace Drone
                  */
                 Handle<TelemetryAltDestinationValidator> validator(
                     new TelemetryAltDestinationValidator(alt_dest_validity));
-                SacAbortIfNot(validator, false);
+                FswAbortIfNot(validator, false);
                 dest_validators[flow.id] = validator;
                 /*
                  * Create the slate channel for specifying destination.
@@ -923,7 +923,7 @@ namespace Drone
                 SlateBuilder sub_builder =
                     internal_builder.sub_slate(flow.name);
                 ReadToken<UINT8> alt_destination_tok;
-                SacAbortIfNot(
+                FswAbortIfNot(
                     sub_builder.create(
                         "destination", 0U, slate_shard, slate_read_write,
                         member_validator(
@@ -938,7 +938,7 @@ namespace Drone
          * "is enabled" control element for non-gated flows.
          */
         ReadToken<bool> default_enabled_tok;
-        SacAbortIfNot(internal_builder.create("always_enabled", true,
+        FswAbortIfNot(internal_builder.create("always_enabled", true,
                                               shard_static, slate_read_only,
                                               default_enabled_tok),
                       false);
@@ -947,7 +947,7 @@ namespace Drone
          * "destination" control element for flows with no alt dests
          */
         ReadToken<UINT8> default_alt_destination_tok;
-        SacAbortIfNot(internal_builder.create("default_destination", 0U,
+        FswAbortIfNot(internal_builder.create("default_destination", 0U,
                                               shard_static, slate_read_only,
                                               default_alt_destination_tok),
                       false);
@@ -1000,22 +1000,22 @@ namespace Drone
         std::set<telem_group_t> _muxed_groups,
         const bool should_aggregate_destination_connections)
     {
-        SacAbortIf(is_initialized, false);
+        FswAbortIf(is_initialized, false);
         /*
          * Open file.
          */
         std::string filename;
-        SacAbortIfNot(configs.config_file(config_key, filename), false);
+        FswAbortIfNot(configs.config_file(config_key, filename), false);
         /*
          * Parse lines.
          */
         str_v_v file_lines;
-        SacAbortIfNot(read_meta_str_v_v(configs, filename, file_lines), false);
-        if (SacIfNot(init(eloop, elist, control_builder, local_builder, configs,
+        FswAbortIfNot(read_meta_str_v_v(configs, filename, file_lines), false);
+        if (FswIfNot(init(eloop, elist, control_builder, local_builder, configs,
                           ident, file_lines, std::move(_muxed_groups),
                           should_aggregate_destination_connections)))
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(100, ": Failed to parse config file \"%s\".\n",
                       config_key.c_str());
             return false;
@@ -1049,19 +1049,19 @@ namespace Drone
         std::set<telem_group_t> _muxed_groups,
         const bool should_aggregate_destination_connections)
     {
-        SacAbortIf(is_initialized, false);
+        FswAbortIf(is_initialized, false);
         muxed_groups = std::move(_muxed_groups);
         std::vector<TelemetryFlowInfo> flow_info;
         /*
          * Parse config info.
          */
-        SacAbortIfNot(parse_file(file_lines, ident, muxed_groups, flow_info),
+        FswAbortIfNot(parse_file(file_lines, ident, muxed_groups, flow_info),
                       false);
-        SacAbortIfNot(init_internal(eloop, elist, control_builder,
+        FswAbortIfNot(init_internal(eloop, elist, control_builder,
                                     local_builder, configs, ident, flow_info,
                                     should_aggregate_destination_connections),
                       false);
-        SacAbortIfNot(local_ident.init(ident.role, ident.inst, ident.string),
+        FswAbortIfNot(local_ident.init(ident.role, ident.inst, ident.string),
                       false);
         return true;
     }
@@ -1081,7 +1081,7 @@ namespace Drone
         const std::set<telem_group_t> &muxed_groups,
         std::vector<TelemetryFlowInfo> &flow_info)
     {
-        SacAbortIfNot(RuntimeFlowInfoParser(ident).parse_file(
+        FswAbortIfNot(RuntimeFlowInfoParser(ident).parse_file(
                           file_lines, muxed_groups, flow_info),
                       false);
         return true;
@@ -1097,8 +1097,8 @@ namespace Drone
     bool
     TelemetryRelayRuntime::finalize(const SmoketestConfig &smoketest_config)
     {
-        SacAbortIfNot(is_initialized, false);
-        SacAbortIf(is_finalized, false);
+        FswAbortIfNot(is_initialized, false);
+        FswAbortIf(is_finalized, false);
         /*
          * Make sure all flows were claimed.
          */
@@ -1111,7 +1111,7 @@ namespace Drone
                 const telem_id_t id = group_ids[i];
                 if (claimed_ids.find(id) == claimed_ids.end())
                 {
-                    SacPrefix();
+                    FswPrefix();
                     dbnprintf(200,
                               ": Cannot start telemetry relay, flow %d "
                               "for %s was not claimed.\n",
@@ -1126,7 +1126,7 @@ namespace Drone
          */
         for (const auto flow_id : claimed_ids)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 smoketest_config.claim_flow_id(local_ident.node_name, flow_id),
                 false);
         }
@@ -1144,8 +1144,8 @@ namespace Drone
     bool TelemetryRelayRuntime::get_ids(telem_group_t group,
                                         std::vector<telem_id_t> &_ids) const
     {
-        SacAbortIfNot(is_initialized, false);
-        SacAbortIf(is_finalized, false);
+        FswAbortIfNot(is_initialized, false);
+        FswAbortIf(is_finalized, false);
         const group_id_v_m::const_iterator iter = ids.find(group);
         if (iter != ids.end())
         {
@@ -1169,9 +1169,9 @@ namespace Drone
     TelemetryRelayRuntime::get_flow_info(const telem_id_t id,
                                          TelemetryFlowInfo &flow_info) const
     {
-        SacAbortIfNot(is_initialized, false);
-        SacAbortIf(is_finalized, false);
-        SacAbortIfNot(map_find(id_to_config_info, id, flow_info), false);
+        FswAbortIfNot(is_initialized, false);
+        FswAbortIf(is_finalized, false);
+        FswAbortIfNot(map_find(id_to_config_info, id, flow_info), false);
         return true;
     }
     /**
@@ -1188,27 +1188,27 @@ namespace Drone
                                       TelemetryFlowInfo &flow_info,
                                       TelemetryWriter &writer)
     {
-        SacAbortIfNot(is_initialized, false);
-        SacAbortIf(is_finalized, false);
-        SacAbortIf(writer.is_good(), false);
+        FswAbortIfNot(is_initialized, false);
+        FswAbortIf(is_finalized, false);
+        FswAbortIf(writer.is_good(), false);
         /*
          * Ensure the ID has not already been claimed.
          */
         if (claimed_ids.find(id) != claimed_ids.end())
         {
-            SacPrefix();
+            FswPrefix();
             dbnprintf(
                 100, ": Telemetry flow \"%d\" has already been claimed.\n", id);
             return false;
         }
         claimed_ids.insert(id);
         Handle<TelemetryRelayFlow> flow;
-        SacAbortIfNot(get_flow(id, flow), false);
+        FswAbortIfNot(get_flow(id, flow), false);
         /*
          * Connect writer.
          */
         Handle<TelemetryConsumer> consumer_handle = flow;
-        SacAbortIfNot(writer.assign_consumer(consumer_handle), false);
+        FswAbortIfNot(writer.assign_consumer(consumer_handle), false);
         flow_info = id_to_config_info[id];
         flow_phase_counter = 0;
         if (flow_info.group == telem_group_t::telem_group_slate)
@@ -1237,8 +1237,8 @@ namespace Drone
      */
     bool TelemetryRelayRuntime::add_producer(Handle<TelemetryTask> producer)
     {
-        SacAbortIf(is_finalized, false);
-        SacAbortIfNot(producer, false);
+        FswAbortIf(is_finalized, false);
+        FswAbortIfNot(producer, false);
         producers.push_back(producer);
         return true;
     }
@@ -1255,12 +1255,12 @@ namespace Drone
      */
     bool TelemetryRelayRuntime::override_addresses(const std::string &host_port)
     {
-        SacAbortIf(is_initialized, false);
-        SacAbortIf(is_finalized, false);
-        SacAbortIfNeqString(master_override_service.host_name, "", false);
+        FswAbortIf(is_initialized, false);
+        FswAbortIf(is_finalized, false);
+        FswAbortIfNeqString(master_override_service.host_name, "", false);
         std::string host = "unknown";
         in_port_t port = 0;
-        SacAbortIfNot(
+        FswAbortIfNot(
             string_to_address(host_port, telemetry_vehicle_port, host, port),
             false);
         master_override_service = Service(host, port, udp_proto);
@@ -1284,10 +1284,10 @@ namespace Drone
     TelemetryRelayRuntime::redirect_service(const std::string &service_name,
                                             Handle<BwpWriter> connection)
     {
-        SacAbortIf(is_initialized, false);
-        SacAbortIf(is_finalized, false);
-        SacAbortIfNot(connection, false);
-        SacAbortIfNot(service_redirects.find(service_name) ==
+        FswAbortIf(is_initialized, false);
+        FswAbortIf(is_finalized, false);
+        FswAbortIfNot(connection, false);
+        FswAbortIfNot(service_redirects.find(service_name) ==
                           service_redirects.end(),
                       false);
         service_redirects[service_name] = connection;
@@ -1302,8 +1302,8 @@ namespace Drone
      */
     nano_t TelemetryRelayRuntime::dispatch(nano_t control_time)
     {
-        SacAbortIfNot(is_initialized, nano_t_max);
-        SacAbortIfNot(is_finalized, nano_t_max);
+        FswAbortIfNot(is_initialized, nano_t_max);
+        FswAbortIfNot(is_finalized, nano_t_max);
         nano_t next_wakeup = nano_t_max;
         /*
          * Dispatch the producers. Each producer pushes data into its consumer.
@@ -1378,7 +1378,7 @@ namespace Drone
         const std::vector<TelemetryFlowInfo> &flow_info,
         const bool should_aggregate_destination_connections)
     {
-        SacAbortIf(is_initialized, false);
+        FswAbortIf(is_initialized, false);
         /*
          * Create state.
          */
@@ -1387,7 +1387,7 @@ namespace Drone
          * Create flow objects.
          */
         SlateBuilder internal_local = local_builder.sub_slate(name);
-        SacAbortIfNot(create_flows(eloop, elist, internal_control,
+        FswAbortIfNot(create_flows(eloop, elist, internal_control,
                                    internal_local, ident, flow_info,
                                    should_aggregate_destination_connections),
                       false);
@@ -1414,7 +1414,7 @@ namespace Drone
                                                const size_t buffer_size_request,
                                                Handle<BwpWriter> &connection)
     {
-        SacAbortIf(connection, false);
+        FswAbortIf(connection, false);
         Service service("", 0, udp_proto);
         /*
          * If the override connection exists, we use it.
@@ -1426,9 +1426,9 @@ namespace Drone
         else
         {
             const ServiceDirectory &sd = service_directory();
-            if (SacIfNot(sd.lookup(service_name, service)))
+            if (FswIfNot(sd.lookup(service_name, service)))
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(100, ": Service '%s' was not found.\n",
                           service_name.c_str());
                 return false;
@@ -1446,7 +1446,7 @@ namespace Drone
         /*
          * Otherwise create the connection.
          */
-        SacAbortIfNot(create_connection(eloop, elist, service,
+        FswAbortIfNot(create_connection(eloop, elist, service,
                                         buffer_size_request, connection),
                       false);
         return true;
@@ -1471,7 +1471,7 @@ namespace Drone
         /*
          * Must be UDP.
          */
-        SacAbortIfNot(udp_proto == service.proto, false);
+        FswAbortIfNot(udp_proto == service.proto, false);
         const size_t num_dgrams = (buffer_size + bwp_datagram_packet_len - 1) /
                                   bwp_datagram_packet_len;
         /*
@@ -1479,11 +1479,11 @@ namespace Drone
          */
         Handle<AnyDgramConnection> dgram_conn(new AnyDgramConnection(
             elist, eloop.fds, num_dgrams, bwp_datagram_packet_len));
-        SacAbortIfNot(dgram_conn, false);
+        FswAbortIfNot(dgram_conn, false);
         Handle<BwpChannelWriter> writer(new BwpChannelWriter);
-        SacAbortIfNot(writer, false);
-        SacAbortIfNot(dgram_conn->open(service.host_name, service.port), false);
-        SacAbortIfNot(writer->assign_channel(dgram_conn), false);
+        FswAbortIfNot(writer, false);
+        FswAbortIfNot(dgram_conn->open(service.host_name, service.port), false);
+        FswAbortIfNot(writer->assign_channel(dgram_conn), false);
         connection = writer;
         return true;
     }
@@ -1514,13 +1514,13 @@ namespace Drone
          * Bind to the default control element for non-gated flows.
          */
         ReadToken<bool> default_enabled_tok;
-        SacAbortIfNot(
+        FswAbortIfNot(
             control_builder.bind("always_enabled", default_enabled_tok), false);
         /*
          * Bind to the default control element for flows with no alt dest.
          */
         ReadToken<UINT8> default_alt_destination_tok;
-        SacAbortIfNot(control_builder.bind("default_destination",
+        FswAbortIfNot(control_builder.bind("default_destination",
                                            default_alt_destination_tok),
                       false);
         for (const TelemetryFlowInfo &flow : flow_info)
@@ -1539,10 +1539,10 @@ namespace Drone
             /*
              * Add config info to map.
              */
-            if (SacIfNot(id_to_config_info.find(flow.id) ==
+            if (FswIfNot(id_to_config_info.find(flow.id) ==
                          id_to_config_info.end()))
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(200, ": Flow \"%d\" defined multiple times.\n",
                           flow.id);
                 return false;
@@ -1566,13 +1566,13 @@ namespace Drone
                  * number of unicast/multicast destinations within the two
                  * sets).
                  */
-                SacMsgAbortIfNot(
+                FswMsgAbortIfNot(
                     flow.hosts[0].size() == flow.disabled_hosts.size(), false,
                     200,
                     "Flow %i has unequal 'destination' and "
                     "'disabled_destination' sizes (%zu and %zu)\n",
                     flow.id, flow.hosts[0].size(), flow.disabled_hosts.size());
-                SacMsgAbortIf(flow.name.empty(), false, 200,
+                FswMsgAbortIf(flow.name.empty(), false, 200,
                               "Flow %i specifies 'disabled_destination' but "
                               "not 'name'\n",
                               flow.id);
@@ -1580,7 +1580,7 @@ namespace Drone
                  * Bind to the control element for this gated flow.
                  */
                 SlateBuilder sub_builder = control_builder.sub_slate(flow.name);
-                SacAbortIfNot(sub_builder.bind("enabled", enabled_tok), false);
+                FswAbortIfNot(sub_builder.bind("enabled", enabled_tok), false);
             }
             /*
              * Look up the slate element for the alt destination for this flow
@@ -1602,14 +1602,14 @@ namespace Drone
                      * enabled state (assuming the same number of
                      * unicast/multicast destinations within the two sets).
                      */
-                    SacMsgAbortIfNot(
+                    FswMsgAbortIfNot(
                         flow.hosts[0].size() == flow.hosts[alt_dest].size(),
                         false, 200,
                         "Flow %i has unequal 'destination' and "
                         "'alt_destination_%zu' sizes (%zu and %zu)\n",
                         flow.id, alt_dest, flow.hosts[0].size(),
                         flow.hosts[alt_dest].size());
-                    SacMsgAbortIf(flow.name.empty(), false, 200,
+                    FswMsgAbortIf(flow.name.empty(), false, 200,
                                   "Flow %i specifies 'alt_destination_%zu' but "
                                   "not 'name'\n",
                                   flow.id, alt_dest);
@@ -1626,7 +1626,7 @@ namespace Drone
                  * destination.
                  */
                 SlateBuilder sub_builder = control_builder.sub_slate(flow.name);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     sub_builder.bind("destination", alt_destination_tok),
                     false);
             }
@@ -1644,7 +1644,7 @@ namespace Drone
                     flow.override_source_role_inst + ident.string;
             }
             UINT32 node_src;
-            SacMsgAbortIfNot(
+            FswMsgAbortIfNot(
                 node_directory().direct_lookup(full_source_name, node_src),
                 false, 100, "Unable to determine source address for node: %s",
                 full_source_name.c_str());
@@ -1661,7 +1661,7 @@ namespace Drone
             const std::string subslate_name = "flows." + to_string(flow.id);
             SlateBuilder flow_slate_builder =
                 local_builder.sub_slate(subslate_name);
-            SacAbortIfNot(relay_flow->init_metrics(flow_slate_builder), false);
+            FswAbortIfNot(relay_flow->init_metrics(flow_slate_builder), false);
             /*
              * We do not allow one of these values to be is_initialized without
              * the other one. This is accomplished by the logical XOR below
@@ -1669,7 +1669,7 @@ namespace Drone
              */
             if (!flow.bandwidth_burst != !flow.bandwidth_recharge)
             {
-                SacPrefix();
+                FswPrefix();
                 dbnprintf(100,
                           ": Telemetry flow %d was given an incomplete"
                           " bandwidth specification\n",
@@ -1686,7 +1686,7 @@ namespace Drone
              */
             if (flow.bandwidth_burst)
             {
-                SacAbortIfNot(
+                FswAbortIfNot(
                     relay_flow->set_bandwidth(flow.bandwidth_burst,
                                               flow.bandwidth_recharge),
                     false);
@@ -1695,7 +1695,7 @@ namespace Drone
                     bwp_datagram_packet_len;
                 buffer_size = num_dgrams * bwp_datagram_packet_len;
             }
-            SacAbortIfNot(relay_flow->set_idle_timeout(flow.idle_timeout),
+            FswAbortIfNot(relay_flow->set_idle_timeout(flow.idle_timeout),
                           false);
             /*
              * Create the connections for this flow, if this relay isn't
@@ -1725,11 +1725,11 @@ namespace Drone
                     else
                     {
                         Handle<BwpWriter> writer;
-                        SacAbortIfNot(get_connection(eloop, elist,
+                        FswAbortIfNot(get_connection(eloop, elist,
                                                      flow.hosts[alt_dest][idx],
                                                      buffer_size, writer),
                                       false);
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             relay_flow->add_connection(writer, alt_dest),
                             false);
                     }
@@ -1763,11 +1763,11 @@ namespace Drone
                     else
                     {
                         Handle<BwpWriter> writer;
-                        SacAbortIfNot(get_connection(eloop, elist,
+                        FswAbortIfNot(get_connection(eloop, elist,
                                                      flow.disabled_hosts[idx],
                                                      buffer_size, writer),
                                       false);
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             relay_flow->add_disabled_connection(writer), false);
                     }
                 }
@@ -1791,7 +1791,7 @@ namespace Drone
                  * Make one connection to that destination.
                  */
                 Handle<BwpWriter> writer;
-                SacAbortIfNot(get_connection(eloop, elist, service_name,
+                FswAbortIfNot(get_connection(eloop, elist, service_name,
                                              buffer_size, writer),
                               false);
                 if (flows_and_alt_dest_by_destination.find(service_name) !=
@@ -1808,7 +1808,7 @@ namespace Drone
                          * logged as wanting that destination and give those
                          * flows the previously-made connection.
                          */
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             flows[flow_id_and_alt_dest.first]->add_connection(
                                 writer, flow_id_and_alt_dest.second),
                             false);
@@ -1829,7 +1829,7 @@ namespace Drone
                          * disabled destination and give those flows the
                          * previously-made connection.
                          */
-                        SacAbortIfNot(
+                        FswAbortIfNot(
                             flows[flow_id]->add_disabled_connection(writer),
                             false);
                     }
@@ -1849,14 +1849,14 @@ namespace Drone
     bool TelemetryRelayRuntime::get_flow(telem_id_t id,
                                          Handle<TelemetryRelayFlow> &flow)
     {
-        SacAbortIfNot(is_initialized, false);
-        SacAbortIf(flow, false);
+        FswAbortIfNot(is_initialized, false);
+        FswAbortIf(flow, false);
         const std::map<telem_id_t, Handle<TelemetryRelayFlow>>::iterator iter =
             flows.find(id);
         if (iter == flows.end())
             return false;
         Handle<TelemetryRelayFlow> &temp_flow = iter->second;
-        SacAbortIfNot(temp_flow, false);
+        FswAbortIfNot(temp_flow, false);
         flow = temp_flow;
         return true;
     }
@@ -1890,7 +1890,7 @@ namespace Drone
                               const std::string &config_key,
                               std::set<telem_group_t> _muxed_groups)
     {
-        SacAbortIfNot(TelemetryRelayRuntime::init(
+        FswAbortIfNot(TelemetryRelayRuntime::init(
                           eloop, elist, builder, builder, configs, ident,
                           config_key, std::move(_muxed_groups)),
                       false);
@@ -1916,7 +1916,7 @@ namespace Drone
                               const str_v_v &file_lines,
                               std::set<telem_group_t> _muxed_groups)
     {
-        SacAbortIfNot(TelemetryRelayRuntime::init(
+        FswAbortIfNot(TelemetryRelayRuntime::init(
                           eloop, elist, builder, builder, configs, ident,
                           file_lines, std::move(_muxed_groups)),
                       false);
@@ -1931,7 +1931,7 @@ namespace Drone
      */
     nano_t TelemetryRelay::dispatch(nano_t control_time)
     {
-        SacAbortIfNot(control, nano_t_max);
+        FswAbortIfNot(control, nano_t_max);
         /*
          * This needs to be done prior to dispatching flows, so data
          * expiration in TelemetryRelayFlow::dispatch has the correct value
@@ -1970,12 +1970,12 @@ namespace Drone
          * create the control elements in the nonsync shard.
          */
         const bool use_sync_shard = false;
-        SacAbortIfNot(control.assume_ownership(new TelemetryRelayControl()),
+        FswAbortIfNot(control.assume_ownership(new TelemetryRelayControl()),
                       false);
-        SacAbortIfNot(control->init_internal(name, control_builder, flow_info,
+        FswAbortIfNot(control->init_internal(name, control_builder, flow_info,
                                              use_sync_shard),
                       false);
-        SacAbortIfNot(TelemetryRelayRuntime::init_internal(
+        FswAbortIfNot(TelemetryRelayRuntime::init_internal(
                           eloop, elist, control_builder, local_builder, configs,
                           ident, flow_info,
                           should_aggregate_destination_connections),

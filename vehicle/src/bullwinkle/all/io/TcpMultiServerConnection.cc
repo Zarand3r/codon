@@ -22,9 +22,9 @@ namespace Drone
     TcpMultiServerConnection::~TcpMultiServerConnection()
     {
         if (server)
-            SacIfNot(server->stop());
+            FswIfNot(server->stop());
         if (fork)
-            SacIfNot(fork->close());
+            FswIfNot(fork->close());
     }
     /**
      * Start the server.
@@ -49,45 +49,45 @@ namespace Drone
                                          const bool atomic_writes,
                                          const uint max_connections)
     {
-        SacAbortIf(server, false);
-        SacAbortIf(fork, false);
+        FswAbortIf(server, false);
+        FswAbortIf(fork, false);
         /*
          * Create the fork.
          */
         if (atomic_writes)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 fork.assume_ownership(new DgramChannelFork(1, size, false)),
                 false);
         }
         else
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 fork.assume_ownership(new StreamChannelFork(size, false)),
                 false);
         }
-        SacAssert(fork);
-        SacAbortIfNot(fork->write_sig.connect(make_slot(
+        FswAssert(fork);
+        FswAbortIfNot(fork->write_sig.connect(make_slot(
                           *this, &TcpMultiServerConnection::handle_write)),
                       false);
-        SacAbortIfNot(fork->close_sig.connect(make_slot(
+        FswAbortIfNot(fork->close_sig.connect(make_slot(
                           *this, &TcpMultiServerConnection::handle_close)),
                       false);
         /*
          * Create the server.
          */
-        SacAbortIfNot(server.assume_ownership(
+        FswAbortIfNot(server.assume_ownership(
                           new TcpServer(fd_bag, size, max_connections)),
                       false);
-        SacAbortIfNot(server, false);
+        FswAbortIfNot(server, false);
         /*
          * Connect signals and submit server to the EventList.
          */
-        SacAbortIfNot(server->connect_sig.connect(make_slot(
+        FswAbortIfNot(server->connect_sig.connect(make_slot(
                           *this, &TcpMultiServerConnection::handle_connect)),
                       false);
-        SacAbortIfNot(install_dispatch(elist, server), false);
-        SacAbortIfNot(server->start(port), false);
+        FswAbortIfNot(install_dispatch(elist, server), false);
+        FswAbortIfNot(server->start(port), false);
         return true;
     }
     /**
@@ -151,8 +151,8 @@ namespace Drone
      */
     bool TcpMultiServerConnection::commit_dataframe(DataFrame &frame)
     {
-        SacAbortIfNot(fork, false);
-        SacAbortIfNot(fork->commit_dataframe(frame), false);
+        FswAbortIfNot(fork, false);
+        FswAbortIfNot(fork->commit_dataframe(frame), false);
         return true;
     }
     /*
@@ -161,9 +161,9 @@ namespace Drone
     bool TcpMultiServerConnection::channel_close()
     {
         if (server)
-            SacAbortIfNot(server->stop(), false);
+            FswAbortIfNot(server->stop(), false);
         if (fork)
-            SacAbortIfNot(fork->close(), false);
+            FswAbortIfNot(fork->close(), false);
         return true;
     }
     /**
@@ -179,11 +179,11 @@ namespace Drone
     TcpMultiServerConnection::handle_connect(TcpServer &_server,
                                              Handle<FdStreamChannel> channel)
     {
-        SacAbortIfNot(channel, false);
+        FswAbortIfNot(channel, false);
         /*
          * Connect our read handler.
          */
-        SacAbortIfNot(channel->read_sig.connect(make_slot(
+        FswAbortIfNot(channel->read_sig.connect(make_slot(
                           *this, &TcpMultiServerConnection::handle_read)),
                       false);
         /*
@@ -198,17 +198,17 @@ namespace Drone
          */
         if (stream_fork.assign_casted(fork))
         {
-            SacAbortIfNot(stream_fork->fork(channel, false), false);
+            FswAbortIfNot(stream_fork->fork(channel, false), false);
         }
         else if (dgram_fork.assign_casted(fork))
         {
-            SacAbortIfNot(dgram_fork->fork(channel, false), false);
+            FswAbortIfNot(dgram_fork->fork(channel, false), false);
         }
         else
         {
-            SacAssert(false);
+            FswAssert(false);
         }
-        SacAbortIfNot(signal_write(), false);
+        FswAbortIfNot(signal_write(), false);
         return true;
     }
     /**
@@ -220,8 +220,8 @@ namespace Drone
      */
     bool TcpMultiServerConnection::handle_read(StreamChannel &channel)
     {
-        SacAbortIfNot(channel.close(), false);
-        SacAbortIfNot(channel.clear(), false);
+        FswAbortIfNot(channel.close(), false);
+        FswAbortIfNot(channel.clear(), false);
         return true;
     }
     /**
@@ -233,7 +233,7 @@ namespace Drone
      */
     bool TcpMultiServerConnection::handle_write(Channel &channel)
     {
-        SacAbortIfNot(signal_write(), false);
+        FswAbortIfNot(signal_write(), false);
         return true;
     }
     /**
@@ -245,7 +245,7 @@ namespace Drone
      */
     bool TcpMultiServerConnection::handle_close(Channel &channel)
     {
-        SacAbortIfNot(close(), false);
+        FswAbortIfNot(close(), false);
         return true;
     }
 } /* end namespace Drone */

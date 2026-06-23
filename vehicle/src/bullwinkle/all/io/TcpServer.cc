@@ -38,19 +38,19 @@ namespace Drone
     bool TcpServer::server_create_connection(Handle<FdEventSink> fes,
                                              Handle<ServerFd> &conn)
     {
-        SacAbortIfNot(fes, false);
-        SacAbortIf(fes->is_closed(), false);
+        FswAbortIfNot(fes, false);
+        FswAbortIf(fes->is_closed(), false);
         /*
          * Enable nodelay to improve responsiveness.
          */
-        SacAbortIfNot(set_tcp_no_delay(fes->get_fd(), true), false);
+        FswAbortIfNot(set_tcp_no_delay(fes->get_fd(), true), false);
         /*
          * Enable TCP keepalive timers to prevent stale server connections.
          */
         const int keepalive_probe_interval = 1;
         const int keepalive_retry_interval = 1;
         const int keepalive_retry_count = 10;
-        SacAbortIfNot(Drone::enable_tcp_keepalive(
+        FswAbortIfNot(Drone::enable_tcp_keepalive(
                           fes->get_fd(), keepalive_probe_interval,
                           keepalive_retry_interval, keepalive_retry_count),
                       false);
@@ -58,20 +58,20 @@ namespace Drone
          * Create a Channel to manage this client.
          */
         Handle<FdStreamChannel> channel(new FdStreamChannel(size));
-        SacAbortIfNot(channel, false);
-        SacAbortIfNot(channel->assign_fd(fes), false);
+        FswAbortIfNot(channel, false);
+        FswAbortIfNot(channel->assign_fd(fes), false);
         /*
          * Emit the new channel to clients. If they reject it, just
          * return.
          */
-        SacAbortIf(connect_sig.empty(), false);
-        SacAbortIfNot(connect_sig.emit(*this, channel), false);
+        FswAbortIf(connect_sig.empty(), false);
+        FswAbortIfNot(connect_sig.emit(*this, channel), false);
         /*
          * Create TcpServerFd so that the Server can hold on to the
          * Channel.
          */
         Handle<TcpServerFd> new_conn(new TcpServerFd(fes, channel));
-        SacAbortIfNot(new_conn, false);
+        FswAbortIfNot(new_conn, false);
         conn = new_conn;
         return true;
     }

@@ -248,8 +248,8 @@ namespace Drone
         DeferredCallbackQueue &queue, const TRequest *request,
         TResponse *response)
     {
-        SacAbortIfNot(request, aborted());
-        SacAbortIfNot(response, aborted());
+        FswAbortIfNot(request, aborted());
+        FswAbortIfNot(response, aborted());
         grpc::StatusCode code = {};
         /*
          * Using std::bind instead of make_slot/slot_bind as they are not
@@ -264,7 +264,7 @@ namespace Drone
          * while it is still processing requests to make behavior as single
          * threaded as possible.
          */
-        SacAbortIfNot(future.get(), aborted());
+        FswAbortIfNot(future.get(), aborted());
         return create_status(code);
     };
     /**
@@ -304,7 +304,7 @@ namespace Drone
          * while it is still processing requests to make behavior as single
          * threaded as possible.
          */
-        SacAbortIfNot(future.get(), false);
+        FswAbortIfNot(future.get(), false);
         return true;
     };
     /**
@@ -379,7 +379,7 @@ namespace Drone
      *
      * void* tag = nullptr;
      *
-     * SacAbortIfNot(
+     * FswAbortIfNot(
      *       runner.register_request<SearchPathGeneratorServiceAPI::CalculateResponse>(
      *           context,
      *           search_path_service_stub->PrepareAsyncCalculate(
@@ -469,7 +469,7 @@ namespace Drone
             auto callback_wrapper = std::bind(
                 &GRPCAsyncRunner::response_callback_trampoline<TResponse>,
                 callback, info);
-            SacAbortIfNot(dispatcher.add_callback(callback_wrapper, request_id),
+            FswAbortIfNot(dispatcher.add_callback(callback_wrapper, request_id),
                           false);
             rpc->StartCall();
             rpc->Finish(&info->response, &info->status, request_id);
@@ -484,7 +484,7 @@ namespace Drone
          */
         bool forget_request(void *request_id)
         {
-            SacAbortIfNot(dispatcher.remove_callback(request_id), false);
+            FswAbortIfNot(dispatcher.remove_callback(request_id), false);
             return true;
         }
         /**
@@ -514,7 +514,7 @@ namespace Drone
             GRPCAsyncRunner::ResponseCallback<TResponse> callback,
             Handle<RequestInfo<TResponse>> info)
         {
-            SacAbortIfNot(
+            FswAbortIfNot(
                 callback(&info->request_id, info->status, info->response),
                 false);
             return true;

@@ -9,7 +9,7 @@
 #include "src/bullwinkle/all/Slate.h"
 #include "src/bullwinkle/all/SlateBuilder.h"
 #include "src/bullwinkle/all/core/drone_types.h"
-#include "src/bullwinkle/all/core/sxtime.h"
+#include "src/bullwinkle/all/core/fswtime.h"
 #include "src/bullwinkle/all/hsm/SslPrivateKeyMethod.h"
 #include "src/bullwinkle/all/hsm_type_t.enum.h"
 #include <curl/curl.h>
@@ -153,7 +153,7 @@ namespace Drone
         static int progress_cb(void *clientp, curl_off_t dltotal,
                                curl_off_t dlnow, curl_off_t ultotal,
                                curl_off_t ulnow);
-#ifdef SX_BORINGSSL_ENABLED
+#ifdef FSW_BORINGSSL_ENABLED
         static int modify_ssl_ctx_cb(CURL *easy_handle, void *ctx, void *userp);
 #endif
         void update_progress(size_t _dltotal, size_t _dlnow);

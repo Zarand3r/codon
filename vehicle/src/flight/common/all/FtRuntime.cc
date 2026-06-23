@@ -110,7 +110,7 @@ namespace Drone
          * Ensure that the child class has passed us a valid
          * ControlInterface object.
          */
-        SacAssert(control);
+        FswAssert(control);
     }
     /**
      * Destructor.
@@ -123,7 +123,7 @@ namespace Drone
      */
     bool FtRuntime::init()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Enable the configuration cache to reduce boot time.
          */
@@ -132,33 +132,33 @@ namespace Drone
          * Initialize any runtime systems that must exist prior to starting
          * initialization of the control component.
          */
-        SacAbortIfNot(init_pre_control_early(), false);
+        FswAbortIfNot(init_pre_control_early(), false);
         /*
          * Perform pre-slate-build initialization of the control logic.
          */
         ControlNodeIdentity control_ident;
-        SacAbortIfNot(control_ident.init(ident.role, get_control_inst()),
+        FswAbortIfNot(control_ident.init(ident.role, get_control_inst()),
                       false);
         /*
          * Read the node configs from the Node Manager config file.
          */
         const std::string node_mgr_config_key = "node_mgr";
-        SacAbortIfNot(node_configs.parse(configs, node_mgr_config_key), false);
-        SacAbortIf(node_configs.empty(), false);
+        FswAbortIfNot(node_configs.parse(configs, node_mgr_config_key), false);
+        FswAbortIf(node_configs.empty(), false);
         /*
          * Provide the control component with fundamental information about its
          * identity, and allow it to append requests for additional remote I/O
          * nodes to node_configs.
          */
-        SacAbortIfNot(control->init_basic_identity(
+        FswAbortIfNot(control->init_basic_identity(
                           control_period, configs,
                           smoketest_config.get_prog_name(), control_ident,
                           slate_control_sync_only, node_configs),
                       false);
-        SacAbortIfNot(init_pre_control_late(), false);
-        SacAbortIfNot(init_runtime_pre_control(), false);
+        FswAbortIfNot(init_pre_control_late(), false);
+        FswAbortIfNot(init_runtime_pre_control(), false);
         cycle_timer_name_s control_cycle_timer_names;
-        SacAbortIfNot(control->init_pre_slate_build(
+        FswAbortIfNot(control->init_pre_slate_build(
                           keychain, channel_manager, adc_boards_info,
                           enum_registry, control_cycle_timer_names),
                       false);
@@ -166,9 +166,9 @@ namespace Drone
          * Perform pre-slate-build initialization of runtime systems that may
          * rely on the existence of control components.
          */
-        SacAbortIfNot(init_pre_slate_build_early(), false);
-        SacAbortIfNot(init_runtime_pre_slate_build(), false);
-        SacAbortIfNot(init_pre_slate_build_late(), false);
+        FswAbortIfNot(init_pre_slate_build_early(), false);
+        FswAbortIfNot(init_runtime_pre_slate_build(), false);
+        FswAbortIfNot(init_pre_slate_build_late(), false);
         /*
          * Create all the requested CycleTimers.
          */
@@ -178,49 +178,49 @@ namespace Drone
              i != control_cycle_timer_names.end(); ++i)
         {
             Handle<CycleTimer> timer(new CycleTimer(eloop.clock));
-            SacAbortIfNot(timer->init(slate_local, *i), false);
+            FswAbortIfNot(timer->init(slate_local, *i), false);
             control_cycle_timers[*i] = timer;
         }
         /*
          * Initialize the time scaler.
          */
-        SacAbortIfNot(time_scaler.init(slate_root.super_slate()), false);
+        FswAbortIfNot(time_scaler.init(slate_root.super_slate()), false);
         /*
          * Build the slate.
          */
         slate = slate_root.slate(slate_no_validation);
-        SacAbortIfNot(slate_root.build(), false);
+        FswAbortIfNot(slate_root.build(), false);
         /*
          * Perform post-slate build initialization of the control code.
          */
         SlateBuilder sudo_slate_root = slate_root.super_slate();
         SlateBuilder sudo_slate_control =
             sudo_slate_root.sub_slate(control_slate_name());
-        SacAbortIfNot(control->init_post_slate_build(sudo_slate_control,
+        FswAbortIfNot(control->init_post_slate_build(sudo_slate_control,
                                                      control_cycle_timers),
                       false);
         /*
          * Perform post-slate-build initialization of all runtime components.
          */
-        SacAbortIfNot(init_post_slate_build_early(), false);
-        SacAbortIfNot(init_runtime_post_slate_build(), false);
-        SacAbortIfNot(init_post_slate_build_late(), false);
+        FswAbortIfNot(init_post_slate_build_early(), false);
+        FswAbortIfNot(init_runtime_post_slate_build(), false);
+        FswAbortIfNot(init_post_slate_build_late(), false);
         /*
          * Validate that all seed objects have been initialized.
          */
-        SacAbortIfNot(validate_all_seeds_initialized(), false);
+        FswAbortIfNot(validate_all_seeds_initialized(), false);
         /*
          * Log all initial values to DNA.
          */
-        SacIfNot(dna.log(0, eloop.clock.get_telemetry_timestamp()));
+        FswIfNot(dna.log(0, eloop.clock.get_telemetry_timestamp()));
         /*
          * Ensure NOTHING was added to any of the EventLoop lists before
          * we got to this point, and install the dispatch method.
          */
-        SacAbortIfNeq(eloop.early_list.num_sources(), 0U, false);
-        SacAbortIfNeq(eloop.normal_list.num_sources(), 0U, false);
-        SacAbortIfNeq(eloop.late_list.num_sources(), 0U, false);
-        SacAbortIfNot(install_dispatch(eloop, "dispatch",
+        FswAbortIfNeq(eloop.early_list.num_sources(), 0U, false);
+        FswAbortIfNeq(eloop.normal_list.num_sources(), 0U, false);
+        FswAbortIfNeq(eloop.late_list.num_sources(), 0U, false);
+        FswAbortIfNot(install_dispatch(eloop, "dispatch",
                                        make_slot(*this, &FtRuntime::dispatch)),
                       false);
         /*
@@ -231,7 +231,7 @@ namespace Drone
         /*
          * Finalize slate, clearing any build time only metadata.
          */
-        SacAbortIfNot(slate_root.finalize(), false);
+        FswAbortIfNot(slate_root.finalize(), false);
         is_init = true;
         return true;
     }
@@ -244,7 +244,7 @@ namespace Drone
     {
         str_v devices;
         slateelem_v elements;
-        SacAbortIfNot(slate_root.super_slate().compute_path_set(elements),
+        FswAbortIfNot(slate_root.super_slate().compute_path_set(elements),
                       false);
         for (size_t i = 0; i < elements.size(); ++i)
         {
@@ -327,18 +327,18 @@ namespace Drone
      */
     bool FtRuntime::init_pre_control_early()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Store off all of the commonly-used names for future use.
          */
-        SacAbortIfNot(ident.init(cmd.get_string("role"), cmd.get_int("inst"),
+        FswAbortIfNot(ident.init(cmd.get_string("role"), cmd.get_int("inst"),
                                  cmd.get_string("string")),
                       false);
         /*
          * Check if the DNA debugger is present and potentially connect to it.
          * This needs to be done first since this returns the slate root to use.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             dna.init(ident.node_name, local_slate_name() + ".dna", &slate_root),
             false);
         /*
@@ -377,9 +377,9 @@ namespace Drone
          */
         ft_sync = Handle<FtSync>(
             new FtSync(eloop, upkeep_list, false /* auto_send_syncs */));
-        SacAbortIfNot(ft_sync, false);
-        SacAbortIfNot(ft_sync->init(slate_local, configs, cmd), false);
-        SacAbortIfNot(
+        FswAbortIfNot(ft_sync, false);
+        FswAbortIfNot(ft_sync->init(slate_local, configs, cmd), false);
+        FswAbortIfNot(
             ft_sync->populate_enums(*enum_registry, local_enum_prefix()),
             false);
         control_period = ft_sync->get_sync_period();
@@ -396,29 +396,29 @@ namespace Drone
         if (cmd.get_bool("enable_slate_dump"))
         {
             slate_dump.assume_ownership(new SlateDump(eloop.clock));
-            SacAbortIfNot(slate_dump->init(slate_local, smoketest_config),
+            FswAbortIfNot(slate_dump->init(slate_local, smoketest_config),
                           false);
         }
         /*
          * Create the Keychain and load our private key.
          */
         keychain = Handle<Keychain>(new Keychain(Keychain::use_murmurhash));
-        SacAbortIfNot(keychain, false);
-        SacAbortIfNot(keychain->init(configs, ident.node_name, "public.key"),
+        FswAbortIfNot(keychain, false);
+        FswAbortIfNot(keychain->init(configs, ident.node_name, "public.key"),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             keychain->load_private_key(configs, ident.node_name + ".key"),
             false);
         /*
          * Create heap usage tokens.
          */
-        SacAbortIfNot(slate_local.create("heap.bytes", shard_nonsync,
+        FswAbortIfNot(slate_local.create("heap.bytes", shard_nonsync,
                                          slate_private, heap_used_tok),
                       false);
-        SacAbortIfNot(slate_local.create("heap.max_bytes", shard_nonsync,
+        FswAbortIfNot(slate_local.create("heap.max_bytes", shard_nonsync,
                                          slate_private, heap_max_used_tok),
                       false);
-        SacAbortIfNot(slate_local.create("heap.allocations", shard_nonsync,
+        FswAbortIfNot(slate_local.create("heap.allocations", shard_nonsync,
                                          slate_private,
                                          heap_allocations_count_tok),
                       false);
@@ -426,30 +426,30 @@ namespace Drone
          * Create control cycle timers.
          */
         SlateBuilder slate_prof = slate_local.sub_slate("prof");
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_syncer_replace_timer.init(slate_prof, "slate_syncer_replace"),
             false);
-        SacAbortIfNot(firmware_comm_timer.init(slate_prof, "firmware_comm"),
+        FswAbortIfNot(firmware_comm_timer.init(slate_prof, "firmware_comm"),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             pre_data_sharing_timer.init(slate_prof, "pre_data_sharing"), false);
-        SacAbortIfNot(data_sharing_timer.init(slate_prof, "data_sharing"),
+        FswAbortIfNot(data_sharing_timer.init(slate_prof, "data_sharing"),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             post_data_sharing_timer.init(slate_prof, "post_data_sharing"),
             false);
-        SacAbortIfNot(pre_telemetry_timer.init(slate_prof, "pre_telemetry"),
+        FswAbortIfNot(pre_telemetry_timer.init(slate_prof, "pre_telemetry"),
                       false);
-        SacAbortIfNot(telemetry_timer.init(slate_prof, "telemetry"), false);
-        SacAbortIfNot(
+        FswAbortIfNot(telemetry_timer.init(slate_prof, "telemetry"), false);
+        FswAbortIfNot(
             slate_syncer_share_timer.init(slate_prof, "slate_syncer_share"),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_roll_frame_timer.init(slate_prof, "slate_roll_frame"), false);
-        SacAbortIfNot(channel_manager_flush_timer.init(slate_prof,
+        FswAbortIfNot(channel_manager_flush_timer.init(slate_prof,
                                                        "channel_manager_flush"),
                       false);
-        SacAbortIfNot(eloop_dispatch_select_timer.init(slate_prof,
+        FswAbortIfNot(eloop_dispatch_select_timer.init(slate_prof,
                                                        "eloop_dispatch_select"),
                       false);
         /*
@@ -458,31 +458,31 @@ namespace Drone
          */
         if (props.use_firmware_comm)
         {
-            SacAbortIfNot(create_adc_system(), false);
+            FswAbortIfNot(create_adc_system(), false);
         }
         /*
          * Create the channel manager so we can bind to FT channels.
          */
-        SacAbortIf(node_configs.empty(), false);
-        SacAbortIfNot(channel_manager.assume_ownership(
+        FswAbortIf(node_configs.empty(), false);
+        FswAbortIfNot(channel_manager.assume_ownership(
                           new FtChannelManager(ident.string)),
                       false);
-        SacAbortIfNot(channel_manager->init(node_configs), false);
+        FswAbortIfNot(channel_manager->init(node_configs), false);
         /*
          * Create the input sharing system, which will exchange and vote
          * input data between computers.
          */
         nano_t share_time = 0;
-        SacAbortIfNot(
+        FswAbortIfNot(
             string_to_nano_t(cmd.get_string("ds_share_time"), share_time),
             false);
         nano_t reshare_time = 0;
-        SacAbortIfNot(
+        FswAbortIfNot(
             string_to_nano_t(cmd.get_string("ds_reshare_time"), reshare_time),
             false);
         if (props.use_input_sync)
         {
-            SacAbortIfNot(create_input_sharing_system(share_time, reshare_time),
+            FswAbortIfNot(create_input_sharing_system(share_time, reshare_time),
                           false);
         }
         else
@@ -500,11 +500,11 @@ namespace Drone
              * sharer would have created. Create them here.
              */
             slate_element_t element_id = 0;
-            SacAbortIfNot(slate_local.create_element<bool>(
+            FswAbortIfNot(slate_local.create_element<bool>(
                               "ds.trigger", false, shard_nonsync,
                               slate_read_write, element_id),
                           false);
-            SacAbortIfNot(slate_local.create_element<UINT32>(
+            FswAbortIfNot(slate_local.create_element<UINT32>(
                               "ds.input_crc", 0u, shard_nonsync,
                               slate_read_write, element_id),
                           false);
@@ -514,7 +514,7 @@ namespace Drone
          */
         if (props.use_slate_syncer)
         {
-            SacAbortIfNot(slate_syncer_fd_bag.assume_ownership(new FdBag),
+            FswAbortIfNot(slate_syncer_fd_bag.assume_ownership(new FdBag),
                           false);
             /*
              * Put SlateSyncer file descriptors in their own FdBag so they can
@@ -528,14 +528,14 @@ namespace Drone
              * Otherwise, both transmission and receipt will occur during slack
              * time.
              */
-            SacAbortIfNot(slate_syncer.assume_ownership(new SlateSyncer(
+            FswAbortIfNot(slate_syncer.assume_ownership(new SlateSyncer(
                               eloop.clock, *slate_syncer_fd_bag,
                               slate_syncer_duplex_mode, control_period)),
                           false);
-            SacAbortIfNot(ft_sync->add_extra_fd_bag(slate_syncer_fd_bag),
+            FswAbortIfNot(ft_sync->add_extra_fd_bag(slate_syncer_fd_bag),
                           false);
             const bool start_enabled = false;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 slate_syncer->init_outputs(slate_local, ident.role_inst,
                                            ident.string, start_enabled),
                 false);
@@ -551,7 +551,7 @@ namespace Drone
      */
     bool FtRuntime::init_pre_slate_build_early()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Finish creation of the slate syncer system.
          */
@@ -565,7 +565,7 @@ namespace Drone
                 slate_control_read_only.sub_slate(shared_slate_name('c'));
             SlateBuilder slate_shared_median =
                 slate_control_read_only.sub_slate(median_slate_name());
-            SacAbortIfNot(slate_syncer->init_inputs(
+            FswAbortIfNot(slate_syncer->init_inputs(
                               slate_shared_a, slate_shared_b, slate_shared_c,
                               slate_shared_median, ident.string),
                           false);
@@ -575,34 +575,34 @@ namespace Drone
          * Note that the trap binds to the reset_counters element in the
          * control slate that is actuated by the state machine.
          */
-        SacAbortIfNot(reset_counters_trap.assume_ownership(new SlateFlagTrap),
+        FswAbortIfNot(reset_counters_trap.assume_ownership(new SlateFlagTrap),
                       false);
-        SacAbortIfNot(reset_counters_trap->init(slate_control_read_only,
+        FswAbortIfNot(reset_counters_trap->init(slate_control_read_only,
                                                 "reset_counters", slate_local,
                                                 "reset_counters_trap_local",
                                                 shard_nonsync),
                       false);
-        SacAbortIfNot(reset_counters_trap->trap_sig.connect(
+        FswAbortIfNot(reset_counters_trap->trap_sig.connect(
                           make_slot(*this, &FtRuntime::reset_counters)),
                       false);
         /*
          * Create and initialize the TimestampGatherer.
          */
-        SacAbortIfNot(timestamp_gatherer.assume_ownership(
+        FswAbortIfNot(timestamp_gatherer.assume_ownership(
                           new TimestampGatherer(eloop.clock)),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             timestamp_gatherer->init(slate_local, slate_control_read_only),
             false);
         /*
          * Create the telemetry relay, but don't finalize it yet.
          */
-        SacAbortIfNot(telem_relay.assume_ownership(
+        FswAbortIfNot(telem_relay.assume_ownership(
                           new TelemetryRelayRuntime(eloop.clock, "telem")),
                       false);
-        SacAbortIfNot(telem_relay, false);
-        SacAbortIfNot(create_local_telemetry_connections(*telem_relay), false);
-        SacAbortIfNot(
+        FswAbortIfNot(telem_relay, false);
+        FswAbortIfNot(create_local_telemetry_connections(*telem_relay), false);
+        FswAbortIfNot(
             telem_relay->init(eloop, upkeep_list, slate_control_read_only,
                               slate_local, configs, ident,
                               get_telemetry_config_file_name(),
@@ -613,9 +613,9 @@ namespace Drone
          * Obtain a read token to the null_int device so we can telemeter its
          * address for use in desync testing.
          */
-        SacAbortIfNot(slate_control_read_only.bind("null_int", null_int_tok),
+        FswAbortIfNot(slate_control_read_only.bind("null_int", null_int_tok),
                       false);
-        SacAbortIfNot(slate_local.create("null_int_address", 0llu,
+        FswAbortIfNot(slate_local.create("null_int_address", 0llu,
                                          shard_nonsync, slate_private,
                                          null_int_address_tok),
                       false);
@@ -628,11 +628,11 @@ namespace Drone
          *          the enable device be initialized to false to prevent
          *          accidental activation in flight.
          */
-        SacAbortIfNot(slate_local.create("simulated_control_cycle_extension",
+        FswAbortIfNot(slate_local.create("simulated_control_cycle_extension",
                                          0.0, shard_nonsync, slate_private,
                                          simulated_control_cycle_extension_tok),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_local.create("enable_simulated_control_cycle_extension",
                                false, shard_nonsync, slate_private,
                                enable_simulated_control_cycle_extension_tok),
@@ -644,21 +644,21 @@ namespace Drone
          */
         if (props.use_ftrace_trap && !cmd.get_bool("disable_ftrace"))
         {
-            SacAbortIfNot(ftrace_init(false /* report_error */), false);
+            FswAbortIfNot(ftrace_init(false /* report_error */), false);
             ftrace_trap = FtraceTrap::create(
                 eloop.clock, slate_control_read_only, slate_local);
-            SacAbortIfNot(ftrace_trap, false);
+            FswAbortIfNot(ftrace_trap, false);
             ftrace_trap_local =
                 FtraceTrap::create(eloop.clock, slate_control_read_only,
                                    slate_local, ident.node_name);
-            SacAbortIfNot(ftrace_trap_local, false);
+            FswAbortIfNot(ftrace_trap_local, false);
         }
         /*
          * Create the non-synced command platform.
          */
         if (enable_local_external_commanding)
         {
-            SacAbortIfNot(create_nonsynced_command_platform(), false);
+            FswAbortIfNot(create_nonsynced_command_platform(), false);
         }
         return true;
     }
@@ -670,13 +670,13 @@ namespace Drone
      */
     bool FtRuntime::init_pre_slate_build_late()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create and initialize the bootstrapper system. Happens before local
          * slate sharing system creation so that we can share the bootstrapper
          * state.
          */
-        SacAbortIfNot(create_bootstrapper_system(), false);
+        FswAbortIfNot(create_bootstrapper_system(), false);
         /*
          * Create and initialize the local slate sharing system.
          */
@@ -689,16 +689,16 @@ namespace Drone
              * manager.
              */
             size_t buf_size = 0;
-            SacAbortIfNot(node_configs.get_node_output_buffer_size(
+            FswAbortIfNot(node_configs.get_node_output_buffer_size(
                               ident.node_name, buf_size),
                           false);
             Handle<DataDgramChannel> channel(new DataDgramChannel(1, buf_size));
-            SacAbortIfNot(channel, false);
+            FswAbortIfNot(channel, false);
             node_id_t node_id = unknown_node_id;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 NodeIdentifier::node_name_to_node_id(ident.node_name, node_id),
                 false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 channel->read_sig.connect(slot_bind(
                     make_slot(*this, &FtRuntime::handle_local_share_read),
                     node_id)),
@@ -708,11 +708,11 @@ namespace Drone
              * is no need to share anything from the control slate, as all
              * strings will have identical values.
              */
-            SacAbortIf(slate_sender_local, false);
-            SacAbortIfNot(slate_sender_local.assume_ownership(
+            FswAbortIf(slate_sender_local, false);
+            FswAbortIfNot(slate_sender_local.assume_ownership(
                               new SlateSharerSender(eloop.clock)),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 slate_sender_local->init("local_share_sender", slate_local,
                                          shard_nonsync, configs,
                                          sharer_get_default_local_config_list(
@@ -723,7 +723,7 @@ namespace Drone
         /*
          * Block the further addition of enumerations to the enum registry.
          */
-        SacAbortIfNot(enum_registry->finalize(slate_root.super_slate()), false);
+        FswAbortIfNot(enum_registry->finalize(slate_root.super_slate()), false);
         if (props.use_input_sync)
         {
             /*
@@ -731,7 +731,7 @@ namespace Drone
              * that by this point NodeIOManager is fully initialized on all
              * nodes.
              */
-            SacAbortIfNot(node_io_manager->is_initialized(), false);
+            FswAbortIfNot(node_io_manager->is_initialized(), false);
         }
         return true;
     }
@@ -743,7 +743,7 @@ namespace Drone
      */
     bool FtRuntime::init_post_slate_build_early()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Print shard statistics to the console.
          */
@@ -764,7 +764,7 @@ namespace Drone
             const std::string &shard_name = shard_desc[i].first;
             const slate_shard_t shard = shard_desc[i].second;
             B2c mem;
-            SacAbortIfNot(slate.get_shard_memory(shard, mem), false);
+            FswAbortIfNot(slate.get_shard_memory(shard, mem), false);
             dbnprintf(200, "Slate '%s' shard size: %zukb\n", shard_name.c_str(),
                       mem.len() / 1024);
         }
@@ -773,8 +773,8 @@ namespace Drone
          */
         if (props.use_slate_syncer)
         {
-            SacAbortIfNot(slate_syncer, false);
-            SacAbortIfNot(slate_syncer->init(), false);
+            FswAbortIfNot(slate_syncer, false);
+            FswAbortIfNot(slate_syncer->init(), false);
         }
         /*
          * Set up the local and control sudo slates.
@@ -790,7 +790,7 @@ namespace Drone
         if (props.use_firmware_comm)
         {
             const bool sim_firmware = cmd.get_bool("sim_firmware");
-            SacAbortIfNot(firmware_comm->init_controllers(sim_firmware,
+            FswAbortIfNot(firmware_comm->init_controllers(sim_firmware,
                                                           false /* resume */),
                           false);
         }
@@ -799,8 +799,8 @@ namespace Drone
          */
         if (slate_command_interface_local)
         {
-            SacAbortIfNot(slate_command_interface_local, false);
-            SacAbortIfNot(slate_command_interface_local->init(sudo_slate_local,
+            FswAbortIfNot(slate_command_interface_local, false);
+            FswAbortIfNot(slate_command_interface_local->init(sudo_slate_local,
                                                               ident.node_name),
                           false);
         }
@@ -819,7 +819,7 @@ namespace Drone
          * Medianed inputs and hardware outputs.
          */
         hardware_prefixes.insert(control_slate_name() + ".");
-        SacAbortIfNot(adc_boards_to_scale_info(hardware_prefixes,
+        FswAbortIfNot(adc_boards_to_scale_info(hardware_prefixes,
                                                adc_boards_info, *scale_info),
                       false);
         /*
@@ -841,7 +841,7 @@ namespace Drone
          * Add any scaling info generated by control logic into our list.
          */
         scale_info_v control_scaling;
-        SacAbortIfNot(control->get_scaling(control_scaling), false);
+        FswAbortIfNot(control->get_scaling(control_scaling), false);
         scale_info->insert(scale_info->end(), control_scaling.begin(),
                            control_scaling.end());
         sort_scale_info(*scale_info);
@@ -855,10 +855,10 @@ namespace Drone
      */
     bool FtRuntime::init_post_slate_build_late()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         if (slate_dump)
         {
-            SacAbortIfNot(slate_dump->init_post_slate(
+            FswAbortIfNot(slate_dump->init_post_slate(
                               ident, control_period, *enum_registry,
                               smoketest_config.get_init_only()),
                           false);
@@ -872,9 +872,9 @@ namespace Drone
         /*
          * Make the SlateTelemetryTask.
          */
-        SacAbortIfNot(slate_telem.assume_ownership(new SlateTelemetryTask()),
+        FswAbortIfNot(slate_telem.assume_ownership(new SlateTelemetryTask()),
                       false);
-        SacAbortIfNot(slate_telem->init(
+        FswAbortIfNot(slate_telem->init(
                           slate_root.super_slate(), eloop.clock, *telem_relay,
                           ident, *scale_info, *enum_registry, telemetry_parsers,
                           smoketest_config, device_root, control_period),
@@ -882,11 +882,11 @@ namespace Drone
         /*
          * Add the SlateTelemetryTask telemetry producer.
          */
-        SacAbortIfNot(telem_relay->add_producer(slate_telem), false);
+        FswAbortIfNot(telem_relay->add_producer(slate_telem), false);
         /*
          * Write annotations for the devices and slate telemetry tasks.
          */
-        SacAbortIfNot(telem_relay->finalize(smoketest_config), false);
+        FswAbortIfNot(telem_relay->finalize(smoketest_config), false);
         return true;
     }
     /**
@@ -897,7 +897,7 @@ namespace Drone
      */
     bool FtRuntime::init_runtime_pre_control()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -909,7 +909,7 @@ namespace Drone
      */
     bool FtRuntime::init_runtime_pre_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -920,7 +920,7 @@ namespace Drone
      */
     bool FtRuntime::init_runtime_post_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         return true;
     }
     /**
@@ -1064,7 +1064,7 @@ namespace Drone
              * On systems that do not participate in input synchronization, we
              * sleep for an equivalent period of time.
              */
-            sxsleep(ds_parallel_sleep_time);
+            fswsleep(ds_parallel_sleep_time);
         }
         data_sharing_timer.stop();
         post_data_sharing_timer.start();
@@ -1113,7 +1113,7 @@ namespace Drone
         {
             const nano_t control_cycle_extension = static_cast<nano_t>(
                 slate[simulated_control_cycle_extension_tok] * billion);
-            sxsleep(control_cycle_extension);
+            fswsleep(control_cycle_extension);
         }
         /*
          * Dispatch the reset_counter_trap so the counter-clearing methods can
@@ -1208,7 +1208,7 @@ namespace Drone
                  * blocking. Limit to fd_write_ev so only transmission occurs.
                  */
                 nano_t time_used = nano_t_min;
-                SacOnSelectError(slate_syncer_fd_bag->select_absolute(
+                FswOnSelectError(slate_syncer_fd_bag->select_absolute(
                     nano_t_min, fd_write_ev, time_used));
             }
         }
@@ -1342,7 +1342,7 @@ namespace Drone
     bool FtRuntime::create_input_sharing_system(const nano_t share_time,
                                                 const nano_t reshare_time)
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the NodeIoManager to get the data. If we are using output
          * synchronization on this process, we do not pull output data from the
@@ -1350,16 +1350,16 @@ namespace Drone
          * comparator instead.
          */
         Handle<FdBag> fds_input(new FdBag);
-        SacAbortIfNot(fds_input, false);
-        SacAbortIfNot(node_io_manager.assume_ownership(new NodeIoManager),
+        FswAbortIfNot(fds_input, false);
+        FswAbortIfNot(node_io_manager.assume_ownership(new NodeIoManager),
                       false);
-        SacAbortIfNot(node_io_manager->init(slate_local.sub_slate("node_io"),
+        FswAbortIfNot(node_io_manager->init(slate_local.sub_slate("node_io"),
                                             node_configs, ident, upkeep_list,
                                             *fds_input, eloop.fds),
                       false);
         if (!props.use_output_sync)
         {
-            SacAbortIfNot(node_io_manager->init_output_sources(channel_manager),
+            FswAbortIfNot(node_io_manager->init_output_sources(channel_manager),
                           false);
         }
         /*
@@ -1373,14 +1373,14 @@ namespace Drone
          * below, since those channels have references to these FdBags.
          */
         Handle<FdBag> fds_share(new FdBag);
-        SacAbortIfNot(fds_share, false);
+        FswAbortIfNot(fds_share, false);
         Handle<FdBag> fds_reshare(new FdBag);
-        SacAbortIfNot(fds_reshare, false);
+        FswAbortIfNot(fds_reshare, false);
         Handle<UdpConnection> left_share_conn;
         Handle<UdpConnection> right_share_conn;
         Handle<UdpConnection> left_reshare_conn;
         Handle<UdpConnection> right_reshare_conn;
-        SacAbortIfNot(FtSimpleDataSharer::create_sharing_connections(
+        FswAbortIfNot(FtSimpleDataSharer::create_sharing_connections(
                           node_configs, ident, service_directory(), upkeep_list,
                           *fds_share, *fds_reshare, left_share_conn,
                           right_share_conn, left_reshare_conn,
@@ -1390,12 +1390,12 @@ namespace Drone
          * Instantiate the data sharer and connect it to the data_sig of the
          * NodeIoManager.
          */
-        SacAbortIfNot(data_sharer.assume_ownership(new FtSimpleDataSharer(
+        FswAbortIfNot(data_sharer.assume_ownership(new FtSimpleDataSharer(
                           eloop.clock, node_io_manager->data_sig,
                           should_overlap_reshare_and_input_writes())),
                       false);
-        SacAbortIfNeq(ident.string.length(), 1, false);
-        SacAbortIfNot(
+        FswAbortIfNeq(ident.string.length(), 1, false);
+        FswAbortIfNot(
             data_sharer->init(slate_local, ident.role_inst, ident.string[0],
                               node_configs, keychain, fds_input, fds_share,
                               fds_reshare, left_share_conn, right_share_conn,
@@ -1410,13 +1410,13 @@ namespace Drone
          */
         if (!props.use_output_sync)
         {
-            SacAbortIfNot(data_sharer->shared_data_sig.connect(make_slot(
+            FswAbortIfNot(data_sharer->shared_data_sig.connect(make_slot(
                               *channel_manager, &FtChannelManager::read_input)),
                           false);
         }
         if (should_send_syncs_during_reshare_phase())
         {
-            SacAbortIfNot(data_sharer->reshare_phase_sig.connect(
+            FswAbortIfNot(data_sharer->reshare_phase_sig.connect(
                               make_slot(*ft_sync, &FtSync::send_syncs)),
                           false);
         }
@@ -1429,7 +1429,7 @@ namespace Drone
      */
     bool FtRuntime::create_adc_system()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the raw slates.
          */
@@ -1444,10 +1444,10 @@ namespace Drone
         /*
          * Create the FirmwareComm hardware classes.
          */
-        SacAbortIfNot(firmware_comm.assume_ownership(
+        FswAbortIfNot(firmware_comm.assume_ownership(
                           new FirmwareComm(smoketest_config.get_init_only())),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             firmware_comm->init(
                 ident, configs, firmware_update_delay, use_sensor_prefixes,
                 slate_local, slate_control_read_create, slate_local_raw,
@@ -1461,7 +1461,7 @@ namespace Drone
          * corresponding element in the raw slate, but booleans are pulled from
          * the scaled slate.
          */
-        SacAbortIfNot(create_adc_scaler(slate_local_raw, slate_local,
+        FswAbortIfNot(create_adc_scaler(slate_local_raw, slate_local,
                                         false /* scale_ad_banks */,
                                         adc_scaler_local),
                       false);
@@ -1490,8 +1490,8 @@ namespace Drone
      */
     bool FtRuntime::create_bootstrapper_system()
     {
-        SacAbortIfNot(create_bootstrapper(bootstrapper), false);
-        SacAbortIfNot(
+        FswAbortIfNot(create_bootstrapper(bootstrapper), false);
+        FswAbortIfNot(
             FtBootstrapper::populate_enums(enum_registry, local_enum_prefix()),
             false);
         /*
@@ -1499,11 +1499,11 @@ namespace Drone
          * synchronization, and we should reset all counters when we are fully
          * synchronized.
          */
-        SacAbortIfNot(ft_sync, false);
-        SacAbortIfNot(bootstrapper->time_sync_established_sig.connect(
+        FswAbortIfNot(ft_sync, false);
+        FswAbortIfNot(bootstrapper->time_sync_established_sig.connect(
                           make_slot(*ft_sync, &FtSync::reset_counters)),
                       false);
-        SacAbortIfNot(bootstrapper->full_sync_established_sig.connect(
+        FswAbortIfNot(bootstrapper->full_sync_established_sig.connect(
                           make_slot(*this, &FtRuntime::reset_counters)),
                       false);
         return true;
@@ -1515,7 +1515,7 @@ namespace Drone
      */
     bool FtRuntime::create_nonsynced_command_platform()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create a name that can be used for the dispatcher.
          */
@@ -1524,7 +1524,7 @@ namespace Drone
          * Get the input channels.
          */
         std::vector<Handle<DgramChannel>> inputs;
-        SacAbortIfNot(external_command_get_default_nonsynced_inputs(
+        FswAbortIfNot(external_command_get_default_nonsynced_inputs(
                           node_configs, ident, upkeep_list, eloop.fds, inputs),
                       false);
         /*
@@ -1536,21 +1536,21 @@ namespace Drone
          */
         Handle<ExternalCommandDeframer> deframer(
             new ExternalCommandDeframerNull());
-        SacAbortIfNot(deframer, false);
+        FswAbortIfNot(deframer, false);
         /*
          * Create the command filters.
          */
         Handle<ExternalCommandTimeFilter> time_filter;
         Handle<ExternalCommandFilter> cmd_filter;
-        SacAbortIfNot(create_command_filters(time_filter, cmd_filter), false);
-        SacAbortIfNot(time_filter, false);
-        SacAbortIfNot(cmd_filter, false);
+        FswAbortIfNot(create_command_filters(time_filter, cmd_filter), false);
+        FswAbortIfNot(time_filter, false);
+        FswAbortIfNot(cmd_filter, false);
         /*
          * The non-synced command system has no state machine handler, so it
          * doesn't need an armer either.
          */
         Handle<ExternalCommandArmerNull> armer(new ExternalCommandArmerNull());
-        SacAbortIfNot(armer, false);
+        FswAbortIfNot(armer, false);
         /*
          * Create the command handlers.
          */
@@ -1558,51 +1558,51 @@ namespace Drone
         /*
          * Create the slate command handler.
          */
-        SacAbortIfNot(slate_command_interface_local.assume_ownership(
+        FswAbortIfNot(slate_command_interface_local.assume_ownership(
                           new SlateCommandInterface),
                       false);
         Handle<ExternalCommandSlateHandler> cmd_slate_handler(
             new ExternalCommandSlateHandler);
-        SacAbortIfNot(cmd_slate_handler, false);
-        SacAbortIfNot(cmd_slate_handler->init(slate_command_interface_local),
+        FswAbortIfNot(cmd_slate_handler, false);
+        FswAbortIfNot(cmd_slate_handler->init(slate_command_interface_local),
                       false);
         handlers.push_back(cmd_slate_handler);
         /*
          * Create and initialize the reflection manager. This must be done
          * after the slate command handler is created.
          */
-        SacAbortIfNot(ReflectionManager::create(get_num_local_reflect_slots(),
+        FswAbortIfNot(ReflectionManager::create(get_num_local_reflect_slots(),
                                                 slate_local, shard_nonsync,
                                                 "local_" /* prefix */,
                                                 slate_command_interface_local,
                                                 reflection_manager_local),
                       false);
-        SacAbortIfNot(reflection_manager_local, false);
+        FswAbortIfNot(reflection_manager_local, false);
         /*
          * Create and initialize the reflection command handler. This must be
          * done after the reflection manager is created.
          */
         Handle<ExternalCommandReflectionHandler> reflection_handler;
-        SacAbortIfNot(ExternalCommandReflectionHandler::create(
+        FswAbortIfNot(ExternalCommandReflectionHandler::create(
                           reflection_manager_local, reflection_handler),
                       false);
-        SacAbortIfNot(reflection_handler, false);
+        FswAbortIfNot(reflection_handler, false);
         handlers.push_back(reflection_handler);
         /*
          * Create the output channels.
          */
         std::map<std::string, Handle<Channel>> outputs;
-        SacAbortIfNot(external_command_get_default_nonsynced_outputs(
+        FswAbortIfNot(external_command_get_default_nonsynced_outputs(
                           node_configs, upkeep_list, eloop.fds, outputs),
                       false);
         /*
          * Create and initialize the command dispatcher.
          */
-        SacAbortIfNot(gnd_cmd_dispatcher_nonsynced.assume_ownership(
+        FswAbortIfNot(gnd_cmd_dispatcher_nonsynced.assume_ownership(
                           new ExternalCommandDispatcher(
                               dispatcher_name, eloop.clock, ext_cmd_params)),
                       false);
-        SacAbortIfNot(gnd_cmd_dispatcher_nonsynced->init(
+        FswAbortIfNot(gnd_cmd_dispatcher_nonsynced->init(
                           slate_local, ident.node_name, shard, inputs, deframer,
                           time_filter, cmd_filter, armer, handlers, outputs),
                       false);
@@ -1610,15 +1610,15 @@ namespace Drone
          * Create some devices that can be used to test commanding.
          */
         slate_element_t element_id = 0;
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_local.create_element<INT64>("nonsynced_null_int", 0ll, shard,
                                               slate_private, element_id),
             false);
-        SacAbortIfNot(slate_local.create_element<INT32>("nonsynced_null_int32",
+        FswAbortIfNot(slate_local.create_element<INT32>("nonsynced_null_int32",
                                                         0, shard, slate_private,
                                                         element_id),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_local.create_element<double>("nonsynced_null_fp", 0.0, shard,
                                                slate_private, element_id),
             false);
@@ -1638,15 +1638,15 @@ namespace Drone
                                       const bool scale_ad_banks,
                                       Handle<AdcScaler> &scaler)
     {
-        SacAbortIf(scaler, false);
+        FswAbortIf(scaler, false);
         bank_select_t bank_select = {};
-        SacAbortIfNot(AdcScaler::select_all_banks(bank_select), false);
+        FswAbortIfNot(AdcScaler::select_all_banks(bank_select), false);
         if (!scale_ad_banks)
         {
             bank_select[ad_dev_t] = bank_select_never;
         }
-        SacAbortIfNot(scaler.assume_ownership(new AdcScaler), false);
-        SacAbortIfNot(scaler->init(raw, scaled, adc_boards_info, bank_select),
+        FswAbortIfNot(scaler.assume_ownership(new AdcScaler), false);
+        FswAbortIfNot(scaler->init(raw, scaled, adc_boards_info, bank_select),
                       false);
         return true;
     }
@@ -1729,13 +1729,13 @@ namespace Drone
     bool FtRuntime::handle_local_share_read(DgramChannel &channel,
                                             node_id_t node_id)
     {
-        SacAbortIfNot(is_init, false);
-        SacAbortIfNot(node_io_manager, false);
+        FswAbortIfNot(is_init, false);
+        FswAbortIfNot(node_io_manager, false);
         while (channel.dgrams_avail())
         {
             DgramData dgram = channel.get_dgram();
-            SacIfNot(node_io_manager->data_sig.emit(node_id, dgram.data()));
-            SacAbortIfNot(dgram.pop(), false);
+            FswIfNot(node_io_manager->data_sig.emit(node_id, dgram.data()));
+            FswAbortIfNot(dgram.pop(), false);
         }
         return true;
     }

@@ -105,10 +105,10 @@ namespace Drone
      */
     bool DroneFtRuntime::init_runtime_pre_control()
     {
-        SacAbortIf(is_init, false);
-        SacAbortIfNot(Satellite::get_satellite_rev(configs, satellite_rev),
+        FswAbortIf(is_init, false);
+        FswAbortIfNot(Satellite::get_satellite_rev(configs, satellite_rev),
                       false);
-        SacAbortIfNot(Satellite::get_fcpu_board_rev(configs, fcpu_board_rev),
+        FswAbortIfNot(Satellite::get_fcpu_board_rev(configs, fcpu_board_rev),
                       false);
         /*
          * Set the initial values for FirmwareComm outputs
@@ -116,7 +116,7 @@ namespace Drone
          */
         if (props.use_firmware_comm)
         {
-            SacAbortIfNot(FirmwareCommAdcInit::init_hardware(
+            FswAbortIfNot(FirmwareCommAdcInit::init_hardware(
                               configs, "firmwarecomm_adc_init"),
                           false);
         }
@@ -130,7 +130,7 @@ namespace Drone
      */
     bool DroneFtRuntime::init_runtime_pre_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Create the TT&C radio system, SAPC Interface, and Real Time Clock
          * interface on satfcs
@@ -149,13 +149,13 @@ namespace Drone
              */
             if (!props.use_firmware_comm)
             {
-                SacAbortIfNot(watchdog_heartbeat = WatchdogHeartbeat::create(
+                FswAbortIfNot(watchdog_heartbeat = WatchdogHeartbeat::create(
                                   slate_control_read_only, ident),
                               false);
             }
             if (has_ttc)
             {
-                SacAbortIfNot(create_ttc_radio_system(), false);
+                FswAbortIfNot(create_ttc_radio_system(), false);
             }
             bool has_distributed_sapcs;
             bool has_muxed_sapcs;
@@ -195,10 +195,10 @@ namespace Drone
              * Create the power converter interface which binds to tokens
              * created by the power converter controller in the synced logic.
              */
-            SacAbortIf(sapc_interface, false);
+            FswAbortIf(sapc_interface, false);
             if (has_distributed_sapcs)
             {
-                SacAbortIfNot(
+                FswAbortIfNot(
                     sapc_interface =
                         DroneDistributedPowerConverterInterface::create(
                             slate_control_read_only, slate_local, ident,
@@ -207,14 +207,14 @@ namespace Drone
             }
             else if (has_muxed_sapcs)
             {
-                SacAbortIfNot(sapc_interface =
+                FswAbortIfNot(sapc_interface =
                                   DroneMuxedPowerConverterInterface::create(
                                       slate_control_read_only, slate_local,
                                       ident, sapc_telem_channels),
                               false);
             }
             bool has_gnss = false;
-            SacAbortIfNot(
+            FswAbortIfNot(
                 get_cbor_data("satfc.has_gnss", manifest_info, has_gnss),
                 false);
             /*
@@ -225,23 +225,23 @@ namespace Drone
                 /*
                  * Open a channel to receive timestamp packets from Swift.
                  */
-                SacAbortIfNot(timestamp_channel.assume_ownership(
+                FswAbortIfNot(timestamp_channel.assume_ownership(
                                   new UdpConnection(upkeep_list, eloop.fds)),
                               false);
                 {
                     Service service;
                     const std::string timestamp_service =
                         "satgps1" + ident.string + "_timestamp";
-                    SacAbortIfNot(
+                    FswAbortIfNot(
                         service_directory().lookup(timestamp_service, service),
                         false);
-                    SacAbortIfNot(service.proto == udp_proto, false);
+                    FswAbortIfNot(service.proto == udp_proto, false);
                     /*
                      * SATSW-81271: don't open the timestamp channel until
                      * satellite_ptp_driver is no longer listening to the same
                      * service.
                      */
-                    // SacAbortIfNot(timestamp_channel->open(service.port),
+                    // FswAbortIfNot(timestamp_channel->open(service.port),
                     // false);
                 }
                 /*
@@ -249,17 +249,17 @@ namespace Drone
                  */
                 SlateBuilder swift_pps_subslate =
                     slate_local.sub_slate("swift_pps_interface");
-                SacAbortIfNot(swift_pps_interface.assume_ownership(
+                FswAbortIfNot(swift_pps_interface.assume_ownership(
                                   new SwiftPpsInterface()),
                               false);
-                SacAbortIfNot(
+                FswAbortIfNot(
                     swift_pps_interface->init(swift_pps_subslate,
                                               timestamp_channel->read_sig),
                     false);
                 /*
                  * Initialize the PPS manager.
                  */
-                SacAbortIfNot(pps_manager = PpsManager::create(
+                FswAbortIfNot(pps_manager = PpsManager::create(
                                   slate_local, slate_control_read_only,
                                   swift_pps_subslate, ident),
                               false);
@@ -273,24 +273,24 @@ namespace Drone
             {
                 Handle<StreamChannelTelemetryTask> telem_task(
                     new StreamChannelTelemetryTask(eloop.clock));
-                SacAbortIfNot(telem_task, false);
-                SacAbortIfNot(telem_task->init(*telem_relay,
+                FswAbortIfNot(telem_task, false);
+                FswAbortIfNot(telem_task->init(*telem_relay,
                                                telem_group_sat_sapc,
                                                i, /* flow index */
                                                sapc_telem_channels[i]),
                               false);
-                SacAbortIfNot(telem_relay->add_producer(telem_task), false);
+                FswAbortIfNot(telem_relay->add_producer(telem_task), false);
             }
             /*
              * Initialize the real time clock interface.
              */
-            SacAbortIfNot(rtc_interface = RealTimeClockInterface::create(
+            FswAbortIfNot(rtc_interface = RealTimeClockInterface::create(
                               slate_local, ident, "/dev/rtc0"),
                           false);
             /*
              * Bind to the control token used to update the real time clock.
              */
-            SacAbortIfNot(
+            FswAbortIfNot(
                 slate_control_read_only.bind("rtc.nav_time_to_persist",
                                              nav_time_to_persist_tok),
                 false);
@@ -298,11 +298,11 @@ namespace Drone
         /*
          * Initialize the AlertManagerRuntime.
          */
-        SacAbortIf(alert_mgr_runtime, false);
-        SacAbortIfNot(
+        FswAbortIf(alert_mgr_runtime, false);
+        FswAbortIfNot(
             alert_mgr_runtime.assume_ownership(new AlertManagerRuntime()),
             false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_mgr_runtime->init(configs, alert_info_init_only->group_infos,
                                     alert_info_init_only->alert_infos,
                                     slate_control_read_only, *telem_relay),
@@ -311,12 +311,12 @@ namespace Drone
          * Create the alert buffer manager. This needs to bind to control
          * elements created by AlertManagerControl.
          */
-        SacAbortIfNot(create_alert_buffer_manager(), false);
+        FswAbortIfNot(create_alert_buffer_manager(), false);
         /*
          * Bind to the element in the control slate that determines whether
          * SlateSyncer should enable hotsyncing with only one peer connected.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             slate_control_read_only.bind("single_peer_hotsync_enabled",
                                          single_peer_hotsync_enabled_tok),
             false);
@@ -324,7 +324,7 @@ namespace Drone
          * Bind to the element in the control slate that determines whether
          * SlateSyncer should disable transfer.
          */
-        SacAbortIfNot(slate_control_sync_only.bind("force_disable_transfer",
+        FswAbortIfNot(slate_control_sync_only.bind("force_disable_transfer",
                                                    force_disable_transfer_tok),
                       false);
         return true;
@@ -337,12 +337,12 @@ namespace Drone
      */
     bool DroneFtRuntime::init_runtime_post_slate_build()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         /*
          * Enable data transfer and hotsync.
          */
-        SacAbortIfNot(slate_syncer->enable_transfer(), false);
-        SacAbortIfNot(slate_syncer->enable_hotsync(), false);
+        FswAbortIfNot(slate_syncer->enable_transfer(), false);
+        FswAbortIfNot(slate_syncer->enable_hotsync(), false);
         /*
          * Make sure every IP in the node directory is inside a satellite
          * network segment.
@@ -353,7 +353,7 @@ namespace Drone
         segments.push_back(vehicle_network_segment_satellite);
         segments.push_back(vehicle_network_segment_satellite_utility);
         segments.push_back(vehicle_network_segment_satellite_payload);
-        SacAbortIfNot(verify_node_directory_segments(node_directory(), segments,
+        FswAbortIfNot(verify_node_directory_segments(node_directory(), segments,
                                                      true /* allow_192_168 */),
                       false);
         /*
@@ -362,17 +362,17 @@ namespace Drone
          * state machine or alert provider.
          */
         CommandTable empty_cmd_table;
-        SacAbortIfNot(empty_cmd_table.init(), false);
+        FswAbortIfNot(empty_cmd_table.init(), false);
         const str_v empty_sm_prefixes;
-        SacAbortIfNot(command_filter_nonsynced, false);
-        SacAbortIfNot(command_filter_nonsynced->init(configs, slate_local,
+        FswAbortIfNot(command_filter_nonsynced, false);
+        FswAbortIfNot(command_filter_nonsynced->init(configs, slate_local,
                                                      empty_cmd_table,
                                                      empty_sm_prefixes),
                       false);
         /*
          * Finalize the AlertManagerRuntime.
          */
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_mgr_runtime->finalize(smoketest_config, *telem_relay,
                                         alert_info_init_only->alert_infos),
             false);
@@ -383,7 +383,7 @@ namespace Drone
         decltype(alert_info_init_only)::weak_type weak_init_only =
             alert_info_init_only;
         alert_info_init_only.reset();
-        SacAbortIfNot(weak_init_only.expired(), false);
+        FswAbortIfNot(weak_init_only.expired(), false);
         return true;
     }
     /**
@@ -394,7 +394,7 @@ namespace Drone
     {
         if (sapc_interface)
         {
-            SacIfNot(sapc_interface->dispatch());
+            FswIfNot(sapc_interface->dispatch());
         }
         if (watchdog_heartbeat)
         {
@@ -423,20 +423,20 @@ namespace Drone
          */
         if (pps_manager)
         {
-            SacIfNot(pps_manager->dispatch());
+            FswIfNot(pps_manager->dispatch());
         }
         /*
          * Set the single peer hotsync enable flag based on the value in the
          * control slate.
          */
-        SacIfNot(slate_syncer->set_single_peer_hotsync(
+        FswIfNot(slate_syncer->set_single_peer_hotsync(
             slate[single_peer_hotsync_enabled_tok]));
         /*
          * Force disable transfer if the flag on the control slate is high.
          */
         if (slate[force_disable_transfer_tok])
         {
-            SacIfNot(slate_syncer->disable_transfer());
+            FswIfNot(slate_syncer->disable_transfer());
         }
         /*
          * Dispatch the real time clock interface, then update the real time
@@ -444,14 +444,14 @@ namespace Drone
          */
         if (rtc_interface)
         {
-            SacIfNot(rtc_interface->dispatch());
+            FswIfNot(rtc_interface->dispatch());
             if (slate[nav_time_to_persist_tok] > 0)
             {
                 const nano_t update_unix_time = gpstime_gps_to_unix(
                     leap_second_table(),
                     static_cast<nano_t>(slate[nav_time_to_persist_tok] *
                                         billion));
-                SacIfNot(
+                FswIfNot(
                     rtc_interface->update_rtc_from_unix_time(update_unix_time));
             }
         }
@@ -473,12 +473,12 @@ namespace Drone
          * case we have to buffer.
          */
         constexpr size_t num_dgrams = 10;
-        SacAbortIfNot(alert_telem_channel.assume_ownership(
+        FswAbortIfNot(alert_telem_channel.assume_ownership(
                           new DataDgramChannel(num_dgrams, bwp_mtu)),
                       false);
         Handle<BwpChannelWriter> writer;
-        SacAbortIfNot(writer.assume_ownership(new BwpChannelWriter()), false);
-        SacAbortIfNot(writer->assign_channel(alert_telem_channel), false);
+        FswAbortIfNot(writer.assume_ownership(new BwpChannelWriter()), false);
+        FswAbortIfNot(writer->assign_channel(alert_telem_channel), false);
         /*
          * BwpChannelWriter::assign_channel() is a bit presumptuous,
          * opting us into a "pull" I/O model that we don't need.
@@ -495,7 +495,7 @@ namespace Drone
          * anyway.
          */
         alert_telem_channel->write_sig.clear();
-        SacAbortIfNot(relay.redirect_service(
+        FswAbortIfNot(relay.redirect_service(
                           Satellite::alert_buffer_input_service, writer),
                       false);
         return true;
@@ -550,7 +550,7 @@ namespace Drone
             FtBootstrapper::establish_input_sync,
             FtBootstrapper::no_output_sync, FtBootstrapper::use_slate_syncer,
             delays);
-        SacAbortIfNot(_bootstrapper, false);
+        FswAbortIfNot(_bootstrapper, false);
         return true;
     }
     /**
@@ -566,7 +566,7 @@ namespace Drone
         Handle<ExternalCommandTimeFilter> &time_filter,
         Handle<ExternalCommandFilter> &cmd_filter)
     {
-        SacAbortIfNot(
+        FswAbortIfNot(
             time_filter.assume_ownership(new ExternalCommandTimeFilterNull),
             false);
         /*
@@ -576,16 +576,16 @@ namespace Drone
          * sufficiently configurable through config and isn't really vehicle
          * specific.
          */
-        SacAbortIfNot(command_filter_nonsynced.assume_ownership(
+        FswAbortIfNot(command_filter_nonsynced.assume_ownership(
                           new CommonCommandFilter("command_filter_nonsynced")),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             command_filter_nonsynced->init_storage(
                 configs, slate_local, shard_nonsync, true /* enable_at_init */),
             false);
         Handle<ExternalCommandFilterCommon> common_cmd_filter(
             new ExternalCommandFilterCommon);
-        SacAbortIfNot(common_cmd_filter->init(command_filter_nonsynced), false);
+        FswAbortIfNot(common_cmd_filter->init(command_filter_nonsynced), false);
         cmd_filter = common_cmd_filter;
         return true;
     }
@@ -596,7 +596,7 @@ namespace Drone
      */
     bool DroneFtRuntime::create_ttc_radio_system()
     {
-        SacAbortIf(is_init, false);
+        FswAbortIf(is_init, false);
         const str_v real_radio_nodes = Satellite::get_ttc_strings(configs);
         const bool real_radio =
             (std::find(real_radio_nodes.begin(), real_radio_nodes.end(),
@@ -605,7 +605,7 @@ namespace Drone
          * Initialize TT&C hardware. Some of this logic binds to slate elements
          * created in TtcControl.
          */
-        SacAbortIfNot(ttc_runtime = TtcRuntime::create(
+        FswAbortIfNot(ttc_runtime = TtcRuntime::create(
                           eloop, upkeep_list, ident, service_directory(),
                           configs, slate_control_read_only, slate_local,
                           ad9361_device, ttc_misc_dir, ttc_misc_config_offset,
@@ -628,16 +628,16 @@ namespace Drone
          * Create our output channel into the alerts buffer.
          */
         Service alerts_service;
-        SacAbortIfNot(
+        FswAbortIfNot(
             service_directory().lookup(Satellite::alert_buffer_output_service,
                                        alerts_service),
             false);
-        SacAbortIf(alerts_service.proto != udp_proto, false);
+        FswAbortIf(alerts_service.proto != udp_proto, false);
         Handle<AnyDgramConnection> output_connection;
-        SacAbortIfNot(output_connection.assume_ownership(
+        FswAbortIfNot(output_connection.assume_ownership(
                           new AnyDgramConnection(upkeep_list, eloop.fds)),
                       false);
-        SacAbortIfNot(output_connection->open(alerts_service.host_name,
+        FswAbortIfNot(output_connection->open(alerts_service.host_name,
                                               alerts_service.port),
                       false);
         /*
@@ -653,17 +653,17 @@ namespace Drone
         const UINT64 recharge_bits_per_sec = 200000;
         const UINT64 max_quota = recharge_bits_per_sec / 8 / 10;
         const UINT64 signal_threshold = bwp_mtu;
-        SacAbortIfNot(alert_buffer_output.assume_ownership(new ByteQuotaFramer(
+        FswAbortIfNot(alert_buffer_output.assume_ownership(new ByteQuotaFramer(
                           output_connection, max_quota, recharge_bits_per_sec,
                           signal_threshold)),
                       false);
-        SacAbortIfNot(
+        FswAbortIfNot(
             alert_buffer_output->init(alert_buffer_builder, "framer_dgrams"),
             false);
         /*
          * Create the buffer manager.
          */
-        SacAbortIfNot(alert_buffer_manager = AlertBufferManager::create(
+        FswAbortIfNot(alert_buffer_manager = AlertBufferManager::create(
                           configs, "alert_buffers", "alerts",
                           get_telemetry_config_file_name(),
                           Satellite::alert_buffer_input_service, ident,

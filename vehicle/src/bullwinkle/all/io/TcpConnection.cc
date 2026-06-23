@@ -50,28 +50,28 @@ namespace Drone
         /*
          * Do not allow double connections.
          */
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         /*
          * Set up connection information.
          */
         Handle<ConnectionInfo> conn_info = ConnectionInfo::create(
             host_port, default_port, tcp_proto, tcp_no_delay,
             socket_receive_buf_size, socket_send_buf_size);
-        SacAbortIfNot(conn_info, false);
+        FswAbortIfNot(conn_info, false);
         /*
          * Create the Reconnector the first time this method is called.
          */
         if (!reconnector)
         {
-            SacAbortIfNot(reconnector.assume_ownership(new Reconnector(fd_bag)),
+            FswAbortIfNot(reconnector.assume_ownership(new Reconnector(fd_bag)),
                           false);
-            SacAbortIfNot(reconnector, false);
-            SacAbortIfNot(reconnector->connect_sig.connect(
+            FswAbortIfNot(reconnector, false);
+            FswAbortIfNot(reconnector->connect_sig.connect(
                               make_slot(*this, &TcpConnection::handle_connect)),
                           false);
-            SacAbortIfNot(reconnector->timer().set_wait_after_reset(false),
+            FswAbortIfNot(reconnector->timer().set_wait_after_reset(false),
                           false);
-            SacAbortIfNot(
+            FswAbortIfNot(
                 install_dispatch(
                     elist, make_slot(*reconnector, &Reconnector::dispatch)),
                 false);
@@ -79,8 +79,8 @@ namespace Drone
         /*
          * Connect and start the Reconnector.
          */
-        SacAbortIfNot(reconnector->connect(conn_info), false);
-        SacAbortIfNot(reconnector->timer().reset(), false);
+        FswAbortIfNot(reconnector->connect(conn_info), false);
+        FswAbortIfNot(reconnector->timer().reset(), false);
         is_closed_flag = false;
         return true;
     }
@@ -93,7 +93,7 @@ namespace Drone
      */
     bool TcpConnection::set_reconnect_timer(const ExponentialBackoff &_timer)
     {
-        SacAbortIfNot(reconnector, false);
+        FswAbortIfNot(reconnector, false);
         reconnector->set_timer(_timer);
         return true;
     }
@@ -117,7 +117,7 @@ namespace Drone
          * The receive buffer size must be set before connecting; see comments
          * above set_socket_receive_buf_size().
          */
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         /*
          * Remember for next connect.
          */
@@ -146,7 +146,7 @@ namespace Drone
          * set_socket_kernel_receive_size(), only calls before connect() are
          * accepted.
          */
-        SacAbortIf(is_connected(), false);
+        FswAbortIf(is_connected(), false);
         /*
          * Remember for next connect.
          */
@@ -164,9 +164,9 @@ namespace Drone
     {
         if (reconnector)
         {
-            SacAbortIfNot(reconnector->enable(false), false);
+            FswAbortIfNot(reconnector->enable(false), false);
         }
-        SacAbortIfNot(fd_channel.close(), false);
+        FswAbortIfNot(fd_channel.close(), false);
         return true;
     }
     /*
@@ -174,7 +174,7 @@ namespace Drone
      */
     bool TcpConnection::reset()
     {
-        SacAbortIfNot(fd_channel.close(), false);
+        FswAbortIfNot(fd_channel.close(), false);
         return true;
     }
     /*
@@ -260,9 +260,9 @@ namespace Drone
         if (is_connected())
         {
             Handle<FdEventSink> fes;
-            SacAbortIfNot(fd_channel.get_fd(fes), false);
-            SacAbortIfNot(fes, false);
-            SacAbortIfNot(Drone::enable_tcp_keepalive(
+            FswAbortIfNot(fd_channel.get_fd(fes), false);
+            FswAbortIfNot(fes, false);
+            FswAbortIfNot(Drone::enable_tcp_keepalive(
                               fes->get_fd(), keepalive_probe_interval,
                               keepalive_retry_interval, keepalive_retry_count),
                           false);
@@ -280,9 +280,9 @@ namespace Drone
         if (is_connected())
         {
             Handle<FdEventSink> fes;
-            SacAbortIfNot(fd_channel.get_fd(fes), false);
-            SacAbortIfNot(fes, false);
-            SacAbortIfNot(Drone::disable_tcp_keepalive(fes->get_fd()), false);
+            FswAbortIfNot(fd_channel.get_fd(fes), false);
+            FswAbortIfNot(fes, false);
+            FswAbortIfNot(Drone::disable_tcp_keepalive(fes->get_fd()), false);
         }
         return true;
     }
@@ -300,7 +300,7 @@ namespace Drone
     bool TcpConnection::channel_close()
     {
         is_closed_flag = true;
-        SacAbortIfNot(disconnect(), false);
+        FswAbortIfNot(disconnect(), false);
         return true;
     }
     /*
@@ -308,7 +308,7 @@ namespace Drone
      */
     bool TcpConnection::channel_clear()
     {
-        SacAbortIfNot(fd_channel.clear(), false);
+        FswAbortIfNot(fd_channel.clear(), false);
         return true;
     }
     /*
@@ -316,7 +316,7 @@ namespace Drone
      */
     bool TcpConnection::channel_commit_dataframe(DataFrame &frame)
     {
-        SacAbortIfNot(fd_channel.commit_dataframe(frame), false);
+        FswAbortIfNot(fd_channel.commit_dataframe(frame), false);
         return true;
     }
     /*
@@ -324,7 +324,7 @@ namespace Drone
      */
     bool TcpConnection::channel_pop_front(const size_t bytes)
     {
-        SacAbortIfNot(fd_channel.pop_front(bytes), false);
+        FswAbortIfNot(fd_channel.pop_front(bytes), false);
         has_popped = false;
         return true;
     }
@@ -342,12 +342,12 @@ namespace Drone
      */
     bool TcpConnection::handle_connect(Handle<ConnectionInfo> conn_info)
     {
-        SacAbortIfNot(reconnector, false);
-        SacAbortIfNot(reconnector->conn_info, false);
+        FswAbortIfNot(reconnector, false);
+        FswAbortIfNot(reconnector->conn_info, false);
         if (!reconnector->conn_info->is_valid())
             return true;
-        SacAbortIfNot(reconnector->conn_info->fd, false);
-        SacAbortIf(is_connected(), false);
+        FswAbortIfNot(reconnector->conn_info->fd, false);
+        FswAbortIf(is_connected(), false);
         /*
          * Give clients one last chance at any remaining data in the channel.
          */
@@ -365,41 +365,41 @@ namespace Drone
         /*
          * Empty out the channel to make way for the new connection.
          */
-        SacAbortIfNot(fd_channel.clear(), false);
-        SacAbortIfNot(fd_channel.is_drained(), false);
+        FswAbortIfNot(fd_channel.clear(), false);
+        FswAbortIfNot(fd_channel.is_drained(), false);
         /*
          * Assign the fd to our fd_channel and set up event handlers.
          */
         bool success = true;
-        SacIfNot2(fd_channel.assign_fd(conn_info->fd), success);
-        SacAssert(fd_channel.read_sig.connect(
+        FswIfNot2(fd_channel.assign_fd(conn_info->fd), success);
+        FswAssert(fd_channel.read_sig.connect(
             make_slot(*this, &TcpConnection::handle_read)));
-        SacAssert(fd_channel.write_sig.connect(
+        FswAssert(fd_channel.write_sig.connect(
             make_slot(*this, &TcpConnection::handle_write)));
         /*
          * Enable/Disable TCP keep alive.
          */
         if (use_keepalive)
         {
-            SacIfNot2(Drone::enable_tcp_keepalive(
+            FswIfNot2(Drone::enable_tcp_keepalive(
                           conn_info->fd->get_fd(), keepalive_probe_interval,
                           keepalive_retry_interval, keepalive_retry_count),
                       success);
         }
         else
         {
-            SacIfNot2(Drone::disable_tcp_keepalive(conn_info->fd->get_fd()),
+            FswIfNot2(Drone::disable_tcp_keepalive(conn_info->fd->get_fd()),
                       success);
         }
         /*
          * Keep a watch on the file descriptor so we can emit disconnect
          * signals.
          */
-        SacIfNot2(
+        FswIfNot2(
             conn_info->fd->add_events(
                 fd_close_ev, make_slot(*this, &TcpConnection::handle_fd_close)),
             success);
-        SacIfNot2(signal_connect(), success);
+        FswIfNot2(signal_connect(), success);
         /*
          * Clean up if something goes wrong.
          */
@@ -430,13 +430,13 @@ namespace Drone
          * The fd_channel's handle_fd_close function should have run
          * before us.
          */
-        SacAssert(fd_channel.is_closed());
+        FswAssert(fd_channel.is_closed());
         /*
          * Notify clients.
          */
-        if (SacIfNot(signal_connect()))
+        if (FswIfNot(signal_connect()))
         {
-            SacAbortIfNot(close(), false);
+            FswAbortIfNot(close(), false);
         }
         else if (is_drained())
         {
@@ -445,7 +445,7 @@ namespace Drone
              * data to be read, then emit the close signal. Otherwise, the
              * signal will be emitted after all the data is read.
              */
-            SacIfNot(signal_close());
+            FswIfNot(signal_close());
         }
         return true;
     }
@@ -458,8 +458,8 @@ namespace Drone
      */
     bool TcpConnection::handle_read(StreamChannel &channel)
     {
-        SacAbortIfNot(&channel == &fd_channel, false);
-        SacAbortIfNot(signal_read(), false);
+        FswAbortIfNot(&channel == &fd_channel, false);
+        FswAbortIfNot(signal_read(), false);
         return true;
     }
     /**
@@ -471,8 +471,8 @@ namespace Drone
      */
     bool TcpConnection::handle_write(Channel &channel)
     {
-        SacAbortIfNot(&channel == &fd_channel, false);
-        SacAbortIfNot(signal_write(), false);
+        FswAbortIfNot(&channel == &fd_channel, false);
+        FswAbortIfNot(signal_write(), false);
         return true;
     }
 } /* end namespace Drone */

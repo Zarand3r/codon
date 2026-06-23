@@ -51,3 +51,15 @@ test/PR gates*. Read a skill's `SKILL.md` before acting on its domain.
   after every batch and will not advance on a non-zero exit.
 - Constitution (ungameable promises the elves Judge enforces):
   [`docs/constitution.md`](docs/constitution.md).
+
+## Naming conventions
+
+This codebase descends from a SpaceX/Starlink slice — **no SpaceX/Starlink-alluding
+names**. Flight-software house utilities/macros use the **`fsw`** prefix:
+`FswAbortIfNot`/`FswAssert` (asserts, `core/fsw.h`), `fswtime`/`fswsleep`,
+`FSW_DISALLOW_COPY_AND_ASSIGN`, `fsw_*` socket/perf helpers. **Never reintroduce
+`sx` / `SX` / `Sac` / `noc`.** Satellite-domain terms (`sat*`, `SAPC`, `Ttc`,
+`Cola`, `Satellites::Fleet`) are replaced as the vehicle layer is reimplemented for
+the drone pivot — prefer neutral (`vehicle`) or the agreed drone term, and surface
+a design decision if unsure. Full rules + substitution table:
+[`docs/NAMING.md`](docs/NAMING.md).

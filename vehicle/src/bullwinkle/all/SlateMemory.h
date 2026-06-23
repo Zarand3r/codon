@@ -136,7 +136,7 @@ namespace Drone
         AlignedBuffer cyclic_mem_no_telem_template{};
 
     private:
-        SX_DISALLOW_COPY_AND_ASSIGN(SlateMemory);
+        FSW_DISALLOW_COPY_AND_ASSIGN(SlateMemory);
     };
 
     /**
@@ -155,14 +155,14 @@ namespace Drone
          * Doing all of these branch tests in the final flight build is
          * far too expensive. We include them in dev builds for debugging.
          */
-        SacDebugAssert(is_built_flag);
+        FswDebugAssert(is_built_flag);
         static_cast<void>(type_id);
         bool may_write = false;
         bool has_validator = false;
         slate_shard_t shard = num_slate_shard_t;
         slate_offset_t offset = 0;
         slate_id_breakdown(element_id, may_write, has_validator, shard, offset);
-        SacDebugAssert(shard < num_slate_shard_t);
+        FswDebugAssert(shard < num_slate_shard_t);
 
         const char *value_ptr = shard_table[shard].data() + offset;
         return value_ptr;
@@ -183,16 +183,16 @@ namespace Drone
          * Doing all of these branch tests in the final flight build is
          * far too expensive. We include them in dev builds for debugging.
          */
-        SacDebugAssert(is_built_flag);
+        FswDebugAssert(is_built_flag);
         static_cast<void>(type_id);
         bool may_write = false;
         bool has_validator = false;
         slate_shard_t shard = num_slate_shard_t;
         slate_offset_t offset = 0;
         slate_id_breakdown(element_id, may_write, has_validator, shard, offset);
-        SacDebugAssert(may_write);
-        SacDebugAssert(!has_validator);
-        SacDebugAssert(shard < num_slate_shard_t);
+        FswDebugAssert(may_write);
+        FswDebugAssert(!has_validator);
+        FswDebugAssert(shard < num_slate_shard_t);
 
         const char *value_ptr = shard_table[shard].data() + offset;
         return value_ptr;
@@ -214,22 +214,22 @@ namespace Drone
          * Doing all of these branch tests in the final flight build is
          * far too expensive. We include them in dev builds for debugging.
          */
-        SacDebugAssert(is_built_flag);
+        FswDebugAssert(is_built_flag);
         static_cast<void>(type_id);
         bool may_write = false;
         bool has_validator = false;
         slate_shard_t shard = num_slate_shard_t;
         slate_offset_t offset = 0;
         slate_id_breakdown(element_id, may_write, has_validator, shard, offset);
-        SacDebugAssert(may_write);
-        SacDebugAssert(has_validator);
-        SacDebugAssert(shard < num_slate_shard_t);
+        FswDebugAssert(may_write);
+        FswDebugAssert(has_validator);
+        FswDebugAssert(shard < num_slate_shard_t);
 
         slate_validator_t validator =
             layout->get_element_validator(element_id, type_id);
 
         char *value_ptr = shard_table[shard].data() + offset;
-        SacDebugAssert(value_ptr);
+        FswDebugAssert(value_ptr);
 
         return std::pair<void *, const slate_validator_t>(value_ptr, validator);
     };

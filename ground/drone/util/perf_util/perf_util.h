@@ -13,7 +13,7 @@
 #include <cstdio>
 namespace Drone::Perf
 {
-#ifdef ENABLE_SX_PROFILE
+#ifdef ENABLE_FSW_PROFILE
     class ProfileSimpleNugget
     {
     public:
@@ -29,7 +29,7 @@ namespace Drone::Perf
             const U64 ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
                                end - m_start)
                                .count();
-            printf("SXPROF|%s@%s:%d|%luns\n", m_pFile, m_pFunc, m_line, ns);
+            printf("FSWPROF|%s@%s:%d|%luns\n", m_pFile, m_pFunc, m_line, ns);
             fflush(stdout);
         }
 
@@ -78,7 +78,7 @@ namespace Drone::Perf
             m_pas.m_totalNs += ns;
             if (m_pas.m_numVisits % kProfileAccumPrintFreq == 0)
             {
-                printf("SXPROF|%s@%s:%d|%lux|cur %luns|tot %luns|avg %luns\n",
+                printf("FSWPROF|%s@%s:%d|%lux|cur %luns|tot %luns|avg %luns\n",
                        m_pas.m_pFile, m_pas.m_pFunc, m_pas.m_line,
                        m_pas.m_numVisits, ns, m_pas.m_totalNs,
                        m_pas.m_totalNs / m_pas.m_numVisits);
@@ -90,24 +90,24 @@ namespace Drone::Perf
         ProfileAccumStatic &m_pas;
         const std::chrono::high_resolution_clock::time_point m_start;
     };
-#define SX_CONCAT1(x, y) x##_##y
-#define SX_CONCAT2(x, y) SX_CONCAT1(x, y)
+#define FSW_CONCAT1(x, y) x##_##y
+#define FSW_CONCAT2(x, y) FSW_CONCAT1(x, y)
 /// Simple profile. Add to any scope block to profile from that point to the end
 /// of the scope block. Performs no accumulation or tracking of multiple
 /// invocations across time.
 #define PROFILE_SIMPLE()                                                       \
-    const ProfileSimpleNugget SX_CONCAT2(profileNugget, __LINE__)(             \
-        SX_PERF_FILENAME, __FUNCTION__, __LINE__)
+    const ProfileSimpleNugget FSW_CONCAT2(profileNugget, __LINE__)(             \
+        FSW_PERF_FILENAME, __FUNCTION__, __LINE__)
 /// Accumulated profile. Add to any scope block to profile from that point to
 /// the end of the scope block. Tracks multiple invocations across time and
 /// accumulates statistics accordingly. Pass no arguments to report on every
 /// invocation, or an integer n to only report on every nth invocation.
 #define PROFILE_ACCUM(...)                                                     \
-    static ProfileAccumStatic SX_CONCAT2(profileAccumStatic, __LINE__)(        \
-        SX_PERF_FILENAME, __FUNCTION__, __LINE__);                             \
-    const ProfileAccumNugget<__VA_ARGS__> SX_CONCAT2(profileAccumNugget,       \
+    static ProfileAccumStatic FSW_CONCAT2(profileAccumStatic, __LINE__)(        \
+        FSW_PERF_FILENAME, __FUNCTION__, __LINE__);                             \
+    const ProfileAccumNugget<__VA_ARGS__> FSW_CONCAT2(profileAccumNugget,       \
                                                      __LINE__)(                \
-        SX_CONCAT2(profileAccumStatic, __LINE__))
+        FSW_CONCAT2(profileAccumStatic, __LINE__))
 #else
 /// Simple profile (disabled).
 #define PROFILE_SIMPLE()                                                       \
@@ -119,5 +119,5 @@ namespace Drone::Perf
     do                                                                         \
     {                                                                          \
     } while (0)
-#endif // #ifdef ENABLE_SX_PROFILE
+#endif // #ifdef ENABLE_FSW_PROFILE
 } // namespace Drone::Perf

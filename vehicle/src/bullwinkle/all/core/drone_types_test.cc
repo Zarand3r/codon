@@ -18,12 +18,12 @@ namespace
     struct NonCopyable
     {
         NonCopyable() = default;
-        SX_DISALLOW_COPY_AND_ASSIGN(NonCopyable);
+        FSW_DISALLOW_COPY_AND_ASSIGN(NonCopyable);
     };
     static_assert(!std::is_copy_constructible<NonCopyable>::value,
-                  "SX_DISALLOW_COPY_AND_ASSIGN deletes the copy ctor");
+                  "FSW_DISALLOW_COPY_AND_ASSIGN deletes the copy ctor");
     static_assert(!std::is_copy_assignable<NonCopyable>::value,
-                  "SX_DISALLOW_COPY_AND_ASSIGN deletes copy-assign");
+                  "FSW_DISALLOW_COPY_AND_ASSIGN deletes copy-assign");
 }
 
 int main()

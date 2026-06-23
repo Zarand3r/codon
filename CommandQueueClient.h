@@ -65,11 +65,11 @@ namespace Drone
          */
         Signal<bool, uint32_t, const CommandPayload &, bool &> send_command_sig;
         /**
-         * Keystore of noc command signing public keys.
+         * Keystore of operator command signing public keys.
          */
         Ed25519KeyStore<
             Drone::API::Satellites::Fleet::Services::Security::TBSCommand>
-            noc_keystore;
+            operator_keystore;
         /**
          * Keystore of command authorization command signing public keys.
          */
@@ -78,7 +78,7 @@ namespace Drone
             command_auth_keystore;
 
     private:
-        SX_DISALLOW_COPY_AND_ASSIGN(CommandQueueClient);
+        FSW_DISALLOW_COPY_AND_ASSIGN(CommandQueueClient);
         /**
          * Whether the reader is successfully inited.
          */

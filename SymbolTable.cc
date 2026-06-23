@@ -3,7 +3,7 @@
  * @date   07/19/04
  */
 #include "src/bullwinkle/all/enum/SymbolTable.h"
-#include "src/bullwinkle/all/core/sac.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/bullwinkle/all/core/str_util.h"
 #include "src/bullwinkle/all/core/util.h"
 #include "src/bullwinkle/all/file/file_parse.h"
@@ -45,7 +45,7 @@ namespace Drone
         : use_fallback(_use_fallback), default_int(_default_int),
           default_string(_default_string)
     {
-        SacAssert(read(fname));
+        FswAssert(read(fname));
     }
     SymbolTable::SymbolTable(const string_table_entry *st, int st_size,
                              bool _use_fallback, int _default_int,
@@ -53,7 +53,7 @@ namespace Drone
         : use_fallback(_use_fallback), default_int(_default_int),
           default_string(_default_string)
     {
-        SacAssert(read(st, st_size));
+        FswAssert(read(st, st_size));
     }
     SymbolTable::~SymbolTable() {}
     /**
@@ -71,7 +71,7 @@ namespace Drone
         if (dbverbose() >= 2)
             dbnprintf(100, "SymbolTable::read: %s\n", fname.c_str());
         FILE *in;
-        SacAbortIfNot(sx_fopen(in, fname, "r"), false);
+        FswAbortIfNot(fsw_fopen(in, fname, "r"), false);
         bool ret = read(in);
         fclose(in);
         return ret;
@@ -108,14 +108,14 @@ namespace Drone
             uint val = 0;
             if (string_to_int(vbuf, v) == false)
             {
-                SacAbortIfNot(string_to_uint(vbuf, val), false);
+                FswAbortIfNot(string_to_uint(vbuf, val), false);
                 v = static_cast<int>(val);
             }
             /*
              * Insert new entries.  If an entry already exists, it is
              * unchanged.
              */
-            SacAbortIfNot(internal_add(wbuf, v), false);
+            FswAbortIfNot(internal_add(wbuf, v), false);
             if (dbverbose() >= 2)
                 dbnprintf(100, "\t%s: %d\n", wbuf, v);
         }
@@ -135,7 +135,7 @@ namespace Drone
     bool SymbolTable::read(const string_table_entry *st, uint st_size)
     {
         for (uint i = 0; i < st_size; i++)
-            SacAbortIfNot(internal_add(st[i].name, st[i].value), false);
+            FswAbortIfNot(internal_add(st[i].name, st[i].value), false);
         return true;
     }
     /**

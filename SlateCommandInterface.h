@@ -130,7 +130,7 @@ namespace Drone
         bool set(const K &key, const T &value, bool &success) RUNTIME
         {
             success = false;
-            SacAbortIfNot(is_init, false);
+            FswAbortIfNot(is_init, false);
             element_t elem;
             external_command_name_hash_t hash(key);
             if (!lookup(key, elem))
@@ -169,7 +169,7 @@ namespace Drone
         {
             success = false;
             value = T();
-            SacAbortIfNot(is_init, false);
+            FswAbortIfNot(is_init, false);
             element_t elem;
             const external_command_name_hash_t hash(key);
             if (!lookup(hash, elem))

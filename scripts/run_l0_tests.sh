@@ -19,8 +19,8 @@ trap 'rm -rf "$TMP"' EXIT
 
 TESTS=(
   vehicle/src/bullwinkle/all/core/drone_types_test.cc
-  vehicle/src/bullwinkle/all/core/sac_test.cc
-  vehicle/src/bullwinkle/all/core/sxtime_test.cc
+  vehicle/src/bullwinkle/all/core/fsw_test.cc
+  vehicle/src/bullwinkle/all/core/fswtime_test.cc
   vehicle/src/hash/hash_test.cc
   vehicle/src/bullwinkle/all/b2_test.cc
   vehicle/src/bullwinkle/all/runtime_test.cc

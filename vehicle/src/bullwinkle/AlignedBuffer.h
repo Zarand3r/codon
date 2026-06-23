@@ -81,7 +81,7 @@ namespace Drone
         }
 
     private:
-        SX_DISALLOW_COPY_AND_ASSIGN(AlignedBuffer);
+        FSW_DISALLOW_COPY_AND_ASSIGN(AlignedBuffer);
 
         void assign(AlignedBuffer &&other);
 
