@@ -603,6 +603,8 @@ Resolve before the phase each blocks. **D1–D4 block P0 and must be answered fi
 | **D14** | Target board + device map | hardware input | P9 (real drivers) |
 | **D15–D19** | Drone domain: control law, mixer/ESC, RC+failsafe, geofence/RTH, time/power | **all human design (Track B)** | P10 |
 | **D20–D22** | RT platform specifics, key mgmt/secure boot, OTA | program inputs | P11 |
+| **D23** | `digest_xxh128` is MurmurHash3-x64-128, not XXH3-128 | fine now (internal, deterministic); **benchmark shard-hash throughput vs. control period at P7** and vendor XXH3 behind the same signature if it's a per-cycle bottleneck | P7 |
+| **D24** | `FswAssert` is always-on `std::abort()` | reconcile prod semantics with the failure policy — flight wants **fail-to-safe-state, not `abort()`**, and the perf-assert family is compiled out in prod | P1 |
 
 > **Protocol:** when execution reaches a phase whose blocker is unresolved, **STOP**,
 > present the decision (Statement / Options / Recommendation), and wait. Never fabricate
