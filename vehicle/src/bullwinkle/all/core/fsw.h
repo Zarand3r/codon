@@ -38,7 +38,7 @@ namespace Drone
 #define FswAbortIf(cond, ret)                                                  \
     do                                                                         \
     {                                                                          \
-        if (__builtin_expect((cond), 0))                                       \
+        if (__builtin_expect(!!(cond), 0))                                     \
         {                                                                      \
             ::Drone::fsw_report(__FILE__, __LINE__, #cond);                    \
             return (ret);                                                      \
