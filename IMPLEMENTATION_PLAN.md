@@ -160,8 +160,20 @@ the build/test harness for everything after.
   (a script) asserts 0 unresolved internal includes *within L0*.
 
 **Implement (Green):** `core/{fsw,drone_types,fswtime,util}.h`, `hash/{Hash128,xxh}.h`,
-`static_vector.h`, `runtime.h` (annotation macros), real `B2`/`B2c`, `enum/auto_enum.h`
-+ the codegen for `*.enum.h`, BUILD targets. Fix the 18 path-mismatch include roots.
+`static_vector.h`, `runtime.h` (annotation macros), real `B2`/`B2c`,
+`enum/SymbolTable.h`, BUILD targets. Fix the 18 path-mismatch include roots.
+
+> **Corrected after build-out (2026-07-01):**
+> - **Enum reflection is a runtime `SymbolTable`, not codegen.** The `*_sym` tables
+>   (`slate_shard_t_sym`, …) and `StateMachine`'s `state_sym`/`ctask_sym` are
+>   hand-populated `enum/SymbolTable` instances — there is no `auto_enum.h` / generated
+>   `*.enum.h`. D3's enum half is therefore moot (proto codegen at P6 still stands).
+> - **`core/fsw.h` needs a logging/context layer** beyond the abort/assert core:
+>   `dbnprintf`, `FswPrefix`, `FswStackFrame::get_current_stack_frame`, and the assert
+>   variants `FswAbortIfNeq`/`FswAbortIfEqUint64`/`FswAbortIfOpUint64`/`FswMsgAbortIf`/
+>   `FswIf`/`FswIfNot`. Under-scoped originally; every Slate consumer `.cc` needs it, so
+>   it is an **L0 prerequisite for P1's consumer-`.cc` compile+link gate** (header
+>   consumer-compile gates work without it). Build it before/at the start of P1.
 
 **Acceptance gate:** L0 library builds; include-resolution test → 0 unresolved at L0;
 primitive tests green.
@@ -210,10 +222,17 @@ creation-time permission boundary.
 - **Harness (§4.2):** `SlateTestHarness` satisfies the token read/write surface; a
   test drives an element set through it with no live Slate.
 
-**Implement (Green):** `SlateElement`, `SlatePathMap`, `SlateBuilderStore`,
-`slate_info`, `EnumRegistry`, `ReflectionManager`, `SlateDump`, `SlateTestHarness`
-(the §4.2 mock). (Contracts: ROADMAP §3 L1.) The present `Slate*`, `SlateCombiner`,
-`slate_tokens` now compile.
+**Implement (Green), leaf-first (actual dependency order):** `enum/SymbolTable` →
+`slate_enums` (shards/access/permissions) → `slate_id` (packed id) → `slate_type`
+(`slate_type_id<T>`) → `slate_info` umbrella → **the `slate_info<T>` value trait**
+(lands with its consumer `Slate.h`, so that compile validates it) → `SlateElement` →
+`SlatePathMap` (element indices ≥ 1) → `SlateBuilderStore` → `SlateMemory` →
+`EnumRegistry`/`ReflectionManager`/`SlateDump`, plus `SlateTestHarness` (§4.2 mock).
+**Prerequisite:** the L0 fsw logging layer (see the P0 correction) before any
+consumer-`.cc` link. (Contracts: ROADMAP §3 L1.) The present `Slate*`, `SlateCombiner`,
+`slate_tokens` compile — each joins the gate as a consumer-compile target when its
+includes resolve (`slate_tokens.h` done; `slate_tokens.cc` after the fsw layer;
+`SlateLayout.cc`/`SlateBuilder.cc` after the trait + stores).
 
 **Acceptance gate:** all above tests green; the 7-shard table and permission
 behavior match `SYSTEM_DESIGN.md` §Shards exactly.
@@ -670,14 +689,17 @@ Resolve before the phase each blocks. **D1–D4 block P0 and must be answered fi
 > (WCET / `SCHED_FIFO` / `mlockall` gates live at P11; P1–P8 run SIL on a dev
 > host). **D2 (default) = single include root `vehicle/`** so `#include "src/…"`
 > resolves (Bazel `strip_include_prefix`/`includes`); each reimplemented header is
-> placed to match its include path. **D3 (default) = Bazel `genrule`** for
-> `*.enum.h` codegen (and `*.pb.h` at P6). D5+ are resolved at the phase they block.
+> placed to match its include path. **D3 (default) = Bazel `genrule`** for `*.pb.h`
+> at P6. **(Revised 2026-07-01: the enum half of D3 is dropped — enum↔name reflection
+> is a runtime, hand-populated `enum/SymbolTable`, so there is no `*.enum.h` codegen;
+> D3 now covers only the command/security proto at P6.)** D5+ are resolved at the phase
+> they block.
 
 | ID | Decision | Options / note | Blocks |
 |----|----------|----------------|--------|
 | **D1** | **Port the upstream framework headers, or reimplement to the inferred contracts?** | Porting turns most phases into integration; reimplementing is the inferred-contract path. *Biggest lever.* | P0 (all) |
 | **D2** | Include-root layout (resolve the 18 path-mismatches) | one root + Bazel `strip_include_prefix`, vs move files | P0 |
-| **D3** | Codegen toolchain for `*.enum.h` and `*.pb.h` | which generator + Bazel rule | P0, P6 |
+| **D3** | Codegen toolchain for `*.pb.h` (proto) | which generator + Bazel rule; enum reflection is runtime `SymbolTable`, no codegen | P6 |
 | **D4** | Real-time target platform | RTOS / PREEMPT_RT Linux / bare board — sets WCET gates | P0 direction, P11 |
 | **D5** | Network topology/addressing for the 3 strings | sample for SIL; real is human input | P3 |
 | **D6** | `Keychain` key provisioning (SIL) | software keys for SIL; real keys P11 | P4 |
