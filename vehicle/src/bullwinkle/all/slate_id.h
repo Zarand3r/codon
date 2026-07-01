@@ -22,9 +22,12 @@
  *   - v       (1b): has_validator  (value must go through an on-write validator)
  *
  * Validity / sentinels:
- *   - slate_element_default == 0 is the "no element" sentinel. A *bound* id is
- *     never 0 because layout element indices start at 1 (SlatePathMap reserves
- *     index 0). slate_id_is_valid therefore = (id != 0 && shard < num).
+ *   - slate_element_default == 0 is the "no element" sentinel.
+ *   - slate_id_buildup is the *only* way to mint a bound id, and it rejects
+ *     index 0. So a bound id always has a non-zero index field and is therefore
+ *     never 0 — the "index 0 is reserved" invariant is enforced structurally
+ *     here, not delegated to the caller (SlatePathMap just never asks for 0).
+ *     slate_id_is_valid is thus (id != 0 && shard < num).
  *   - slate_id_build_invalid(count) encodes shard_invalid + a unique counter:
  *     it is never valid, never the default, and disjoint from every bound id.
  */
@@ -66,6 +69,19 @@ namespace Drone
         static const slate_element_t kShardMask = (slate_element_t(1) << kShardBits) - 1;
         static const slate_element_t kIndexMax = (slate_element_t(1) << kIndexBits) - 1;
         static const slate_element_t kOffsetMax = (slate_element_t(1) << kOffsetBits) - 1;
+
+        /*
+         * The fields must tile the 64-bit word exactly and in order, with no
+         * overlap or gap. If a width is ever retuned, these fail to compile
+         * rather than silently corrupting ids.
+         */
+        static_assert(kValidatorShift == 0, "validator bit must be bit 0");
+        static_assert(kWriteShift == kValidatorShift + 1, "w follows v");
+        static_assert(kShardShift == kWriteShift + 1, "shard follows w");
+        static_assert(kIndexShift == kShardShift + kShardBits, "index follows shard");
+        static_assert(kOffsetShift == kIndexShift + kIndexBits, "offset follows index");
+        static_assert(kOffsetShift + kOffsetBits == 64, "fields fill 64 bits");
+        static_assert(num_slate_shard_t <= kShardMask, "shards fit the shard field");
 
         inline slate_element_t shard_field(const slate_element_t id)
         {
