@@ -51,6 +51,10 @@ test/PR gates*. Read a skill's `SKILL.md` before acting on its domain.
   after every batch and will not advance on a non-zero exit.
 - Constitution (ungameable promises the elves Judge enforces):
   [`docs/constitution.md`](docs/constitution.md).
+- **Docs as you go:** [`docs/implementation.md`](docs/implementation.md) is the
+  living record of what's actually built + verified. Update it whenever a component
+  lands — it is part of "done" (ROADMAP §1.4). Design lives in `SYSTEM_DESIGN.md`,
+  the plan in `ROADMAP.md`/`IMPLEMENTATION_PLAN.md`, naming in `docs/NAMING.md`.
 
 ## Naming conventions
 

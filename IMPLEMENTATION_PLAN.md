@@ -49,6 +49,10 @@ Never weaken, skip, comment out, or delete a test to make a gate pass.
 - A phase also closes only when its **Design-Consistency Check** passes (the
   `SYSTEM_DESIGN.md` claim it implements is demonstrated by a test) and its
   **Extension Check** passes (R1).
+- **Docs move with the code.** A component/phase is not done until its entry in
+  [`docs/implementation.md`](docs/implementation.md) is added/updated (contract,
+  test location, verification status, any deferred flags). Stale docs are a defect,
+  not a follow-up.
 
 ### R4 — Ambiguity ⇒ surface a Design Decision to a human. Do not guess.
 - When a missing piece's contract **cannot be inferred** from present usage or the
