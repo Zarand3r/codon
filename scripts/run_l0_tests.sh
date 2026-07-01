@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# P0 gate: compile + run every L0 (core primitive) unit test with the repo's
-# include root (`vehicle/`). A failed compile is also the include-resolution check
-# for L0 (an unresolved internal include fails here). Exits 0 iff all tests pass.
+# Gate: compile + run every core/storage unit test with the repo's include root
+# (`vehicle/`). A failed compile is also the include-resolution check (an unresolved
+# internal include fails here). Exits 0 iff all tests pass.
+#
+# Each TESTS entry is a space-separated source list: the test .cc first (used for the
+# binary name), then any extra .cc it must link (e.g. AlignedBuffer.cc).
 #
 # g++ is the current driver (zero external deps, deterministic, no network); the
-# Bazel `cc_test` targets in the BUILD files are the eventual driver once the
-# dependency-fetching toolchain (D1/D3) is wired.
+# Bazel cc_test targets are the eventual driver once the dependency toolchain lands.
 
 set -u -o pipefail
 cd "$(dirname "$0")/.." || exit 2
@@ -18,30 +20,33 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 TESTS=(
-  vehicle/src/bullwinkle/all/core/drone_types_test.cc
-  vehicle/src/bullwinkle/all/core/fsw_test.cc
-  vehicle/src/bullwinkle/all/core/fswtime_test.cc
-  vehicle/src/bullwinkle/all/core/util_test.cc
-  vehicle/src/hash/hash_test.cc
-  vehicle/src/bullwinkle/all/b2_test.cc
-  vehicle/src/bullwinkle/all/runtime_test.cc
-  vehicle/src/bullwinkle/all/static_vector_test.cc
+  "vehicle/src/bullwinkle/all/core/drone_types_test.cc"
+  "vehicle/src/bullwinkle/all/core/fsw_test.cc"
+  "vehicle/src/bullwinkle/all/core/fswtime_test.cc"
+  "vehicle/src/bullwinkle/all/core/util_test.cc"
+  "vehicle/src/hash/hash_test.cc"
+  "vehicle/src/bullwinkle/all/b2_test.cc"
+  "vehicle/src/bullwinkle/all/runtime_test.cc"
+  "vehicle/src/bullwinkle/all/static_vector_test.cc"
+  "vehicle/src/bullwinkle/all/aligned_buffer_test.cc vehicle/src/bullwinkle/all/AlignedBuffer.cc"
 )
 
 fail=0
-for t in "${TESTS[@]}"; do
-  bin="$TMP/$(basename "$t" .cc)"
-  if ! $CXX $STD $WARN $INC -o "$bin" "$t" 2> "$TMP/err"; then
-    echo "COMPILE FAIL: $t"; sed 's/^/    /' "$TMP/err"; fail=1; continue
+for entry in "${TESTS[@]}"; do
+  first="${entry%% *}"                       # test .cc (first token) -> binary name
+  bin="$TMP/$(basename "$first" .cc)"
+  # shellcheck disable=SC2086  # $entry is an intentional multi-file source list
+  if ! $CXX $STD $WARN $INC -o "$bin" $entry 2> "$TMP/err"; then
+    echo "COMPILE FAIL: $first"; sed 's/^/    /' "$TMP/err"; fail=1; continue
   fi
   if ! "$bin"; then
-    echo "RUN FAIL: $t"; fail=1
+    echo "RUN FAIL: $first"; fail=1
   fi
 done
 
 if [ "$fail" -eq 0 ]; then
-  echo "L0 GATE GREEN — $((${#TESTS[@]})) test(s) passed"
+  echo "GATE GREEN — ${#TESTS[@]} test(s) passed"
 else
-  echo "L0 GATE RED"
+  echo "GATE RED"
 fi
 exit "$fail"

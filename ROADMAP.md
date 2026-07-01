@@ -81,7 +81,9 @@ For the control loop: a WCET measurement against the control period
 Builds under its BUILD target · its `RUNTIME` methods provably allocate/throw/block
 nothing (audited) · ownership expressed in types · a unit test exercises empty/full/
 error paths · for hot code, a benchmark + WCET · consistent with the
-`SYSTEM_DESIGN.md` mechanism it implements.
+`SYSTEM_DESIGN.md` mechanism it implements · **its entry in
+[`docs/implementation.md`](docs/implementation.md) is added/updated** (contract,
+test, verification, any flags).
 
 ---
 
