@@ -32,6 +32,15 @@ TESTS=(
   "vehicle/src/bullwinkle/all/enum/SymbolTable_test.cc vehicle/src/bullwinkle/all/enum/SymbolTable.cc"
   "vehicle/src/bullwinkle/all/slate_enums_test.cc vehicle/src/bullwinkle/all/slate_enums.cc vehicle/src/bullwinkle/all/enum/SymbolTable.cc"
   "vehicle/src/bullwinkle/all/slate_id_test.cc"
+  "vehicle/src/bullwinkle/all/slate_type_test.cc"
+)
+
+# Consumer-compile gates (IMPLEMENTATION_PLAN §4): compile an *imported* consumer
+# object-only to validate our inferred contracts as real code uses them. Compiled
+# (`-c`, no link/run) because these consumers' link deps (accountant globals, the
+# fsw logging layer) do not exist yet; a mis-inferred contract still fails to compile.
+COMPILE_ONLY=(
+  "vehicle/src/bullwinkle/all/slate_tokens_compile_test.cc"
 )
 
 fail=0
@@ -47,8 +56,15 @@ for entry in "${TESTS[@]}"; do
   fi
 done
 
+for src in "${COMPILE_ONLY[@]}"; do
+  if ! $CXX $STD $WARN $INC -fsyntax-only "$src" 2> "$TMP/err"; then
+    echo "CONSUMER-COMPILE FAIL: $src"; sed 's/^/    /' "$TMP/err"; fail=1
+  fi
+done
+
+total=$(( ${#TESTS[@]} + ${#COMPILE_ONLY[@]} ))
 if [ "$fail" -eq 0 ]; then
-  echo "GATE GREEN — ${#TESTS[@]} test(s) passed"
+  echo "GATE GREEN — ${#TESTS[@]} test(s) + ${#COMPILE_ONLY[@]} consumer-compile(s) = ${total} checks passed"
 else
   echo "GATE RED"
 fi

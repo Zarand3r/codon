@@ -44,12 +44,15 @@ decisions).
 | `enum/SymbolTable.h` + `.cc` | bijective name↔`uint` reflection table: `add` (rejects either-side collision), `raw_get` (both directions), `get`→name/`""`, `dump`, `==`/`!=` | `SymbolTable_test.cc` | build-phase/diagnostic reflection (node-based std maps by design, **cold path only**); backs `slate_shard_t_sym`, `slate_elem_access_t_sym`, `state_sym`/`ctask_sym`, and the `SlateCombiner` cross-string enum-agreement check |
 | `slate_enums.h` + `.cc` | `slate_shard_t` (7 shards + `shard_invalid`), `slate_elem_access_t` (ordered private<read_only<read_write), `slate_permission_t` bitmask + algebra (`deny`/`is_superset`/`take_subset`/`can_read`/`can_write`/`can_create`), `slate_shard_t_sym`/`slate_elem_access_t_sym` reflection | `slate_enums_test.cc` | permission = read/write/create + create-sync/create-nonsync qualifiers; **create classes: sync={sync,sync_no_telem} needs c_sync, nonsync={nonsync,nonsync_no_telem} needs c_nonsync, static/cyclic need only the create bit** (control creates cyclic scratch via its sync-only handle — BasicControl); sym **names carry `shard_`/`slate_` prefixes** (SlateLayout does `.substr(strlen("shard_"/"slate_"))`); shard value is dense (array index + packed ID field) |
 | `slate_id.h` | packed `slate_element_t` = `[offset:32][index:26][shard:4][w:1][v:1]`; `buildup`/`breakdown`/`index`/`can_write`/`has_validator`/`ro`/`is_valid`/`build_invalid`; `slate_element_default`=0 | `slate_id_test.cc` | **hot-path** — resolution is pure shift/mask (objdump: 0 calls, 0 branches under `-O2`). Bound ids are never 0 (layout indices start at 1); `build_invalid` carries `shard_invalid`. `slate_index_t`/`slate_offset_t` = UINT32 |
-| `slate_type`, `slate_info<T>` trait, `SlateElement`, `SlatePathMap`, `SlateBuilderStore`, `SlateMemory`, `Slate`, `SlateCombiner` | — | — | pending (next P1 increments) |
+| `slate_type.h` | `slate_type_t` (UINT64), `slate_type_invalid`=0, `slate_type_id<T>()` — hash of `__PRETTY_FUNCTION__` per-type name via `digest_xxh128`, folded to 64b, never 0 | `slate_type_test.cc` (stable, distinct incl. look-alike structs, template instantiations) | cross-string-stable (same binary → same name → same id); cold (build-time tag), memoized per type |
+| `slate_info.h` | umbrella header: aggregates `slate_id` + `slate_type` + `core/fsw`; the header Slate consumers `#include` | `slate_tokens_compile_test.cc` (consumer-compile gate) | `slate_info<T>` **value trait** deferred to the increment whose consumer (`Slate.h`) validates it |
+| `slate_tokens.h` (consumer-compile) | **gate, not owned here**: the imported token layer compiles against `slate_info` | `slate_tokens_compile_test.cc` — object-only (§4) | first imported consumer to validate the inferred contracts; `.cc` link blocked on the fsw logging layer (see below) |
+| `slate_info<T>` trait, `SlateElement`, `SlatePathMap`, `SlateBuilderStore`, `SlateMemory`, `Slate`, `SlateCombiner` | — | — | pending (next P1 increments) |
 
 ## Verification status (current)
 
-- **g++** `-Wall -Wextra -Werror`: **12/12** unit tests green (`scripts/run_l0_tests.sh`).
-- **Bazel**: 12/12 (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`).
+- **g++** `-Wall -Wextra -Werror`: **13 unit tests + 1 consumer-compile** green (`scripts/run_l0_tests.sh`).
+- **Bazel**: all green (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`); `slate_tokens_compile` is a compile-only `cc_library` consumer gate.
 - **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`, `slate_enums`).
 - **Perf spot-checks**: `static_vector::operator[]` is a single load under `-O2 -DNDEBUG` (bounds check compiles out); `slate_id` breakdown+index resolves in pure `mov`/`shr`/`and`/`add` (0 calls, 0 branches).
 - ASan/UBSan runtime libs are absent in the CI sandbox; valgrind substitutes.
@@ -60,6 +63,7 @@ decisions).
 - **D24** — `FswAssert` always-aborts: reconcile with the fail-to-safe-state failure policy at P1.
 - `static_vector` eager-constructs its `N` inline slots (requires default-constructible + copy-assignable `T`); acceptable while `T` is cheap and off the hot path — raw aligned storage deferred until a use site needs it.
 - `core/util.h` `std::set`/`std::string` are node-based/heap containers, acceptable only as cold build-phase code — must not leak into a hot path.
+- **fsw logging layer missing (blocks consumer `.cc` links):** `slate_tokens.cc` (and every Slate consumer `.cc`) needs `dbnprintf`, `FswPrefix`, `FswStackFrame::get_current_stack_frame`, and more assert variants (`FswAbortIfNeq`, `FswAbortIfEqUint64`, `FswAbortIfOpUint64`, `FswMsgAbortIf`, `FswIf`/`FswIfNot`) that `core/fsw.h` does not yet provide. Header consumer-compile gates work now; full compile+link is blocked on building this L0 layer. **Surfaced for the plan review.**
 
 ## How to build & test
 
