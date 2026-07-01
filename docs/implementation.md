@@ -15,7 +15,7 @@ decisions).
 | Phase | State | Notes |
 |---|---|---|
 | **P0** — L0 core primitives | ✅ done (merged, PR #1) | + naming convention (`fsw`) |
-| **P1** — Slate data model | 🚧 in progress | done: `core/util.h`, `AlignedBuffer`, `enum/SymbolTable`. Next: `slate_info` (types/packed-id/permissions/shard enum + `_sym` tables) → `SlateElement` → `SlatePathMap` → `SlateBuilderStore` → `SlateMemory` → compile `Slate`/`SlateCombiner` → golden-path integration test |
+| **P1** — Slate data model | 🚧 in progress | done: `core/util.h`, `AlignedBuffer`, `enum/SymbolTable`, `slate_enums` (shards/access/permissions). Next: `slate_info` (id types + packed-id `[offset:32][index:26][shard:4][w:1][v:1]` + `slate_type_id<T>` + `slate_info<T>` trait) → `SlateElement` → `SlatePathMap` → `SlateBuilderStore` → `SlateMemory` → compile `Slate`/`SlateCombiner` → golden-path integration test |
 | P2+ | ⬜ not started | see ROADMAP |
 
 **Build root:** `vehicle/` — includes resolve as `src/...` (Bazel `strip_include_prefix="/vehicle"`).
@@ -42,13 +42,14 @@ decisions).
 |---|---|---|---|
 | `core/AlignedBuffer.h` + `AlignedBuffer.cc` | per-shard heap storage: `ensure(amount,align)` geometric grow (32B-aligned, preserve + zero-fill), `clone()` deep copy, move-only | `aligned_buffer_test.cc` | the contiguous backing for `SlateMemory`'s `shard_table[num_slate_shard_t]` |
 | `enum/SymbolTable.h` + `.cc` | bijective name↔`uint` reflection table: `add` (rejects either-side collision), `raw_get` (both directions), `get`→name/`""`, `dump`, `==`/`!=` | `SymbolTable_test.cc` | build-phase/diagnostic reflection (node-based std maps by design, **cold path only**); backs `slate_shard_t_sym`, `slate_elem_access_t_sym`, `state_sym`/`ctask_sym`, and the `SlateCombiner` cross-string enum-agreement check |
+| `slate_enums.h` + `.cc` | `slate_shard_t` (7 shards + `shard_invalid`), `slate_elem_access_t` (ordered private<read_only<read_write), `slate_permission_t` bitmask + algebra (`deny`/`is_superset`/`take_subset`/`can_read`/`can_write`/`can_create`), `slate_shard_t_sym`/`slate_elem_access_t_sym` reflection | `slate_enums_test.cc` | permission = read/write/create + create-sync/create-nonsync qualifiers; sync-class shards = {sync, sync_no_telem} (the create-time boundary per SYSTEM_DESIGN); shard value is dense (array index + packed ID field) |
 | `slate_info`, `SlateElement`, `SlatePathMap`, `SlateBuilderStore`, `SlateMemory`, `Slate`, `SlateCombiner` | — | — | pending (next P1 increments) |
 
 ## Verification status (current)
 
-- **g++** `-Wall -Wextra -Werror`: **10/10** unit tests green (`scripts/run_l0_tests.sh`).
-- **Bazel**: 10/10 (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`).
-- **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`).
+- **g++** `-Wall -Wextra -Werror`: **11/11** unit tests green (`scripts/run_l0_tests.sh`).
+- **Bazel**: 11/11 (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`).
+- **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`, `slate_enums`).
 - **Perf spot-checks**: `static_vector::operator[]` is a single load under `-O2 -DNDEBUG` (bounds check compiles out).
 - ASan/UBSan runtime libs are absent in the CI sandbox; valgrind substitutes.
 
