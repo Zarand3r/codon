@@ -29,6 +29,7 @@ TESTS=(
   "vehicle/src/bullwinkle/all/runtime_test.cc"
   "vehicle/src/bullwinkle/all/static_vector_test.cc"
   "vehicle/src/bullwinkle/all/aligned_buffer_test.cc vehicle/src/bullwinkle/all/AlignedBuffer.cc"
+  "vehicle/src/bullwinkle/all/enum/SymbolTable_test.cc vehicle/src/bullwinkle/all/enum/SymbolTable.cc"
 )
 
 fail=0
