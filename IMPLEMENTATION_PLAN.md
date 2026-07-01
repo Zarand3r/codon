@@ -199,10 +199,21 @@ creation-time permission boundary.
 - **SlateCombiner (P9):** 3/3, 2/2, 1/1 median by freshness; stale source
   (`fresh_age_tok` > `stale_threshold`) dropped; `downselect` takes one source whole
   (no tearing).
+- **Integration L1 (§4.1):** one process builds a Slate, then writes and reads a
+  recorded element set **through the handle layer** — `WriteToken`/`ReadToken`,
+  validators, and `sub_slate` permission scoping — asserting values and the
+  layout/content hash (the golden-path §4.3 seed). Not raw IDs; this proves the
+  abstractions, not just the packing.
+- **Consumer-compile checkpoint:** the moment `slate_info.h` lands, `slate_tokens.cc`
+  (a real imported consumer) joins the gate as a compile+link target — the first time
+  imported code validates the inferred contracts (the review's structural guard).
+- **Harness (§4.2):** `SlateTestHarness` satisfies the token read/write surface; a
+  test drives an element set through it with no live Slate.
 
 **Implement (Green):** `SlateElement`, `SlatePathMap`, `SlateBuilderStore`,
-`slate_info`, `EnumRegistry`, `ReflectionManager`, `SlateDump`. (Contracts: ROADMAP
-§3 L1.) The present `Slate*`, `SlateCombiner`, `slate_tokens` now compile.
+`slate_info`, `EnumRegistry`, `ReflectionManager`, `SlateDump`, `SlateTestHarness`
+(the §4.2 mock). (Contracts: ROADMAP §3 L1.) The present `Slate*`, `SlateCombiner`,
+`slate_tokens` now compile.
 
 **Acceptance gate:** all above tests green; the 7-shard table and permission
 behavior match `SYSTEM_DESIGN.md` §Shards exactly.
@@ -294,6 +305,12 @@ choreography (that is P7); signed inputs.
 - **P10:** a datagram with a bad `Keychain` signature is rejected; a valid one accepted.
 - Self-share path (P6): a unit's own inputs go out and come back via loopback and land
   identically (the "even feeding its own data back goes through messaging" claim).
+- **Integration L2 (§4.1):** the sharer round-trip run across **two real OS processes**
+  over a localhost socket (not an in-process loopback) — sender process packs the
+  recorded set, receiver process deposits it and its slate hash matches the sender's
+  golden. This is the first genuine multi-process IPC gate; P7 scales it to 3 strings.
+  (The single-process bullets above isolate the sharing/vote *logic*; this proves it
+  survives a process boundary.)
 
 **Implement (Green):** `SlateSharer{Sender,Receiver,Manager}`, `Keychain`,
 `NodeIoManager` (enough to emit `data_sig`), `ft/FtChannelManager` (enough for
@@ -323,7 +340,8 @@ resolved destinations, local-consumer redirection; muxed-group identical framing
 **Tests first (Red):** **P15:** `SlateTelemetryTask` frames a group → `DataDgramChannel`
 → decoder recovers values; `ByteQuotaFramer` enforces a *measured* byte/sec bound;
 a muxed group frames byte-identically for identical input; `redirect_service` sends to
-a local writer, not the socket.
+a local writer, not the socket. Telemetry-source values are seeded via the
+`SlateTestHarness` (§4.2) so the framing is asserted against a known injected set.
 
 **Implement (Green):** `BwpFramer`/`BwpWriter`/`BwpChannelWriter`/`ByteQuotaFramer`,
 `TelemetryFlowInfo`/`TelemetryRelayFlow`/`TelemetryWriter`/`TelemetryConsumer`,
@@ -352,7 +370,9 @@ authenticated → applied by name/hash, on the correct shard. Depends on P1, P2,
 `set_multi_by_hash` atomic (inject one invalid → all roll back); dedup drops a replayed
 seq; time-filter rejects stale; **synced dispatcher writes `sync`, nonsynced writes
 `nonsync`** (assert shard of the created elements). **P10:** Ed25519-signed command
-verifies; tampered rejected (two-keystore unwrap).
+verifies; tampered rejected (two-keystore unwrap). Command effects are asserted against
+Slate writes **captured by the `SlateTestHarness`** (§4.2), isolating dispatch/auth
+from a live runtime.
 
 **Implement (Green):** `ExternalCommandDispatcher` + the five handlers, `CommandTable`,
 `external_command_util`, `CommonCommandFilter`, `ExternalCommandFilterCommon`,
@@ -381,7 +401,9 @@ input-agreed, identical-compute, recoverable. Depends on **P4, P5, P6** all gree
 mechanisms) + "The control cycle".
 
 **Tests first (Red):** build the **SIL harness** (3 processes `a/b/c` on loopback, sim
-clock, fault injector). Then:
+clock, fault injector) — this is **integration L2 at three-string scale** (§4.1), and
+it is written **host-agnostic** (endpoints from the service directory, §P3) so P11 can
+re-point it across machines for L3 without code change. Then:
 - **P7 (time):** all three step on one cadence; `FtSync.dispatch` runs first and sets
   control time; `satfc1` is the initiator.
 - **P8/P11 (agree+determinism):** after share+reshare(ring, two-pass)+vote, the three
@@ -418,9 +440,12 @@ minimal) control law and a `main()` that wires `EventLoop` + runtime. Depends on
 **Design claims satisfied:** "Identical computation"; "The control cycle" (all steps);
 end-to-end command+telemetry under the redundant runtime.
 
-**Tests first (Red):** SIL run of all 17 cycle steps × 3 strings → deterministic
-identical `sync` shard each cycle; a synced command is applied identically on all
-three; a forced compaction/restart resumes correctly; telemetry emitted.
+**Tests first (Red):** **integration L4 (§4.1)** — SIL run of all cycle steps × 3
+strings → deterministic identical `sync` shard each cycle; a synced command is applied
+identically on all three; a forced compaction/restart resumes correctly; telemetry
+emitted. GNC/control-law components are additionally unit-tested through the
+`SlateTestHarness` (§4.2) — inject sensor/estimator inputs, assert actuator outputs —
+so a control bug is caught without standing up the full runtime.
 
 **Implement (Green):** resolve `ControlState`/`ControlTask` (**see D12**), wire
 `GncController`/`GncComponentFactory`/`StateRegistry` (or a minimal control law for the
@@ -474,7 +499,10 @@ the **same** redundant runtime (P7 properties still hold). Depends on P8 (and P9
 
 **Tests first (Red):** SIL flight (sim dynamics) holds attitude/altitude, responds to
 RC, triggers failsafe on link loss, respects geofence — all while P11/P12/P13 (identical
-compute, single-unit loss, recovery) still pass.
+compute, single-unit loss, recovery) still pass. Each drone GNC component (estimator,
+control law, mixer, failsafe) is first unit-tested through the `SlateTestHarness`
+(§4.2) — recorded sensor inputs in, expected actuator/mode outputs out — before it is
+wired into the runtime, so algorithm bugs are isolated from integration bugs.
 
 **Implement (Green):** per ROADMAP §6 — drone GNC (estimator + control law), motor
 mixer + ESC/servo HAL, RC link + failsafe, geofence/RTH, drone time/power; drop
@@ -496,7 +524,11 @@ fault-injection on hardware. Depends on all.
 
 **Tests first (Red):** WCET < period with margin under load on target; injected
 single-unit faults never interrupt control on real hardware; no alloc/page-fault in the
-hot path (verified); signed-boot + OTA acceptance.
+hot path (verified); signed-boot + OTA acceptance. **Integration L3 (§4.1):** the P7/P8
+SIL scenario re-run with the three strings on **separate hosts** over a real network
+(the host-agnostic harness only swaps endpoints) → identical golden `sync`-shard
+hashes, proving agreement is transport-independent, and single-host-loss tolerance
+holds across a real link.
 
 **Implement (Green):** `SCHED_FIFO`/`mlockall`/CPU isolation, real HSM, signed/verified
 boot, OTA, cross-compile toolchain, test campaigns.
@@ -508,21 +540,73 @@ secure-boot chain; **D22** OTA mechanism. Human/program inputs.
 
 ---
 
-## 4. Golden-path integration test (the spine — grows each phase)
+## 4. Integration testing — layered composition gates + golden-path spine
 
-One fixed scenario, run after **every** phase from P4 on; red ⇒ the most recent phase
-caused it.
+Unit tests prove a component against its own contract; they **cannot** prove the
+components compose, nor that a real *consumer* agrees with an inferred contract — the
+P1 review found two contract mismatches that unit tests happily passed because the
+tests mirrored the same wrong assumption as the code. Integration testing closes that
+gap in four additive layers, each a **merge gate at the phase where its substrate
+first exists**, plus a cross-cutting test-harness seam used everywhere a component
+touches the Slate.
 
-- **From P1:** a built Slate + recorded element set → stamped layout/content hash.
-- **From P4:** share the recorded inputs through loopback → voted control slate matches
-  a stamped golden slate hash.
-- **From P7:** 3-string SIL run of a recorded input trace → each string's per-cycle
-  `sync`-shard hash matches the stamped golden sequence (this is the determinism +
-  agreement spine); kill+restart injected at a fixed cycle → recovery by cycle K.
-- **From P8:** full cycle incl. a scripted command + telemetry capture → golden artifact.
+> **The strongest integration test is compiling the real consumer.** As soon as a
+> phase's headers make an imported consumer's includes resolvable, that consumer
+> (`.cc`) joins the gate as a compile-then-link target — a mis-inferred contract then
+> **fails to build** instead of silently passing a mirror test. First checkpoint:
+> `slate_tokens.{h,cc}` the moment `slate_info.h` lands (P1).
 
-Update the golden artifact **only** at the end of a phase that intentionally changes it;
-a mid-phase golden change is a red flag.
+### 4.1 Layered composition gates
+
+| Layer | What it exercises | First phase (gate) | Scales to |
+|---|---|---|---|
+| **L1 — single process** | one process builds a Slate and reads/writes it **through the handle/abstraction layer** (`WriteToken`/`ReadToken`/accessors, `sub_slate` permission scoping) — not raw IDs | **P1** | reused inside every higher layer |
+| **L2 — multi-process, one machine (IPC)** | two+ **OS processes** share/read/write Slate over a real localhost socket — genuine IPC, not an in-process loopback | **P4** (2 processes) | **P7** (3-string TMR SIL harness) |
+| **L3 — multi-process, across machines (IPC)** | the same strings on **separate hosts**, agreeing over a real network | **P11** (HIL / multi-host) | — (harness is written host-agnostic at P7; P11 only swaps endpoints) |
+| **L4 — full control-cycle runtime** | the entire `dispatch()` cycle (all steps) running end-to-end across three strings | **P8** (SIL) | **P11** (on target hardware) |
+
+A layer's gate is **binary** — the phase cannot close if its integration test is red.
+Each layer reuses the scenario below it (L1's recorded element set rides inside L2's
+datagrams, which ride inside L4's cycle), so the layers share one golden artifact
+(§4.3), not four.
+
+### 4.2 Slate test harness (mock injection) — cross-cutting, every phase
+
+Any component that in production reads/writes the Slate is written against the Slate
+*interface*, so a test can bind a **`SlateTestHarness`** in its place: the harness
+**injects** input values (as if sensed/voted) and **captures** every write for
+assertion. This lets an algorithm be tested in isolation — no event loop, no
+transport, no three-string runtime — while exercising the exact read/write calls it
+makes in flight.
+
+- **Introduced at P1** (needs the Slate + handle layer): the harness satisfies the
+  same token read/write surface a live Slate does.
+- **Used throughout:** GNC / control-law tests (P8, P10) inject sensor/estimator
+  inputs and assert actuator outputs through the harness; telemetry (P5) and command
+  (P6) tests assert against *captured* Slate writes rather than a live socket.
+- **Rule:** a domain/algorithm component must be testable through the harness without
+  constructing a runtime. If it can't, its Slate coupling is too implicit — fix the
+  seam, don't weaken the test.
+
+### 4.3 Golden-path spine (one fixed scenario, grows each phase)
+
+Run after **every** phase from P1 on; red ⇒ the most recent phase caused it.
+
+- **From P1 (L1):** a built Slate + recorded element set, written/read through tokens
+  → stamped layout/content hash.
+- **From P4 (L2):** share the recorded inputs between two processes → voted control
+  slate matches a stamped golden slate hash.
+- **From P7 (L2, 3-string):** 3-string SIL run of a recorded input trace → each
+  string's per-cycle `sync`-shard hash matches the stamped golden sequence (the
+  determinism + agreement spine); kill+restart injected at a fixed cycle → recovery by
+  cycle K.
+- **From P8 (L4):** full cycle incl. a scripted command + telemetry capture → golden
+  artifact.
+- **From P11 (L3):** the P7/P8 scenario re-run across separate hosts → same golden
+  hashes (transport-independent determinism).
+
+Update the golden artifact **only** at the end of a phase that intentionally changes
+it; a mid-phase golden change is a red flag.
 
 ---
 
