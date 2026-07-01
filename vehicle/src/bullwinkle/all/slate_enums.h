@@ -47,15 +47,52 @@ namespace Drone
     };
 
     /**
+     * How creation into a shard is gated. This is the single source of truth
+     * for the creation-time permission boundary (SYSTEM_DESIGN.md): it is
+     * classified by an exhaustive switch below, so adding a shard fails to
+     * compile (`-Wswitch -Werror`) until its create policy is stated here.
+     */
+    enum slate_shard_create_class_t
+    {
+        slate_create_class_open,    /**< static/cyclic: create right suffices.  */
+        slate_create_class_sync,    /**< replicated+voted: needs c_sync.         */
+        slate_create_class_nonsync  /**< string-private: needs c_nonsync.        */
+    };
+
+    inline slate_shard_create_class_t
+    slate_shard_create_class(const slate_shard_t shard)
+    {
+        switch (shard)
+        {
+        case shard_sync:
+        case shard_sync_no_telem:
+            /* Only the control string may create voted state. */
+            return slate_create_class_sync;
+        case shard_nonsync:
+        case shard_nonsync_no_telem:
+            /* The control string is barred from string-private state. */
+            return slate_create_class_nonsync;
+        case shard_static:
+        case shard_cyclic:
+        case shard_cyclic_no_telem:
+            /* Both control and runtime keep per-frame cyclic scratch (e.g.
+             * BasicControl's reset_counters / autosequence flags), and static
+             * constants are seeded by the permission-exempt super builder. */
+            return slate_create_class_open;
+        case num_slate_shard_t: /* == shard_invalid; not a real shard */
+            break;
+        }
+        return slate_create_class_open;
+    }
+
+    /**
      * True for the shards whose contents are replicated and voted across
-     * strings (the "sync" class). Creation into these is gated by the
-     * sync-create permission; everything else is nonsync-class. This is the
-     * creation-time permission boundary of SYSTEM_DESIGN.md (only control
-     * creates sync state).
+     * strings. Defined in terms of the classifier so there is one source of
+     * truth for "sync-ness" (voting/telemetry will reuse this).
      */
     inline bool slate_shard_is_sync_class(const slate_shard_t shard)
     {
-        return shard == shard_sync || shard == shard_sync_no_telem;
+        return slate_shard_create_class(shard) == slate_create_class_sync;
     }
 
     /**
@@ -155,8 +192,11 @@ namespace Drone
     }
 
     /**
-     * True if permission `p` may create an element in `shard`: it must hold the
-     * general create right and the qualifier for the shard's class.
+     * True if permission `p` may create an element in `shard`. The general
+     * create right is always required; the shard's create-class then decides
+     * which qualifier (if any) it additionally needs. This is what lets the
+     * control string (create right + sync qualifier only) still create cyclic
+     * scratch while being barred from string-private `nonsync` state.
      */
     inline bool slate_can_create(const slate_permission_t p,
                                  const slate_shard_t shard)
@@ -165,9 +205,16 @@ namespace Drone
         {
             return false;
         }
-        return slate_shard_is_sync_class(shard)
-                   ? (p & slate_permission_bit_create_sync) != 0
-                   : (p & slate_permission_bit_create_nonsync) != 0;
+        switch (slate_shard_create_class(shard))
+        {
+        case slate_create_class_sync:
+            return (p & slate_permission_bit_create_sync) != 0;
+        case slate_create_class_nonsync:
+            return (p & slate_permission_bit_create_nonsync) != 0;
+        case slate_create_class_open:
+            return true;
+        }
+        return false;
     }
 
     /**

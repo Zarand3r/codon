@@ -12,27 +12,41 @@ namespace Drone
 {
     namespace
     {
+        /*
+         * Register an enumerator under a name *stringized from the enumerator
+         * token itself*. Because the enumerators are literally named
+         * `shard_<x>` / `slate_<x>`, the reflection name always carries the
+         * exact "shard_" / "slate_" prefix that SlateLayout strips with
+         * `get(...).substr(strlen("shard_"|"slate_"))` — the name cannot drift
+         * from the symbol, which is the whole point (a hand-typed name is how
+         * the prefix bug happened in the first place).
+         */
+#define SLATE_SYM_ADD(table, enumerator) \
+    FswAssert((table).add(#enumerator, (enumerator)))
+
         SymbolTable build_shard_sym()
         {
             SymbolTable t;
-            FswAssert(t.add("static", shard_static));
-            FswAssert(t.add("sync", shard_sync));
-            FswAssert(t.add("nonsync", shard_nonsync));
-            FswAssert(t.add("cyclic", shard_cyclic));
-            FswAssert(t.add("sync_no_telem", shard_sync_no_telem));
-            FswAssert(t.add("nonsync_no_telem", shard_nonsync_no_telem));
-            FswAssert(t.add("cyclic_no_telem", shard_cyclic_no_telem));
+            SLATE_SYM_ADD(t, shard_static);
+            SLATE_SYM_ADD(t, shard_sync);
+            SLATE_SYM_ADD(t, shard_nonsync);
+            SLATE_SYM_ADD(t, shard_cyclic);
+            SLATE_SYM_ADD(t, shard_sync_no_telem);
+            SLATE_SYM_ADD(t, shard_nonsync_no_telem);
+            SLATE_SYM_ADD(t, shard_cyclic_no_telem);
             return t;
         }
 
         SymbolTable build_access_sym()
         {
             SymbolTable t;
-            FswAssert(t.add("private", slate_private));
-            FswAssert(t.add("read_only", slate_read_only));
-            FswAssert(t.add("read_write", slate_read_write));
+            SLATE_SYM_ADD(t, slate_private);
+            SLATE_SYM_ADD(t, slate_read_only);
+            SLATE_SYM_ADD(t, slate_read_write);
             return t;
         }
+
+#undef SLATE_SYM_ADD
     } /* anonymous namespace */
 
     const SymbolTable slate_shard_t_sym = build_shard_sym();

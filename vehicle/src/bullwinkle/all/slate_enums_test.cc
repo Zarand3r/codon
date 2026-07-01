@@ -37,20 +37,33 @@ int main()
         // The sentinel is out of the valid range (so `shard < num` rejects it).
         assert(shard_invalid >= num_slate_shard_t);
 
-        // Reflection round-trips.
-        assert(slate_shard_t_sym.get(shard_sync) == "sync");
-        assert(slate_shard_t_sym.get(shard_nonsync) == "nonsync");
-        assert(slate_shard_t_sym.get(shard_static) == "static");
+        // Reflection round-trips. Names carry the "shard_" prefix because
+        // SlateLayout formats them as get(shard).substr(strlen("shard_")) — a
+        // shorter name would throw std::out_of_range there.
+        assert(slate_shard_t_sym.get(shard_sync) == "shard_sync");
+        assert(slate_shard_t_sym.get(shard_nonsync) == "shard_nonsync");
+        assert(slate_shard_t_sym.get(shard_static) == "shard_static");
+        // The substr the consumer performs must yield the bare shard name.
+        assert(slate_shard_t_sym.get(shard_sync).substr(6) == "sync");
+        assert(slate_shard_t_sym.get(shard_cyclic_no_telem).substr(6) ==
+               "cyclic_no_telem");
         uint v = 0;
-        assert(slate_shard_t_sym.raw_get("cyclic", v) && v == shard_cyclic);
+        assert(slate_shard_t_sym.raw_get("shard_cyclic", v) &&
+               v == shard_cyclic);
     }
 
     // --- Element access policy (ordered) -----------------------------------
     {
         assert(slate_private < slate_read_only);
         assert(slate_read_only < slate_read_write);
-        assert(slate_elem_access_t_sym.get(slate_read_only) == "read_only");
-        assert(slate_elem_access_t_sym.get(slate_read_write) == "read_write");
+        // Names carry the "slate_" prefix — SlateLayout does
+        // get(access).substr(strlen("slate_")).
+        assert(slate_elem_access_t_sym.get(slate_read_only) ==
+               "slate_read_only");
+        assert(slate_elem_access_t_sym.get(slate_read_write) ==
+               "slate_read_write");
+        assert(slate_elem_access_t_sym.get(slate_read_only).substr(6) ==
+               "read_only");
     }
 
     // --- Permission algebra ------------------------------------------------
@@ -68,21 +81,29 @@ int main()
         assert(slate_can_create(slate_permission_rwc, shard_sync_no_telem));
         assert(slate_can_create(slate_permission_rwc, shard_nonsync));
 
-        // Runtime = rwc minus sync-create: create in nonsync but never in sync.
+        // Runtime = rwc minus sync-create: nonsync yes, sync never; cyclic/
+        // static are unclassified, so the general create right suffices.
         const slate_permission_t runtime =
             slate_permission_deny(slate_permission_rwc, slate_permission_c_sync);
         assert(slate_can_write(runtime));
         assert(slate_can_create(runtime, shard_nonsync));
+        assert(slate_can_create(runtime, shard_nonsync_no_telem));
         assert(slate_can_create(runtime, shard_cyclic));
+        assert(slate_can_create(runtime, shard_static));
         assert(!slate_can_create(runtime, shard_sync));
         assert(!slate_can_create(runtime, shard_sync_no_telem));
 
-        // Control = rwc minus nonsync-create: create in sync but never in nonsync.
+        // Control = rwc minus nonsync-create: sync yes, nonsync never. It MUST
+        // still create cyclic/static — BasicControl creates reset_counters and
+        // the autosequence flags in shard_cyclic through this exact handle.
         const slate_permission_t control = slate_permission_deny(
             slate_permission_rwc, slate_permission_c_nonsync);
         assert(slate_can_create(control, shard_sync));
+        assert(slate_can_create(control, shard_cyclic));
+        assert(slate_can_create(control, shard_cyclic_no_telem));
+        assert(slate_can_create(control, shard_static));
         assert(!slate_can_create(control, shard_nonsync));
-        assert(!slate_can_create(control, shard_cyclic));
+        assert(!slate_can_create(control, shard_nonsync_no_telem));
 
         // rc: read + create (no write), in both classes.
         assert(slate_can_read(slate_permission_rc));

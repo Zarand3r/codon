@@ -61,7 +61,8 @@ int main()
         }
     }
 
-    // Field overflow is rejected (returns false, leaves out-param untouched).
+    // Field overflow / reserved values are rejected (returns false, leaves the
+    // out-param untouched).
     {
         slate_element_t id = slate_element_default;
         assert(!slate_id_buildup(id, false, false, shard_static, 0u,
@@ -69,6 +70,13 @@ int main()
         assert(id == slate_element_default);
         // A shard out of range is rejected too.
         assert(!slate_id_buildup(id, false, false, shard_invalid, 0u, 1u));
+        assert(id == slate_element_default);
+        // Index 0 is reserved: rejecting it here is what structurally
+        // guarantees a bound id is never the default (0), independent of any
+        // caller. This is the invariant slate_id_is_valid relies on.
+        assert(!slate_id_buildup(id, false, false, shard_static, 0u, 0u));
+        assert(id == slate_element_default);
+        assert(!slate_id_buildup(id, true, true, shard_sync, 4096u, 0u));
         assert(id == slate_element_default);
     }
 
