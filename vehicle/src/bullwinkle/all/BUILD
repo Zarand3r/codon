@@ -77,3 +77,18 @@ cc_test(
     copts = ["-std=c++17"],
     deps = [":slate_enums"],
 )
+
+# slate_id — the packed slate_element_t (header-only; shifts + masks, no hot-path calls).
+cc_library(
+    name = "slate_id",
+    hdrs = ["slate_id.h"],
+    strip_include_prefix = "/vehicle",
+    deps = [":slate_enums"],
+)
+
+cc_test(
+    name = "slate_id_test",
+    srcs = ["slate_id_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_id"],
+)
