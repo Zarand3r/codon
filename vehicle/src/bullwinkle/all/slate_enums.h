@@ -49,13 +49,27 @@ namespace Drone
     /**
      * True for the shards whose contents are replicated and voted across
      * strings (the "sync" class). Creation into these is gated by the
-     * sync-create permission; everything else is nonsync-class. This is the
-     * creation-time permission boundary of SYSTEM_DESIGN.md (only control
-     * creates sync state).
+     * sync-create permission — only the control string may create voted state
+     * (the creation-time permission boundary of SYSTEM_DESIGN.md).
      */
     inline bool slate_shard_is_sync_class(const slate_shard_t shard)
     {
         return shard == shard_sync || shard == shard_sync_no_telem;
+    }
+
+    /**
+     * True for the string-private, frame-persistent shards (the "nonsync"
+     * class). Creation into these is gated by the nonsync-create permission —
+     * the control string is barred from creating string-private state.
+     *
+     * The remaining shards (`static`, `cyclic`, `cyclic_no_telem`) are neither
+     * class: any handle holding the general create right may create in them
+     * (both control and runtime keep per-frame cyclic scratch, e.g.
+     * BasicControl's reset_counters / autosequence flags).
+     */
+    inline bool slate_shard_is_nonsync_class(const slate_shard_t shard)
+    {
+        return shard == shard_nonsync || shard == shard_nonsync_no_telem;
     }
 
     /**
@@ -155,8 +169,13 @@ namespace Drone
     }
 
     /**
-     * True if permission `p` may create an element in `shard`: it must hold the
-     * general create right and the qualifier for the shard's class.
+     * True if permission `p` may create an element in `shard`. The general
+     * create right is always required. A sync-class shard additionally requires
+     * the sync-create qualifier, a nonsync-class shard the nonsync-create
+     * qualifier; the remaining shards (static/cyclic) need only the create
+     * right. This is what lets the control string (create right + sync
+     * qualifier only) still create cyclic scratch while being barred from
+     * string-private `nonsync` state.
      */
     inline bool slate_can_create(const slate_permission_t p,
                                  const slate_shard_t shard)
@@ -165,9 +184,15 @@ namespace Drone
         {
             return false;
         }
-        return slate_shard_is_sync_class(shard)
-                   ? (p & slate_permission_bit_create_sync) != 0
-                   : (p & slate_permission_bit_create_nonsync) != 0;
+        if (slate_shard_is_sync_class(shard))
+        {
+            return (p & slate_permission_bit_create_sync) != 0;
+        }
+        if (slate_shard_is_nonsync_class(shard))
+        {
+            return (p & slate_permission_bit_create_nonsync) != 0;
+        }
+        return true;
     }
 
     /**

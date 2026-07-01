@@ -12,25 +12,34 @@ namespace Drone
 {
     namespace
     {
+        /*
+         * Names carry the "shard_" prefix: SlateLayout formats them as
+         * `get(shard).substr(strlen("shard_"))`, so a shorter name would throw
+         * std::out_of_range and the wrong prefix length would mangle the rest.
+         */
         SymbolTable build_shard_sym()
         {
             SymbolTable t;
-            FswAssert(t.add("static", shard_static));
-            FswAssert(t.add("sync", shard_sync));
-            FswAssert(t.add("nonsync", shard_nonsync));
-            FswAssert(t.add("cyclic", shard_cyclic));
-            FswAssert(t.add("sync_no_telem", shard_sync_no_telem));
-            FswAssert(t.add("nonsync_no_telem", shard_nonsync_no_telem));
-            FswAssert(t.add("cyclic_no_telem", shard_cyclic_no_telem));
+            FswAssert(t.add("shard_static", shard_static));
+            FswAssert(t.add("shard_sync", shard_sync));
+            FswAssert(t.add("shard_nonsync", shard_nonsync));
+            FswAssert(t.add("shard_cyclic", shard_cyclic));
+            FswAssert(t.add("shard_sync_no_telem", shard_sync_no_telem));
+            FswAssert(t.add("shard_nonsync_no_telem", shard_nonsync_no_telem));
+            FswAssert(t.add("shard_cyclic_no_telem", shard_cyclic_no_telem));
             return t;
         }
 
+        /*
+         * Names carry the "slate_" prefix for the same reason: SlateLayout
+         * formats them as `get(access).substr(strlen("slate_"))`.
+         */
         SymbolTable build_access_sym()
         {
             SymbolTable t;
-            FswAssert(t.add("private", slate_private));
-            FswAssert(t.add("read_only", slate_read_only));
-            FswAssert(t.add("read_write", slate_read_write));
+            FswAssert(t.add("slate_private", slate_private));
+            FswAssert(t.add("slate_read_only", slate_read_only));
+            FswAssert(t.add("slate_read_write", slate_read_write));
             return t;
         }
     } /* anonymous namespace */
