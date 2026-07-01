@@ -57,3 +57,23 @@ cc_test(
     copts = ["-std=c++17"],
     deps = [":aligned_buffer"],
 )
+
+# slate_enums — shard set, element-access policy, permission algebra + reflection.
+cc_library(
+    name = "slate_enums",
+    srcs = ["slate_enums.cc"],
+    hdrs = ["slate_enums.h"],
+    strip_include_prefix = "/vehicle",
+    copts = ["-std=c++17"],
+    deps = [
+        ":core",
+        "//vehicle/src/bullwinkle/all/enum:symbol_table",
+    ],
+)
+
+cc_test(
+    name = "slate_enums_test",
+    srcs = ["slate_enums_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_enums"],
+)
