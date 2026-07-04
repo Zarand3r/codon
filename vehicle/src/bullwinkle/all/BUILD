@@ -13,6 +13,7 @@ cc_library(
         "B2c.h",
         "core/drone_types.h",
         "core/fsw.h",
+        "core/fsw_log.h",
         "core/fswtime.h",
         "core/util.h",
         "runtime.h",
@@ -24,6 +25,7 @@ cc_library(
 _L0_TESTS = {
     "drone_types_test": "core/drone_types_test.cc",
     "fsw_test": "core/fsw_test.cc",
+    "fsw_log_test": "core/fsw_log_test.cc",
     "fswtime_test": "core/fswtime_test.cc",
     "util_test": "core/util_test.cc",
     "b2_test": "b2_test.cc",
@@ -126,12 +128,16 @@ cc_library(
     ],
 )
 
-# Consumer-compile gate: compiles the imported slate_tokens.h consumer object-only
-# (cc_library never links an executable, so the not-yet-defined accountant / fsw-logging
-# symbols are fine). A mis-inferred contract fails to build here. See IMPLEMENTATION_PLAN §4.
+# Consumer-compile gate: compiles the imported token layer against the foundation.
+# Now includes slate_tokens.cc itself (its fsw-logging deps landed), so the full
+# imported .cc — accountant impl + template bodies — is validated, not just the header.
+# cc_library compiles object-only (no executable link needed). See IMPLEMENTATION_PLAN §4.
 cc_library(
     name = "slate_tokens_compile",
-    srcs = ["slate_tokens_compile_test.cc"],
+    srcs = [
+        "slate_tokens.cc",
+        "slate_tokens_compile_test.cc",
+    ],
     copts = ["-std=c++17"],
     deps = [":slate_info"],
 )

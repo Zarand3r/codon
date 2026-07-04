@@ -63,3 +63,8 @@ namespace Drone
 #else
 #define FswDebugAssert(cond) FswAssert(cond)
 #endif
+
+// The logging / context / typed-comparison layer (dbnprintf, FswPrefix, FswStackFrame,
+// FswAbortIfEq*/Neq*/OpUint64, FswMsgAbortIf*, FswIf/FswIfNot). Split out so this core
+// header stays free of <string>/<cstdarg>; consumers with fsw.h get the full vocabulary.
+#include "src/bullwinkle/all/core/fsw_log.h"

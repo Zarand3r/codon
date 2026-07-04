@@ -22,6 +22,7 @@ trap 'rm -rf "$TMP"' EXIT
 TESTS=(
   "vehicle/src/bullwinkle/all/core/drone_types_test.cc"
   "vehicle/src/bullwinkle/all/core/fsw_test.cc"
+  "vehicle/src/bullwinkle/all/core/fsw_log_test.cc"
   "vehicle/src/bullwinkle/all/core/fswtime_test.cc"
   "vehicle/src/bullwinkle/all/core/util_test.cc"
   "vehicle/src/hash/hash_test.cc"
@@ -41,6 +42,7 @@ TESTS=(
 # fsw logging layer) do not exist yet; a mis-inferred contract still fails to compile.
 COMPILE_ONLY=(
   "vehicle/src/bullwinkle/all/slate_tokens_compile_test.cc"
+  "vehicle/src/bullwinkle/all/slate_tokens.cc"
 )
 
 fail=0

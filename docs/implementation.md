@@ -27,8 +27,8 @@ decisions).
 
 | Component | Contract (what it is) | Test | Notes |
 |---|---|---|---|
-| `core/drone_types.h` | fixed-width `UINT8..64`/`INT8..64`/`uint` + `FSW_DISALLOW_COPY_AND_ASSIGN` | `drone_types_test.cc` | global scope (matches unqualified usage) |
-| `core/fsw.h` | `FswAbortIfNot`/`FswAbortIf`/`FswAssert`/`FswDebugAssert` + `fsw_report` | `fsw_test.cc` (incl. pointer/int conditions) | `FswAbortIf` coerces via `!!(cond)`; **D24**: `FswAssert` prod semantics (abort → safe-state) TBD at P1 |
+| `core/drone_types.h` | fixed-width `UINT8..64`/`INT8..64`/`uint` + `FSW_DISALLOW_COPY_AND_ASSIGN` | `drone_types_test.cc` | global scope; **64-bit types are the `long long` family** (`static_assert` sizeof==8) so imported `%llx`/`%lld` format specifiers are warning-clean |
+| `core/fsw.h` + `core/fsw_log.h` | asserts (`FswAbortIfNot`/`FswAbortIf`/`FswAssert`/`FswDebugAssert` + `fsw_report`); **logging/context layer** (`dbnprintf`/`dbstring`/`FswPrefix`/`FswStackFrame`, typed `FswAbortIfEqInt/EqUint64/Neq/NeqInt/NeqInt64/NeqDouble/OpUint64`, `FswMsgAbortIf`/`FswMsgAbortIfNot`, `FswIf`/`FswIfNot`/`FswIfNeq`) | `fsw_test.cc`, `fsw_log_test.cc` | `fsw.h` includes `fsw_log.h`; split keeps `<string>`/`<cstdarg>` out of the assert core. `FswStackFrame::get_current_stack_frame()` returns null (no producer yet — documented). **D24** still open |
 | `core/fswtime.h` | `nano_t`, `nano_t_min/max`, `billion`, `get_rel_time`, `fswsleep` | `fswtime_test.cc` | |
 | `core/util.h` | `str_v`/`str_s`/`str_v_v`, `join`, `MonotonicPool` (bump arena `allocate(size,align)`+`release()`) | `util_test.cc` | `std::set/string` are **cold build-phase only** — keep out of hot paths |
 | `hash/Hash128.h` + `hash/xxh.h` | `Hash128{u64[2]}`; `digest_xxh128(buf,len,seed)` deterministic 128-bit | `hash_test.cc` (determinism, sensitivity, avalanche) | impl is MurmurHash3-x64-128; **D23**: benchmark vs XXH3 before P7 per-cycle shard hashing |
@@ -46,13 +46,13 @@ decisions).
 | `slate_id.h` | packed `slate_element_t` = `[offset:32][index:26][shard:4][w:1][v:1]`; `buildup`/`breakdown`/`index`/`can_write`/`has_validator`/`ro`/`is_valid`/`build_invalid`; `slate_element_default`=0 | `slate_id_test.cc` | **hot-path** — resolution is pure shift/mask (objdump: 0 calls, 0 branches under `-O2`). Bound ids are never 0 (layout indices start at 1); `build_invalid` carries `shard_invalid`. `slate_index_t`/`slate_offset_t` = UINT32 |
 | `slate_type.h` | `slate_type_t` (UINT64), `slate_type_invalid`=0, `slate_type_id<T>()` — hash of `__PRETTY_FUNCTION__` per-type name via `digest_xxh128`, folded to 64b, never 0 | `slate_type_test.cc` (stable, distinct incl. look-alike structs, template instantiations) | cross-string-stable (same binary → same name → same id); cold (build-time tag), memoized per type |
 | `slate_info.h` | umbrella header: aggregates `slate_id` + `slate_type` + `core/fsw`; the header Slate consumers `#include` | `slate_tokens_compile_test.cc` (consumer-compile gate) | `slate_info<T>` **value trait** deferred to the increment whose consumer (`Slate.h`) validates it |
-| `slate_tokens.h` (consumer-compile) | **gate, not owned here**: the imported token layer compiles against `slate_info` | `slate_tokens_compile_test.cc` — object-only (§4) | first imported consumer to validate the inferred contracts; `.cc` link blocked on the fsw logging layer (see below) |
+| `slate_tokens.{h,cc}` (consumer-compile) | **gate, not owned here**: the imported token layer + accountant impl compiles against `slate_info` | `slate_tokens_compile_test.cc` + `slate_tokens.cc`, object-only (§4) | **now the full `.cc` compiles** (fsw logging layer landed); caught two real contract issues (`FswIfNeq` missing; `UINT64`→`long long` for `%llx`) |
 | `slate_info<T>` trait, `SlateElement`, `SlatePathMap`, `SlateBuilderStore`, `SlateMemory`, `Slate`, `SlateCombiner` | — | — | pending (next P1 increments) |
 
 ## Verification status (current)
 
-- **g++** `-Wall -Wextra -Werror`: **13 unit tests + 1 consumer-compile** green (`scripts/run_l0_tests.sh`).
-- **Bazel**: all green (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`); `slate_tokens_compile` is a compile-only `cc_library` consumer gate.
+- **g++** `-Wall -Wextra -Werror`: **14 unit tests + 2 consumer-compiles** green (`scripts/run_l0_tests.sh`).
+- **Bazel**: all green (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`); `slate_tokens_compile` (now incl. `slate_tokens.cc`) is a compile-only `cc_library` consumer gate.
 - **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`, `slate_enums`).
 - **Perf spot-checks**: `static_vector::operator[]` is a single load under `-O2 -DNDEBUG` (bounds check compiles out); `slate_id` breakdown+index resolves in pure `mov`/`shr`/`and`/`add` (0 calls, 0 branches).
 - ASan/UBSan runtime libs are absent in the CI sandbox; valgrind substitutes.
@@ -63,7 +63,7 @@ decisions).
 - **D24** — `FswAssert` always-aborts: reconcile with the fail-to-safe-state failure policy at P1.
 - `static_vector` eager-constructs its `N` inline slots (requires default-constructible + copy-assignable `T`); acceptable while `T` is cheap and off the hot path — raw aligned storage deferred until a use site needs it.
 - `core/util.h` `std::set`/`std::string` are node-based/heap containers, acceptable only as cold build-phase code — must not leak into a hot path.
-- **fsw logging layer missing (blocks consumer `.cc` links):** `slate_tokens.cc` (and every Slate consumer `.cc`) needs `dbnprintf`, `FswPrefix`, `FswStackFrame::get_current_stack_frame`, and more assert variants (`FswAbortIfNeq`, `FswAbortIfEqUint64`, `FswAbortIfOpUint64`, `FswMsgAbortIf`, `FswIf`/`FswIfNot`) that `core/fsw.h` does not yet provide. Header consumer-compile gates work now; full compile+link is blocked on building this L0 layer. **Surfaced for the plan review.**
+- ~~fsw logging layer missing~~ **RESOLVED** — `core/fsw_log.h` now provides `dbnprintf`/`dbstring`/`FswPrefix`/`FswStackFrame` + the typed/msg/`FswIf*` macro family; `slate_tokens.cc` compiles in full. `FswStackFrame` has no frame producer yet (returns null; a future enhancement can push frames from the abort macros).
 
 ## How to build & test
 
