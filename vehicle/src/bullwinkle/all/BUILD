@@ -92,3 +92,46 @@ cc_test(
     copts = ["-std=c++17"],
     deps = [":slate_id"],
 )
+
+# slate_type — deterministic cross-string type id (header-only; hashes a per-type name).
+cc_library(
+    name = "slate_type",
+    hdrs = ["slate_type.h"],
+    strip_include_prefix = "/vehicle",
+    deps = [
+        ":core",
+        "//vehicle/src/hash:hash",
+    ],
+)
+
+cc_test(
+    name = "slate_type_test",
+    srcs = ["slate_type_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_type"],
+)
+
+# slate_info — umbrella header the Slate consumers include (ids + type id + fsw).
+cc_library(
+    name = "slate_info",
+    hdrs = [
+        "slate_info.h",
+        "slate_tokens.h",
+    ],
+    strip_include_prefix = "/vehicle",
+    deps = [
+        ":core",
+        ":slate_id",
+        ":slate_type",
+    ],
+)
+
+# Consumer-compile gate: compiles the imported slate_tokens.h consumer object-only
+# (cc_library never links an executable, so the not-yet-defined accountant / fsw-logging
+# symbols are fine). A mis-inferred contract fails to build here. See IMPLEMENTATION_PLAN §4.
+cc_library(
+    name = "slate_tokens_compile",
+    srcs = ["slate_tokens_compile_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_info"],
+)
