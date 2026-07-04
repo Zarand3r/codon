@@ -128,6 +128,13 @@ cc_library(
     ],
 )
 
+cc_test(
+    name = "slate_info_test",
+    srcs = ["slate_info_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_info"],
+)
+
 # Consumer-compile gate: compiles the imported token layer against the foundation.
 # Now includes slate_tokens.cc itself (its fsw-logging deps landed), so the full
 # imported .cc — accountant impl + template bodies — is validated, not just the header.

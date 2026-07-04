@@ -34,6 +34,7 @@ TESTS=(
   "vehicle/src/bullwinkle/all/slate_enums_test.cc vehicle/src/bullwinkle/all/slate_enums.cc vehicle/src/bullwinkle/all/enum/SymbolTable.cc"
   "vehicle/src/bullwinkle/all/slate_id_test.cc"
   "vehicle/src/bullwinkle/all/slate_type_test.cc"
+  "vehicle/src/bullwinkle/all/slate_info_test.cc"
 )
 
 # Consumer-compile gates (IMPLEMENTATION_PLAN §4): compile an *imported* consumer
