@@ -15,7 +15,7 @@ decisions).
 | Phase | State | Notes |
 |---|---|---|
 | **P0** — L0 core primitives | ✅ done (merged, PR #1) | + naming convention (`fsw`) |
-| **P1** — Slate data model | 🚧 in progress | done: `core/util.h`, `AlignedBuffer`, `enum/SymbolTable`, `slate_enums`, `slate_id` (packed element ID). Next: `slate_type` (`slate_type_id<T>` name-hash + `slate_type_info_t`) → `slate_info<T>` trait → `SlateElement` → `SlatePathMap` (indices start at 1) → `SlateBuilderStore` → `SlateMemory` → compile `Slate`/`SlateCombiner` → golden-path integration test |
+| **P1** — Slate data model | 🚧 in progress | done: type system (`SymbolTable`, `slate_enums`, `slate_id`, `slate_type`, `slate_info<T>`), fsw logging+verbose layer, `Handle`, `AlignedBuffer`, `SlateElement`+`SlatePathMap`. Next: `slate_accessor`/`Signal`/`slate_validator_t` + `.enum.h` shims → `SlateBuilderStoreInterface` → `SlateMemory` → `EnumRegistry` → `SlateLayout.cc`/`SlateBuilder.cc`/`Slate.cc` compile → golden-path (L1) integration test. **Internals: see [slate-internals.md](slate-internals.md).** |
 | P2+ | ⬜ not started | see ROADMAP |
 
 **Build root:** `vehicle/` — includes resolve as `src/...` (Bazel `strip_include_prefix="/vehicle"`).
