@@ -135,6 +135,28 @@ cc_test(
     deps = [":slate_info"],
 )
 
+# SlateElement / SlatePathMap — element metadata + the path->metadata directory with
+# the dense 1-based index bijection (header-only). Keys are pool-interned string_views.
+cc_library(
+    name = "slate_path_map",
+    hdrs = [
+        "SlateElement.h",
+        "SlatePathMap.h",
+    ],
+    strip_include_prefix = "/vehicle",
+    deps = [
+        ":slate_id",
+        ":slate_info",
+    ],
+)
+
+cc_test(
+    name = "slate_path_map_test",
+    srcs = ["slate_path_map_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_path_map"],
+)
+
 # Consumer-compile gate: compiles the imported token layer against the foundation.
 # Now includes slate_tokens.cc itself (its fsw-logging deps landed), so the full
 # imported .cc — accountant impl + template bodies — is validated, not just the header.
