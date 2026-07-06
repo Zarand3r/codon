@@ -72,6 +72,37 @@ namespace Drone
         std::fflush(stderr);
     }
 
+    // Verbose-diagnostics gate (off by default). FswOnVerbose(...) runs its argument
+    // only when this is enabled, so extra per-check logging costs nothing in the
+    // normal path but can be switched on for debugging.
+    inline bool &fsw_verbose_flag()
+    {
+        static bool enabled = false;
+        return enabled;
+    }
+    inline bool fsw_verbose() { return fsw_verbose_flag(); }
+
+    // A comparison/relation abort report: "file:line|<abort_type>: <str_1> <str_2>".
+    // Aborts if is_fatal. Used by the typed fsw_if_* helpers (e.g. Handle comparison).
+    inline void report_abort(const char *abort_type, const char *str_1,
+                             const char *str_2, const char *file, int line,
+                             bool is_fatal)
+    {
+        std::fprintf(stderr, "%s:%d|%s: %s %s\n", file, line, abort_type, str_1,
+                     str_2);
+        std::fflush(stderr);
+        if (is_fatal)
+        {
+            std::abort();
+        }
+    }
+
+    // Log one operand value alongside a report_abort (verbose diagnostics).
+    inline void fsw_arg(UINT64 value)
+    {
+        std::fprintf(stderr, "  arg: %llu\n", value);
+    }
+
     // A conditional-abort message: "file:line|FSW FAILED: <formatted>".
     inline void fsw_msg(const char *file, int line, int n, const char *fmt, ...)
         __attribute__((format(printf, 4, 5)));
@@ -122,6 +153,19 @@ namespace Drone
 
 // Print the call-site prefix; a following dbnprintf(": ...\n") completes the line.
 #define FswPrefix() ::Drone::fsw_prefix(__FILE__, __LINE__)
+
+// Run `expr` only when verbose diagnostics are enabled (compiled in, runtime-gated).
+#define FswOnVerbose(expr)                                                     \
+    do                                                                         \
+    {                                                                          \
+        if (::Drone::fsw_verbose())                                            \
+        {                                                                      \
+            expr;                                                              \
+        }                                                                      \
+    } while (0)
+
+// Log one operand value (used inside FswOnVerbose next to a report_abort).
+#define FswArg(x) ::Drone::fsw_arg(x)
 
 // Typed comparison aborts. Operands are cast to the suffix type so the comparison is
 // unambiguous (no -Wsign-compare) and the intent is explicit.

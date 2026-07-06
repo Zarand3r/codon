@@ -95,6 +95,21 @@ cc_test(
     deps = [":slate_id"],
 )
 
+# Handle — shared-ownership smart pointer (header-only; std::shared_ptr-backed).
+cc_library(
+    name = "handle",
+    hdrs = ["Handle.h"],
+    strip_include_prefix = "/vehicle",
+    deps = [":core"],
+)
+
+cc_test(
+    name = "handle_test",
+    srcs = ["handle_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":handle"],
+)
+
 # slate_type — deterministic cross-string type id (header-only; hashes a per-type name).
 cc_library(
     name = "slate_type",
