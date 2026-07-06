@@ -8,7 +8,7 @@
 
 #include "src/bullwinkle/all/Handle.h"
 #include "src/bullwinkle/all/Signal.h"
-#include "src/bullwinkle/all/core/slate_info.h"
+#include "src/bullwinkle/all/slate_info.h"
 
 class SlateAccessorUto;
 class SlateBuilderUto;

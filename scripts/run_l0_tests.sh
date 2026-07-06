@@ -46,6 +46,7 @@ TESTS=(
 COMPILE_ONLY=(
   "vehicle/src/bullwinkle/all/slate_tokens_compile_test.cc"
   "vehicle/src/bullwinkle/all/slate_tokens.cc"
+  "vehicle/src/bullwinkle/all/slate_enum_headers_compile_test.cc"
 )
 
 fail=0
