@@ -109,6 +109,7 @@ namespace Drone
      */
     class Slate
     {
+    public:
         Slate();
         Slate(Handle<SlateMemory> _memory);
         Slate(const Slate &slate);
@@ -482,6 +483,30 @@ namespace Drone
         }
 
         return load_rwv<T>(element_id).store(value);
+    }
+
+
+    /* Restored template bodies (lost in the truncated import): resolve the packed
+     * id through SlateMemory and view the bytes through the slate_info trait. */
+    template <typename T>
+    typename slate_info<T>::R Slate::load_r(const slate_element_t element_id) const
+    {
+        return slate_info<T>::from_mem(
+            memory->load_element_r(element_id, slate_type_id<T>()));
+    }
+
+    template <typename T>
+    typename slate_info<T>::W Slate::load_rw(const slate_element_t element_id)
+    {
+        return slate_info<T>::from_mem(
+            memory->load_element_rw(element_id, slate_type_id<T>()));
+    }
+
+    template <typename T>
+    SlateAccessor<T> Slate::load_rwv(const slate_element_t element_id)
+    {
+        const auto pv = memory->load_element_rwv(element_id, slate_type_id<T>());
+        return SlateAccessor<T>(pv.first, pv.second);
     }
 
 } /* End of namespace Drone */
