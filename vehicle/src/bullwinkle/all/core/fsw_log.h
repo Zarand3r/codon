@@ -51,6 +51,31 @@ namespace Drone
         std::fflush(stderr);
     }
 
+    // Verbosity-gated bounded printf: `level` is a verbosity threshold (emitted only
+    // when >= the runtime verbosity, which defaults to 0 = emit). `n` bounds length.
+    inline void dbvnprintf(int level, int n, const char *fmt, ...)
+        __attribute__((format(printf, 3, 4)));
+    inline void dbvnprintf(int level, int n, const char *fmt, ...)
+    {
+        static int verbosity = 0; // raise to see higher-level diagnostics
+        if (level > verbosity)
+        {
+            return;
+        }
+        char buf[1024];
+        size_t cap = sizeof(buf);
+        if (n > 0 && static_cast<size_t>(n) < cap)
+        {
+            cap = static_cast<size_t>(n) + 1;
+        }
+        va_list ap;
+        va_start(ap, fmt);
+        std::vsnprintf(buf, cap, fmt, ap);
+        va_end(ap);
+        std::fputs(buf, stderr);
+        std::fflush(stderr);
+    }
+
     // Write a literal string (no formatting).
     inline void dbstring(const char *s)
     {
@@ -214,6 +239,17 @@ namespace Drone
     do                                                                         \
     {                                                                          \
         if (__builtin_expect(static_cast<INT64>(a) != static_cast<INT64>(b),   \
+                             0))                                               \
+        {                                                                      \
+            ::Drone::fsw_report_cmp(__FILE__, __LINE__, #a, "!=", #b);         \
+            return (ret);                                                      \
+        }                                                                      \
+    } while (0)
+
+#define FswAbortIfNeqUint64(a, b, ret)                                         \
+    do                                                                         \
+    {                                                                          \
+        if (__builtin_expect(static_cast<UINT64>(a) != static_cast<UINT64>(b), \
                              0))                                               \
         {                                                                      \
             ::Drone::fsw_report_cmp(__FILE__, __LINE__, #a, "!=", #b);         \

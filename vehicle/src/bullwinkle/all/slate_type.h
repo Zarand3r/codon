@@ -26,6 +26,8 @@
 #include "src/hash/xxh.h"
 
 #include <cstring>
+#include <map>
+#include <string>
 
 namespace Drone
 {
@@ -61,10 +63,47 @@ namespace Drone
     } /* namespace slate_type_detail */
 
     /**
+     * Reflection record for a slate type: its id and human-readable name. Returned
+     * (by pointer, no allocation) from get_type_info for diagnostics — e.g. a
+     * type-mismatch error naming the expected vs. actual type.
+     */
+    struct slate_type_info_t
+    {
+        slate_type_t id;
+        std::string name;
+    };
+
+    namespace slate_type_detail
+    {
+        /**
+         * Global id -> info registry. Populated once per type by slate_type_id<T>()
+         * on first use. A Meyers singleton (function-local static) avoids static-init
+         * order issues. Cold path only (build-time type tagging), so a std::map is
+         * fine. The registry never shrinks; entries are stable (pointer returned to
+         * callers), so std::map's node stability is required.
+         */
+        inline std::map<slate_type_t, slate_type_info_t> &type_registry()
+        {
+            static std::map<slate_type_t, slate_type_info_t> registry;
+            return registry;
+        }
+
+        inline slate_type_t register_type(const slate_type_t id, const char *name)
+        {
+            auto &reg = type_registry();
+            /* insert-if-absent; the stored name is a pointer to the static
+             * __PRETTY_FUNCTION__ string, which lives for the whole program. */
+            reg.emplace(id, slate_type_info_t{id, std::string(name)});
+            return id;
+        }
+    } /* namespace slate_type_detail */
+
+    /**
      * The stable id for type T.
      *
      * @return A non-zero slate_type_t, identical across strings running the same
-     *         binary and distinct per type.
+     *         binary and distinct per type. Registers T's {id, name} on first use so
+     *         get_type_info can later recover the name for diagnostics.
      */
     template <typename T>
     inline slate_type_t slate_type_id()
@@ -76,11 +115,34 @@ namespace Drone
                 digest_xxh128(name, std::strlen(name), slate_type_detail::type_seed());
             const slate_type_t folded = h.u64[0] ^ h.u64[1];
             /* Never collide with the invalid sentinel. */
-            return folded == slate_type_invalid ? ~static_cast<slate_type_t>(0)
-                                                : folded;
+            const slate_type_t final_id =
+                folded == slate_type_invalid ? ~static_cast<slate_type_t>(0) : folded;
+            return slate_type_detail::register_type(final_id, name);
         }();
         return id;
     }
+
+    /**
+     * Type reflection lookup — maps a type id back to its {id, name}. Only ids that
+     * have been minted by slate_type_id<T>() are known (which, by the time a
+     * type-mismatch check runs, both the expected and actual types are). Returns a
+     * pointer into the stable registry; do not free.
+     */
+    namespace slate_type_info_utils
+    {
+        inline bool get_type_info(const slate_type_t type,
+                                  const slate_type_info_t *&info)
+        {
+            auto &reg = slate_type_detail::type_registry();
+            const auto found = reg.find(type);
+            if (found == reg.end())
+            {
+                return false;
+            }
+            info = &found->second;
+            return true;
+        }
+    } /* namespace slate_type_info_utils */
 
 } /* end namespace Drone */
 
