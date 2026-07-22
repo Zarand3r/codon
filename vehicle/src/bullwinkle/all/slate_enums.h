@@ -222,6 +222,12 @@ namespace Drone
     }
 
     /**
+     * Per-shard swap-lock value (0 = unlocked). SlateMemory refuses
+     * swap_shard_buffer unless the caller presents the shard's lock value.
+     */
+    typedef UINT32 shard_lock_t;
+
+    /**
      * Reflection tables (value -> name) for diagnostics and config parsing.
      * Populated once at static-init in slate_enums.cc.
      */

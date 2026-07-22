@@ -36,7 +36,7 @@ namespace Drone
          * respectively.
          */
         B2c raw_data[2]{};
-    }
+    };
 
     using shard_delta_v = std::vector<shard_delta_t>;
 
@@ -60,7 +60,7 @@ namespace Drone
         void *load_element_rw(const slate_element_t element_id,
                               const slate_type_t type_id);
 
-        std::pair<void *, const slate_alidator_t>
+        std::pair<void *, const slate_validator_t>
         load_element_rwv(const slate_element_t element_id,
                          const slate_type_t type_id);
 
@@ -73,7 +73,7 @@ namespace Drone
         bool swap_shard_buffer(const slate_shard_t shard, AlignedBuffer &other,
                                const shard_lock_t lock = 0);
 
-        bool compute_shard_delats(const slate_shard_t shard, const B2c mem1,
+        bool compute_shard_deltas(const slate_shard_t shard, const B2c mem1,
                                   const B2c mem2, shard_delta_v &deltas,
                                   const size_t max_deltas = -1) const;
         bool is_shard_empty(const slate_shard_t shard) const;
@@ -194,7 +194,7 @@ namespace Drone
         FswDebugAssert(!has_validator);
         FswDebugAssert(shard < num_slate_shard_t);
 
-        const char *value_ptr = shard_table[shard].data() + offset;
+        char *value_ptr = shard_table[shard].data() + offset;
         return value_ptr;
     }
 
@@ -234,3 +234,4 @@ namespace Drone
         return std::pair<void *, const slate_validator_t>(value_ptr, validator);
     };
 } /* end namespace Drone*/
+#endif /* SLATE_MEMORY_H */
