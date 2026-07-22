@@ -68,7 +68,7 @@ namespace Drone
           /**
            * Complain if unbound tokens have suddenly appeared. 
            */
-          if (_slate_deafult_token_count > last_slate_default_token_count)
+          if (_slate_default_token_count > last_slate_default_token_count)
           {
                FswPrefix();
                dbnprintf(200,
@@ -173,11 +173,11 @@ namespace Drone
       * @return False if deltas could not be computed, e.g. if the memory
       *         sizes don't match the shard metadata.
       */
-     bool Slate::compute_deltas(const slate_shard_t shard,
-                                const B2c &mem1,
-                                const B2c &mem2,
+     bool Slate::compute_shard_deltas(const slate_shard_t shard,
+                                const B2c mem1,
+                                const B2c mem2,
                                 shard_delta_v &deltas,
-                                const int max_deltas) const
+                                const size_t max_deltas) const
      {
           FswAbortIfNot(memory, false);
           if (memory->is_shard_empty(shard) && mem1.len() == 0 && mem2.len() == 0)

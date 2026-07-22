@@ -57,6 +57,8 @@ COMPILE_ONLY=(
 # -Wunused-parameter on these imported diagnostics.
 COMPILE_ONLY_RELAXED=(
   "vehicle/src/bullwinkle/all/SlateLayout.cc"
+  "vehicle/src/bullwinkle/all/SlateBuilder.cc"
+  "vehicle/src/bullwinkle/all/Slate.cc"
 )
 RELAX="-Wno-format -Wno-unused-parameter"
 

@@ -3,8 +3,8 @@
  * @date   01/28/2025
  */
 
-#ifndef SLATE_BUILDER_H
-#define SLATE_BUILDER_H
+#ifndef SLATE_H
+#define SLATE_H
 
 #include "src/bullwinkle/all/Handle.h"
 #include "src/bullwinkle/all/SlateMemory.h"
@@ -12,7 +12,7 @@
 #include "src/bullwinkle/all/slate_tokens.h"
 #include "src/hash/Hash128.h"
 
-class SlateUto
+class SlateUto;
 
 namespace Drone
 {
@@ -121,7 +121,7 @@ namespace Drone
         typename slate_info<T>::R operator[](const SlateToken<T> &token) const;
 
         template <typename T>
-        typename slate_info<T>::W operator[](const WriteTiken<T> &token);
+        typename slate_info<T>::W operator[](const WriteToken<T> &token);
 
         template <typename T>
         SlateAccessor<T> operator[](const WriteValidatorToken<T> &token);
@@ -235,7 +235,7 @@ namespace Drone
         typename slate_info<T>::W load_rw(const slate_element_t element_id);
 
         template <typename T>
-        SlateAccessor<T> load_rw(const slate_element_t element_id);
+        SlateAccessor<T> load_rwv(const slate_element_t element_id);
 
         /**
          * The actual memory storing Slate data.
@@ -290,7 +290,7 @@ namespace Drone
      * it.
      */
     template <typename T>
-    SlateAccessor<T>::W Slate::operator[](const WriteValidatorToken<T> &token)
+    SlateAccessor<T> Slate::operator[](const WriteValidatorToken<T> &token)
     {
         return load_rwv<T>(token.id);
     }
@@ -305,7 +305,7 @@ namespace Drone
      * save it.
      */
     template <typename T>
-    template slate_info<T>::R Slate::load(const SlateToken<T> &token) const
+    typename slate_info<T>::R Slate::load(const SlateToken<T> &token) const
     {
         return load_r<T>(token.id);
     }
@@ -485,3 +485,4 @@ namespace Drone
     }
 
 } /* End of namespace Drone */
+#endif /* SLATE_H */
