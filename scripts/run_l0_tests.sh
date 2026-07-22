@@ -55,6 +55,7 @@ COMPILE_ONLY=(
 # string, not a correctness issue) and unused params in imported stub bodies. We still
 # type-check the whole translation unit against our contracts; we just relax -Wformat/
 # -Wunused-parameter on these imported diagnostics.
+GOLDEN="vehicle/src/bullwinkle/all/slate_golden_path_test.cc vehicle/src/bullwinkle/all/SlateBuilderStore.cc vehicle/src/bullwinkle/all/SlateMemory.cc vehicle/src/bullwinkle/all/SlateLayout.cc vehicle/src/bullwinkle/all/SlateBuilder.cc vehicle/src/bullwinkle/all/Slate.cc vehicle/src/bullwinkle/all/slate_tokens.cc vehicle/src/bullwinkle/all/AlignedBuffer.cc vehicle/src/bullwinkle/all/slate_enums.cc vehicle/src/bullwinkle/all/enum/SymbolTable.cc"
 COMPILE_ONLY_RELAXED=(
   "vehicle/src/bullwinkle/all/SlateLayout.cc"
   "vehicle/src/bullwinkle/all/SlateBuilder.cc"
@@ -89,10 +90,18 @@ for src in "${COMPILE_ONLY_RELAXED[@]}"; do
   fi
 done
 
+# Golden-path L1 integration (links + runs the whole Slate stack).
+# shellcheck disable=SC2086
+if $CXX $STD -Wno-format -Wno-unused-parameter $INC -o "$TMP/golden" $GOLDEN 2> "$TMP/err" && "$TMP/golden" > /dev/null 2>&1; then
+  golden=1
+else
+  echo "GOLDEN-PATH FAIL"; sed 's/^/    /' "$TMP/err" | head -10; fail=1; golden=0
+fi
+
 n_consumer=$(( ${#COMPILE_ONLY[@]} + ${#COMPILE_ONLY_RELAXED[@]} ))
 total=$(( ${#TESTS[@]} + n_consumer ))
 if [ "$fail" -eq 0 ]; then
-  echo "GATE GREEN — ${#TESTS[@]} test(s) + ${n_consumer} consumer-compile(s) = ${total} checks passed"
+  echo "GATE GREEN — ${#TESTS[@]} test(s) + ${n_consumer} consumer-compile(s) = ${total} checks + golden-path(${golden}) passed"
 else
   echo "GATE RED"
 fi
