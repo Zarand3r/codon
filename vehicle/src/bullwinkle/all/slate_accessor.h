@@ -10,6 +10,9 @@
 #include "src/bullwinkle/all/Signal.h"
 #include "src/bullwinkle/all/slate_info.h"
 
+#include <functional>
+#include <utility>
+
 class SlateAccessorUto;
 class SlateBuilderUto;
 
@@ -17,8 +20,31 @@ namespace Drone
 {
     class SlateBuilder;
 
-    template<typename T>
-    class SlateTypedValidator;
+    /**
+     * Type-erased base for all validators. Polymorphic (virtual dtor) so a
+     * `slate_validator_t`'s `Handle<SlateValidator>` can be dynamically down-cast
+     * back to the concrete `SlateTypedValidator<T>` at bind/store time (via
+     * `Handle::assign_casted`, which is `std::dynamic_pointer_cast`). This design
+     * is dictated by the consumer (SlateBuilder.h binds validators exactly so).
+     */
+    class SlateValidator
+    {
+    public:
+        virtual ~SlateValidator() {}
+    };
+
+    /**
+     * Typed validator interface. `validate` receives the proposed value and a
+     * reference to the element's storage; on success it writes the accepted value
+     * into `val` and returns true, on rejection it returns false and leaves `val`
+     * unchanged.
+     */
+    template <typename T>
+    class SlateTypedValidator : public SlateValidator
+    {
+    public:
+        virtual bool validate(const T &new_val, T &val) const = 0;
+    };
 
     /***********************************************************************
      * 
@@ -137,6 +163,112 @@ namespace Drone
      * 
      * bool MyClass::validate(const T &new_val, T &val) const;
      * \endcode
-     * 
+     *
      **********************************************************************/
-}
+
+    /**
+     * Concrete validator wrapping a std::function. The functor is heap-held (via
+     * the Handle) at *build* time only — validators are attached during Slate
+     * construction, never on the runtime hot path (a store's cost is one virtual
+     * call, no allocation).
+     */
+    template <typename T>
+    class SlateFunctionValidator : public SlateTypedValidator<T>
+    {
+    public:
+        typedef std::function<bool(const T &new_val, T &val)> fn_t;
+
+        explicit SlateFunctionValidator(fn_t fn) : fn(std::move(fn)) {}
+
+        bool validate(const T &new_val, T &val) const override
+        {
+            return fn ? fn(new_val, val) : false;
+        }
+
+    private:
+        fn_t fn;
+    };
+
+    /**
+     * Type-erased validator handle stored per element. Default-constructed it is a
+     * "no-op" (no validator attached). Copyable/returnable by value (shares the
+     * underlying validator through the Handle).
+     */
+    struct slate_validator_t
+    {
+        Handle<SlateValidator> internal{};
+
+        /** True if no validator is attached. */
+        bool is_noop() const { return !internal; }
+
+        /** True if a usable validator is attached. */
+        bool is_usable() const { return internal.operator bool(); }
+    };
+
+    /**
+     * Build a validator from a function object `bool(const T& new_val, T& val)`.
+     * This is the general factory; specific factories (enum/member validators) can
+     * be layered on top when a call site needs them.
+     */
+    template <typename T>
+    inline slate_validator_t
+    function_validator(typename SlateFunctionValidator<T>::fn_t fn)
+    {
+        slate_validator_t v;
+        v.internal.assume_ownership(new SlateFunctionValidator<T>(std::move(fn)));
+        return v;
+    }
+
+    /**
+     * Write proxy returned when accessing a validated element. Reading converts to
+     * the element value; writing (operator= / store) runs the validator, so the
+     * element only changes if validation passes. `store` returns false on rejection
+     * (value unchanged); operator= is the fire-and-forget form.
+     */
+    template <typename T>
+    class SlateAccessor
+    {
+    public:
+        typedef typename slate_info<T>::R R;
+
+        SlateAccessor(void *mem, slate_validator_t validator)
+            : value_ptr(static_cast<T *>(mem)), validator(std::move(validator))
+        {}
+
+        /** Read: convert to the element's value. */
+        operator R() const { return *value_ptr; }
+
+        /** Get a const reference to the current value (no write). */
+        R get() const { return *value_ptr; }
+
+        /**
+         * Validated write. Down-casts the type-erased validator to this element's
+         * type and runs it; the element is updated only if it accepts.
+         *
+         * @return True if the value was accepted and stored.
+         */
+        bool store(const T &new_val)
+        {
+            Handle<SlateTypedValidator<T>> typed;
+            if (!typed.assign_casted(validator.internal))
+            {
+                return false; /* wrong type or no validator */
+            }
+            return typed->validate(new_val, *value_ptr);
+        }
+
+        /** Convenience write; ignores the accept/reject result. */
+        SlateAccessor &operator=(const T &new_val)
+        {
+            store(new_val);
+            return *this;
+        }
+
+    private:
+        T *value_ptr;
+        slate_validator_t validator;
+    };
+
+} /* end namespace Drone */
+
+#endif /* SLATE_ACCESSOR_H */

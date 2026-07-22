@@ -37,6 +37,7 @@ TESTS=(
   "vehicle/src/bullwinkle/all/slate_info_test.cc"
   "vehicle/src/bullwinkle/all/slate_path_map_test.cc"
   "vehicle/src/bullwinkle/all/handle_test.cc"
+  "vehicle/src/bullwinkle/all/slate_accessor_test.cc"
 )
 
 # Consumer-compile gates (IMPLEMENTATION_PLAN §4): compile an *imported* consumer
