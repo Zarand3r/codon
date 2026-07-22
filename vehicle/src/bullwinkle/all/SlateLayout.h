@@ -6,12 +6,15 @@
 #ifndef SLATE_LAYOUT_H
 #define SLATE_LAYOUT_H
 
+#include "src/bullwinkle/all/B2.h"
+#include "src/bullwinkle/all/B2c.h"
 #include "src/bullwinkle/all/SlateElement.h"
 #include "src/bullwinkle/all/SlatePathMap.h"
 #include "src/bullwinkle/all/core/AlignedBuffer.h"
 #include "src/bullwinkle/all/slate_accessor.h"
 #include "src/bullwinkle/all/slate_elem_access_t.enum.h"
 #include "src/bullwinkle/all/slate_info.h"
+#include "src/bullwinkle/all/slate_path.h"
 #include "src/bullwinkle/all/slate_shard_t.enum.h"
 #include "src/bullwinkle/all/slate_subsystem_id_t.enum.h"
 
