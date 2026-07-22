@@ -60,7 +60,16 @@ namespace Drone
          */
         static constexpr bool is_valid()
         {
-            return std::is_trivially_copyable<T>::value && !std::is_pointer<T>::value;
+            /* Reject anything address-like: raw pointers, arrays *of* pointers,
+             * member/member-function pointers, and nullptr_t — all trivially
+             * copyable but not position-independent. (A pointer nested inside a
+             * struct still can't be caught generically in C++17 — structural rule
+             * + grep gate cover that; see docs/slate-internals.md.) */
+            typedef typename std::remove_all_extents<T>::type E;
+            return std::is_trivially_copyable<T>::value &&
+                   !std::is_pointer<E>::value &&
+                   !std::is_member_pointer<E>::value &&
+                   !std::is_null_pointer<E>::value;
         }
 
         /** Bytes this value occupies in a shard. Fixed for the primary template. */

@@ -201,6 +201,10 @@ namespace Drone
     inline bool slate_can_create(const slate_permission_t p,
                                  const slate_shard_t shard)
     {
+        if (shard >= num_slate_shard_t)
+        {
+            return false; // fail closed: not a real shard
+        }
         if ((p & slate_permission_bit_create) == 0)
         {
             return false;

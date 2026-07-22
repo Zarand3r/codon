@@ -62,6 +62,19 @@ static int msg_if_not(bool cond)
     FswMsgAbortIfNot(cond, 1, 100, "msg if not: %s", "x");
     return 0;
 }
+static int msg_abort_when(bool take)
+{
+    if (take)
+    {
+        FswMsgAbort(1, 100, "unconditional: %d", 7);
+    }
+    return 0;
+}
+static int not_op(UINT64 a, UINT64 b)
+{
+    FswAbortIfNotOpUint(a, >=, b, 1); // aborts when !(a >= b)
+    return 0;
+}
 
 int main()
 {
@@ -94,6 +107,19 @@ int main()
     assert(msg_if(false) == 0);
     assert(msg_if_not(false) == 1); // aborts when cond is false
     assert(msg_if_not(true) == 0);
+    assert(msg_abort_when(true) == 1);  // unconditional path taken
+    assert(msg_abort_when(false) == 0);
+
+    // FswAbortIfNotOpUint: aborts when the relation is false.
+    assert(not_op(3, 5) == 1); // !(3 >= 5) -> abort
+    assert(not_op(5, 3) == 0); // 5 >= 3 -> ok
+    assert(not_op(5, 5) == 0); // 5 >= 5 -> ok
+
+    // FswOutsideRange: half-open [lo, hi).
+    assert(FswOutsideRange(0u, 1u, 4u));   // below lo
+    assert(FswOutsideRange(4u, 1u, 4u));   // == hi -> outside
+    assert(!FswOutsideRange(1u, 1u, 4u));  // == lo -> inside
+    assert(!FswOutsideRange(3u, 1u, 4u));  // inside
 
     // FswIf / FswIfNot are the (unlikely-hinted) truth of the condition.
     assert(FswIf(1 == 1));

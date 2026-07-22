@@ -51,8 +51,9 @@ namespace Drone
         std::fflush(stderr);
     }
 
-    // Verbosity-gated bounded printf: `level` is a verbosity threshold (emitted only
-    // when >= the runtime verbosity, which defaults to 0 = emit). `n` bounds length.
+    // Verbosity-gated bounded printf: emits only when `level <= verbosity` (verbosity
+    // defaults to 0, so level<=0 prints; higher levels are suppressed unless verbosity
+    // is raised). `n` bounds the emitted length.
     inline void dbvnprintf(int level, int n, const char *fmt, ...)
         __attribute__((format(printf, 3, 4)));
     inline void dbvnprintf(int level, int n, const char *fmt, ...)
@@ -297,6 +298,33 @@ namespace Drone
         if (__builtin_expect(!(cond), 0))                                      \
         {                                                                      \
             ::Drone::fsw_msg(__FILE__, __LINE__, (n), __VA_ARGS__);            \
+            return (ret);                                                      \
+        }                                                                      \
+    } while (0)
+
+// Unconditional formatted-log + return (a check already failed at the call site).
+#define FswMsgAbort(ret, n, ...)                                               \
+    do                                                                         \
+    {                                                                          \
+        ::Drone::fsw_msg(__FILE__, __LINE__, (n), __VA_ARGS__);                \
+        return (ret);                                                          \
+    } while (0)
+
+// True if x is outside the half-open range [lo, hi) (unsigned). Expression form —
+// the caller logs + acts in the taken branch.
+#define FswOutsideRange(x, lo, hi)                                             \
+    (__builtin_expect(static_cast<UINT64>(x) < static_cast<UINT64>(lo) ||      \
+                          static_cast<UINT64>(x) >= static_cast<UINT64>(hi),   \
+                      0))
+
+// If NOT (a op b) as UINT64: log + return ret. (e.g. FswAbortIfNotOpUint(n,>=,1,r))
+#define FswAbortIfNotOpUint(a, op, b, ret)                                     \
+    do                                                                         \
+    {                                                                          \
+        if (__builtin_expect(                                                  \
+                !(static_cast<UINT64>(a) op static_cast<UINT64>(b)), 0))       \
+        {                                                                      \
+            ::Drone::fsw_report_cmp(__FILE__, __LINE__, #a, "!" #op, #b);      \
             return (ret);                                                      \
         }                                                                      \
     } while (0)
