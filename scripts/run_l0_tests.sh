@@ -59,6 +59,7 @@ COMPILE_ONLY_RELAXED=(
   "vehicle/src/bullwinkle/all/SlateLayout.cc"
   "vehicle/src/bullwinkle/all/SlateBuilder.cc"
   "vehicle/src/bullwinkle/all/Slate.cc"
+  "vehicle/src/bullwinkle/all/SlateMemory.cc"
 )
 RELAX="-Wno-format -Wno-unused-parameter"
 
