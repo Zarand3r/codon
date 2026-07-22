@@ -15,12 +15,10 @@
 #define SLATE_ELEMENT_H
 
 #include "src/bullwinkle/all/slate_info.h"
+#include "src/bullwinkle/all/slate_subsystem_id_t.enum.h"
 
 namespace Drone
 {
-    /** Identifies the subsystem that owns/created an element (build-time bookkeeping). */
-    typedef UINT32 slate_subsystem_id_t;
-
     /**
      * Fixed layout facts for one Slate element. Aggregate of trivial fields (no
      * owning members) so it copies/moves freely into the SlatePathMap.

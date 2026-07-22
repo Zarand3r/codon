@@ -150,6 +150,30 @@ cc_test(
     deps = [":slate_info"],
 )
 
+# slate_accessor — validator/accessor subsystem (polymorphic validators + write proxy).
+cc_library(
+    name = "slate_accessor",
+    hdrs = [
+        "Signal.h",
+        "slate_accessor.h",
+        "slate_elem_access_t.enum.h",
+        "slate_shard_t.enum.h",
+        "slate_subsystem_id_t.enum.h",
+    ],
+    strip_include_prefix = "/vehicle",
+    deps = [
+        ":handle",
+        ":slate_info",
+    ],
+)
+
+cc_test(
+    name = "slate_accessor_test",
+    srcs = ["slate_accessor_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [":slate_accessor"],
+)
+
 # SlateElement / SlatePathMap — element metadata + the path->metadata directory with
 # the dense 1-based index bijection (header-only). Keys are pool-interned string_views.
 cc_library(
@@ -157,6 +181,7 @@ cc_library(
     hdrs = [
         "SlateElement.h",
         "SlatePathMap.h",
+        "slate_subsystem_id_t.enum.h",
     ],
     strip_include_prefix = "/vehicle",
     deps = [
@@ -184,4 +209,16 @@ cc_library(
     ],
     copts = ["-std=c++17"],
     deps = [":slate_info"],
+)
+
+# Consumer-compile gate: the .enum.h shims resolve and coexist with SlateElement/
+# SlatePathMap (no double definition). Object-only.
+cc_library(
+    name = "slate_enum_headers_compile",
+    srcs = ["slate_enum_headers_compile_test.cc"],
+    copts = ["-std=c++17"],
+    deps = [
+        ":slate_accessor",
+        ":slate_path_map",
+    ],
 )
