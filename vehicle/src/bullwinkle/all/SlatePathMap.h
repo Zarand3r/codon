@@ -35,6 +35,7 @@ namespace Drone
         {
             return by_path.find(path);
         }
+        const_iterator begin() const { return by_path.begin(); }
         const_iterator end() const { return by_path.end(); }
         size_t size() const { return by_path.size(); }
         bool empty() const { return by_path.empty(); }
@@ -61,6 +62,10 @@ namespace Drone
         /** The 1-based index of the element `it` refers to (0 if `it` is unknown). */
         slate_index_t iterator_to_id(const_iterator it) const
         {
+            if (it == by_path.end())
+            {
+                return 0; // never dereference end()
+            }
             const auto found = ptr_to_index.find(&it->second);
             return found == ptr_to_index.end() ? 0 : found->second;
         }

@@ -168,9 +168,17 @@ namespace Drone
 
     /**
      * Concrete validator wrapping a std::function. The functor is heap-held (via
-     * the Handle) at *build* time only — validators are attached during Slate
-     * construction, never on the runtime hot path (a store's cost is one virtual
-     * call, no allocation).
+     * the Handle) at *build* time only.
+     *
+     * HOT-PATH NOTE (deferred fix): as currently wired, a validated store
+     * (Slate::store -> load_rwv -> SlateAccessor::store) resolves the validator
+     * per call — a map lookup (get_element_validator), a slate_validator_t copy
+     * (shared_ptr atomics), and Handle::assign_casted (dynamic_pointer_cast / RTTI)
+     * — none of which belong on the runtime path. The intended fix, landing with
+     * load_rwv/SlateMemory, is to resolve the typed validator ONCE at bind time and
+     * cache the raw SlateTypedValidator<T>* in the WriteValidatorToken, so a runtime
+     * store is a single indirect virtual call with no map/RTTI/atomics. Tracked as a
+     * P1 hot-path item; validated elements are not yet on any control loop.
      */
     template <typename T>
     class SlateFunctionValidator : public SlateTypedValidator<T>

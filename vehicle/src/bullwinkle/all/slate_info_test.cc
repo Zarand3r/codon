@@ -75,6 +75,10 @@ int main()
     static_assert(slate_info<Pose>::is_valid(), "POD struct storable");
     static_assert(!slate_info<double *>::is_valid(), "pointer rejected");
     static_assert(!slate_info<std::string>::is_valid(), "std::string rejected");
+    // Gate holes closed (review): address-like trivially-copyable types are out.
+    static_assert(!slate_info<int *[4]>::is_valid(), "array of pointers rejected");
+    static_assert(!slate_info<int Pose::*>::is_valid(), "member ptr rejected");
+    static_assert(!slate_info<std::nullptr_t>::is_valid(), "nullptr_t rejected");
 
     // type_id delegates to the stable type id; distinct types differ.
     assert(slate_info<double>::type_id() == slate_type_id<double>());

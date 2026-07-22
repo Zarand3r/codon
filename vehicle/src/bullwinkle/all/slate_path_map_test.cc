@@ -75,6 +75,22 @@ int main()
     assert(m.id_to_iterator(4) == m.end());   // past the end
     assert(m.id_to_iterator(999) == m.end());
 
+    // iterator_to_id(end()) is safe and returns 0 (review: no end() deref).
+    assert(m.iterator_to_id(m.end()) == 0);
+    assert(m.iterator_to_id(m.find("does.not.exist")) == 0);
+
+    // begin()/end() iterate all elements (review: begin() was missing; a consumer
+    // range-for over get_elements() needs it).
+    {
+        size_t count = 0;
+        for (auto it = m.begin(); it != m.end(); ++it)
+        {
+            ++count;
+            assert(m.iterator_to_id(it) >= 1);
+        }
+        assert(count == m.size());
+    }
+
     // A built id from a map index is valid (ties the map to slate_id).
     slate_element_t id = slate_element_default;
     assert(slate_id_buildup(id, true, false, shard_sync, 0,

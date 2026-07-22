@@ -105,6 +105,12 @@ int main()
         assert(!slate_can_create(control, shard_nonsync));
         assert(!slate_can_create(control, shard_nonsync_no_telem));
 
+        // Fail closed (review): an invalid/out-of-range shard is never creatable,
+        // even with the fully-permissive rwc permission.
+        assert(!slate_can_create(slate_permission_rwc, shard_invalid));
+        assert(!slate_can_create(slate_permission_rwc,
+                                 static_cast<slate_shard_t>(num_slate_shard_t + 5)));
+
         // rc: read + create (no write), in both classes.
         assert(slate_can_read(slate_permission_rc));
         assert(!slate_can_write(slate_permission_rc));

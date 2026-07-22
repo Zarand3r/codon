@@ -23,6 +23,7 @@
 #define SLATE_TYPE_H
 
 #include "src/bullwinkle/all/core/drone_types.h"
+#include "src/bullwinkle/all/core/fsw.h"
 #include "src/hash/xxh.h"
 
 #include <cstring>
@@ -51,7 +52,7 @@ namespace Drone
 #if defined(__GNUC__) || defined(__clang__)
             return __PRETTY_FUNCTION__;
 #else
-            return __func__; /* last-resort; distinctness weakens off gcc/clang */
+#error "slate_type_id requires __PRETTY_FUNCTION__ (gcc/clang) for per-type names"
 #endif
         }
 
@@ -91,8 +92,15 @@ namespace Drone
         inline slate_type_t register_type(const slate_type_t id, const char *name)
         {
             auto &reg = type_registry();
-            /* insert-if-absent; the stored name is a pointer to the static
-             * __PRETTY_FUNCTION__ string, which lives for the whole program. */
+            const auto existing = reg.find(id);
+            if (existing != reg.end())
+            {
+                /* Same id must mean the same type. A mismatch is a genuine 64-bit
+                 * hash collision between two distinct types — type confusion in a
+                 * triple-redundant model. Detect it loudly at mint time (cold). */
+                FswAssert(existing->second.name == name);
+                return id;
+            }
             reg.emplace(id, slate_type_info_t{id, std::string(name)});
             return id;
         }

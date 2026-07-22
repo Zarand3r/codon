@@ -106,6 +106,10 @@ namespace Drone
      */
     void AlignedBuffer::assign(AlignedBuffer &&other)
     {
+        if (this == &other)
+        {
+            return; // self-move: keep our buffer, don't free-then-lose it
+        }
         free_buffer(ptr, aligned_ptr);
 
         ptr = other.ptr;
