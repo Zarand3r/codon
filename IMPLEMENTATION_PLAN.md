@@ -138,7 +138,10 @@ Every phase below uses the same blocks:
 - **Tests first (Red)** — the exact tests to write before any code.
 - **Implement (Green)** — the missing files to fill, minimum to pass. (Contracts in
   `ROADMAP.md` §3.)
-- **Acceptance gate** — binary close condition.
+- **Acceptance gate** — binary close condition. Closing a phase ALSO requires one
+  run of the review→codify loop (`docs/engineering-lessons.md` §11): adversarial
+  multi-axis review, triaged fixes, and the distilled lessons amended into the
+  lessons file — in the same PR series as the phase's final fixes.
 - **Extension check** — R1 audit specific to this phase.
 - **Design decisions** — R4 escalations that block this phase (if any).
 
@@ -639,6 +642,20 @@ it; a mid-phase golden change is a red flag.
 4. Re-run the failing test, then the golden-path spine. Green ⇒ done.
 5. **Stuck > 30 min or the contract is genuinely ambiguous → STOP, write a Design
    Decision (R4), do not invent.**
+
+### 5b. Review-cycle loop (companion to §5 — when a REVIEW finds problems)
+
+1. Reviews run in parallel, split by axis, against the running gate; findings
+   must carry FILE:LINE + evidence (measurements for performance claims).
+2. Triage every finding: fix now (separate gate-verified batches) / defer with a
+   tracking note at the point of use / reject with a stated reason. No silent
+   drops.
+3. Distill repeatable failure modes into `docs/engineering-lessons.md` (§11
+   format: incident-cited, falsifiable). Strengthen existing rules on
+   recurrence instead of duplicating.
+4. Sweep the tree for any mechanical signature of a new lesson; record in
+   `docs/import-audit.md`.
+5. The lessons amendment ships with the fixes. Gate green closes the cycle.
 
 ---
 

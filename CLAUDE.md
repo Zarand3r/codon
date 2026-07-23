@@ -8,6 +8,15 @@ it), built with Bazel. Start from [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md) and
 Agent setup (skills library + autonomous harness) is documented in
 [`docs/agent-harness-setup.md`](docs/agent-harness-setup.md).
 
+**Review→codify loop (standing obligation):** at every phase boundary — and after
+any significant post-merge defect — run the iteration loop in
+[`docs/engineering-lessons.md`](docs/engineering-lessons.md) §11: parallel
+adversarial reviews by axis → triage every finding (fix / defer-with-note /
+reject-with-reason; never drop silently) → distill repeatable failure modes into
+new or strengthened rules **in that file, each citing its incident** → sweep the
+tree for any mechanical signature → ship the lessons amendment in the same PR as
+the fixes. Keep this file's summary line in sync when rules change.
+
 **Process doctrine — read before implementing:**
 [`docs/engineering-lessons.md`](docs/engineering-lessons.md) codifies the binding
 lessons from this repo's own review findings (each rule cites the real defect that
