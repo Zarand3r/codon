@@ -123,35 +123,14 @@ silently dropping findings whose consumers haven't landed.
 
 ## 11. The loop itself: review → extract → codify → apply (meta-rule)
 
-This file is not a one-time artifact — it is the output of a **standing
-iteration loop** that runs at every phase boundary and after any significant
-post-merge defect:
+The loop's full process spec now lives in the **`review-codify-loop` skill**
+(eng-skills plugin) so every project inherits it; run that skill. This repo's
+bindings, which the skill's bootstrap step established here:
 
-1. **Review** — parallel adversarial reviews split by *axis* (complexity/
-   modularity, measured performance, interpretability/doc-drift), grounded in
-   the running gate, producing FILE:LINE findings with evidence (rule 10).
-2. **Triage** — every finding lands in exactly one bucket: *fix now* (as
-   separate gate-verified batches), *defer with a tracking note at the point of
-   use*, or *reject with a stated reason*. Silent drops are forbidden.
-3. **Extract** — for each fixed or deferred finding, ask: *"what rule would
-   have prevented this class of defect?"* A finding becomes a lesson only if it
-   is (a) a repeatable failure mode, not a one-off, and (b) expressible as a
-   falsifiable, actionable rule.
-4. **Codify** — amend THIS file. Format is binding: every rule cites the real
-   incident that motivated it (so the rule stays falsifiable), and states the
-   behavior to adopt. If an incident shows an *existing* rule failed to prevent
-   a recurrence, strengthen that rule in place (and say why it failed) rather
-   than adding a near-duplicate. If the rule list changes materially, refresh
-   the one-line summary in CLAUDE.md so every future session loads it.
-5. **Apply retroactively** — if the new lesson has a mechanical signature
-   (a greppable/scriptable defect class, like the include-guard collision),
-   sweep the entire tree for it immediately and record the result in
-   `import-audit.md`.
-6. **Close** — the lessons amendment ships in the same PR as the fixes it was
-   distilled from, gate green. A review cycle that fixes code but writes no
-   lessons (or vice versa) is incomplete.
-
-**Trigger points:** every phase acceptance gate (P1, P2, …); any defect found
-after merge that the existing rules should have caught; any review of ≥3
-findings. The loop is bound into the plan (IMPLEMENTATION_PLAN §3 phase format
-and §5b) and into CLAUDE.md, so no session can miss it.
+- **Lessons** land in this file — incident-cited, falsifiable, strengthened in
+  place on recurrence (never near-duplicated).
+- **Tree sweeps** for mechanical defect signatures are recorded in
+  [`import-audit.md`](import-audit.md).
+- **Triggers are bound** in `CLAUDE.md` (standing obligation) and
+  `IMPLEMENTATION_PLAN.md` §3/§5b (phase acceptance requires one loop run).
+- The lessons amendment ships in the same PR series as the fixes, gate green.
