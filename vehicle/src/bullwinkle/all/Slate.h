@@ -22,7 +22,7 @@ namespace Drone
 
     /**
      * A centralized data storage engine. Subsystems can store their
-     * state structures in the Slate, and retreive them by ID.
+     * state structures in the Slate, and retrieve them by ID.
      * 
      * Data stored in the slate can be read by telemetry, set by command,
      * synchronized between computers, saved to file, etc. These
@@ -33,7 +33,7 @@ namespace Drone
      * 
      * 1. DO NOT keep private state in your objects outside of Slate.
      *    This will make it impossible to telemeter / save / restore /
-     *    synchronize your program. Slate can store yur state in a
+     *    synchronize your program. Slate can store your state in a
      *    semi-private manner, accessible only to specific external
      *    tools.
      *
@@ -42,7 +42,7 @@ namespace Drone
      *    updated/telemetered/etc. and may prevent having to reboot
      *    vehicle computers unnecesarily.
      * 
-     * 3. DO NOT store the referncey ou get from the Slate load()
+     * 3. DO NOT store the reference you get from the Slate load()
      *    calls. Once they go out of scope where you load them, they
      *    are invalidated.
      * 
@@ -92,7 +92,7 @@ namespace Drone
      * 
      * RUN PHASE: 
      * 
-     * Once the Slate has build built, then users pass their ReadTokens
+     * Once the Slate has been built, then users pass their ReadTokens
      * and WriteTokens to Slate in order to retrieve ("load") elements. 
      * References to these elements should be kept for the duration of a
      * function call, and no longer. The references are invalidated as
@@ -195,7 +195,7 @@ namespace Drone
         }
 
         /**
-         * @see SlateMemory::get_shard_layout_has().
+         * @see SlateMemory::get_shard_layout_hash().
          */
         bool get_shard_layout_hash(const slate_shard_t shard,
                                    Hash128 &layout_hash) const

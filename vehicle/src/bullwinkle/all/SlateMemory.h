@@ -98,7 +98,7 @@ namespace Drone
         bool wipe_memory();
 
         /**
-         * The layout paiired with this object. This pointer keeps SlateLayout
+         * The layout paired with this object. This pointer keeps SlateLayout
          * alive if all SlateBuilder instances go out of scope.
          */
         Handle<const SlateLayout> layout{};

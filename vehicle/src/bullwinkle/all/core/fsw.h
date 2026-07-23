@@ -65,6 +65,7 @@ namespace Drone
 #endif
 
 // The logging / context / typed-comparison layer (dbnprintf, FswPrefix, FswStackFrame,
-// FswAbortIfEq*/Neq*/OpUint64, FswMsgAbortIf*, FswIf/FswIfNot). Split out so this core
-// header stays free of <string>/<cstdarg>; consumers with fsw.h get the full vocabulary.
+// FswAbortIfEq*/Neq*/OpUint64, FswMsgAbortIf*, FswIf/FswIfNot). NOTE: this include is
+// unconditional — consumers of fsw.h DO get <string>/<cstdarg> transitively; the file
+// split is organizational (assert core readable on its own), not a dependency cut.
 #include "src/bullwinkle/all/core/fsw_log.h"

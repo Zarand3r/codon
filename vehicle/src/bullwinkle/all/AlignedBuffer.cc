@@ -60,8 +60,8 @@ namespace Drone
         FswAbortIf(ptr, false);
         FswAbortIf(aligned_ptr, false);
 
-        ptr = new char[size + alignment - 1];
-        FswAbortIfNot(ptr, false);
+        ptr = new (std::nothrow) char[size + alignment - 1];
+        FswAbortIfNot(ptr, false); /* nothrow, so this check is real */
 
         aligned_ptr = reinterpret_cast<char *>(
             (reinterpret_cast<uintptr_t>(ptr) + alignment - 1) & -alignment);
@@ -102,7 +102,7 @@ namespace Drone
     /**
      * Transfer ownership of the managed buffer from \ref other to this object.
      *
-     * @param other The object to transfer the buffer overship from.
+     * @param other The object to transfer the buffer ownership from.
      */
     void AlignedBuffer::assign(AlignedBuffer &&other)
     {
@@ -126,7 +126,7 @@ namespace Drone
     /**
      * Transfer ownership of the managed buffer from \ref other to this object.
      *
-     * @param other The object to transfer the buffer overship from.
+     * @param other The object to transfer the buffer ownership from.
      */
     AlignedBuffer::AlignedBuffer(AlignedBuffer &&other)
     {
@@ -136,7 +136,7 @@ namespace Drone
     /**
      * Transfer ownership of the managed buffer from \ref other to this object.
      *
-     * @param other The object to transfer the buffer overship from.
+     * @param other The object to transfer the buffer ownership from.
      *
      * @return Reference to itself.
      */
@@ -151,11 +151,11 @@ namespace Drone
      * Ensures that the managed buffer is at least \ref size bytes large and is
      * aligned to \ref alignment bytes.
      *
-     * Calling this method invalidates any pointes returned by get() previously.
+     * Calling this method invalidates any pointers returned by data() previously.
      * The content of the buffer is copied to the new buffer if reallocation was
      * necessary. Newly allocated space is initialized.
      *
-     * @param amount The requested length of teh buffer.
+     * @param amount The requested length of the buffer.
      * @param alignment The desired alignment. Must be a positive power of 2.
      *
      * @return True on success.

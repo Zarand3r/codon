@@ -51,7 +51,7 @@ namespace Drone
      * 
      * During slate element creation, the code that creates a new slate element
      * can specify a value validation function. Slate value validation functions
-     * are called at the time a caller attemptse to write to a slate element. 
+     * are called at the time a caller attempts to write to a slate element. 
      * 
      * If a validation function is specified for a slate element, it is only
      * possible to bind to this element for writing using a WriteValidatorToken.
@@ -78,7 +78,7 @@ namespace Drone
      * \endcode
      * 
      * Post initialization, it is possible to set the value of the element using
-     * a proxy objectl SlateAccessor. When using WriteValidatorToken, slate
+     * a proxy object, SlateAccessor. When using WriteValidatorToken, slate
      * returns SlateAccessor proxy objects instead of a direct reference to
      * elements memory. 
      * 
