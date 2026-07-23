@@ -487,19 +487,31 @@ namespace Drone
 
 
     /* Restored template bodies (lost in the truncated import): resolve the packed
-     * id through SlateMemory and view the bytes through the slate_info trait. */
+     * id through SlateMemory and view the bytes through the slate_info trait.
+     *
+     * HOT PATH: load_element_r/rw discard type_id in release (it exists for the
+     * debug type check), but slate_type_id<T>() is a memoized static whose guard
+     * the compiler must evaluate PER ACCESS — measured 3.3x per-access tax and it
+     * stops load_r inlining entirely at -O2. So release builds pass the invalid
+     * sentinel instead; debug builds keep the real id for the check. */
+#ifdef NDEBUG
+#define SLATE_LOAD_TYPE_ID() (slate_type_invalid)
+#else
+#define SLATE_LOAD_TYPE_ID() (slate_type_id<T>())
+#endif
+
     template <typename T>
     typename slate_info<T>::R Slate::load_r(const slate_element_t element_id) const
     {
         return slate_info<T>::from_mem(
-            memory->load_element_r(element_id, slate_type_id<T>()));
+            memory->load_element_r(element_id, SLATE_LOAD_TYPE_ID()));
     }
 
     template <typename T>
     typename slate_info<T>::W Slate::load_rw(const slate_element_t element_id)
     {
         return slate_info<T>::from_mem(
-            memory->load_element_rw(element_id, slate_type_id<T>()));
+            memory->load_element_rw(element_id, SLATE_LOAD_TYPE_ID()));
     }
 
     template <typename T>

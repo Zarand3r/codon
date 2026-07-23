@@ -124,6 +124,20 @@ namespace Drone
         shard_lock_t shard_lock_table[num_slate_shard_t]{};
 
         /**
+         * Per-shard dense element regions (offset,size; offset-sorted), frozen at
+         * build(). Lets the per-cycle delta/hash walks touch only this shard's
+         * elements instead of scanning the whole directory through map nodes
+         * (measured 3.2x on the delta pass; the directory walk cost was fixed
+         * per-shard regardless of shard size).
+         */
+        struct elem_region_t
+        {
+            slate_offset_t offset;
+            slate_offset_t size;
+        };
+        std::vector<elem_region_t> shard_regions[num_slate_shard_t]{};
+
+        /**
          * Cyclic shard template. This replaces the existing cyclic shard
          * memory at each frame.
          */

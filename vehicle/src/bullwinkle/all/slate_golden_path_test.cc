@@ -6,6 +6,7 @@
 #include "src/bullwinkle/all/SlateBuilderStore.h"
 
 #include <cassert>
+#include <vector>
 #include <cstdio>
 
 using namespace Drone;
@@ -55,8 +56,35 @@ int main()
     assert(slate.compute_hash(shard_sync, h2));
     assert(h1 != h2);
 
-    // roll_frame: cyclic reverts to template; sync persists.
-    // (roll via memory through a second Slate copy sharing the same memory)
+    // Deltas pinpoint exactly the mutated element: capture the sync shard image,
+    // mutate one element, diff old vs new.
+    {
+        B2c live;
+        assert(slate.get_shard_memory(shard_sync, live));
+        std::vector<char> snapshot(static_cast<const char *>(live.buf()),
+                                   static_cast<const char *>(live.buf()) +
+                                       live.len());
+        slate[alt] = 44.25; // exactly one element changes
+        shard_delta_v deltas;
+        assert(slate.compute_shard_deltas(
+            shard_sync, B2c(snapshot.data(), snapshot.size()), live, deltas));
+        assert(deltas.size() == 1);
+        assert(deltas[0].raw_data[0].len() == sizeof(double));
+        // Identical images -> zero deltas (the steady-state fast path).
+        shard_delta_v none;
+        assert(slate.compute_shard_deltas(shard_sync, live, live, none));
+        assert(none.empty());
+    }
+
+    // roll_frame: cyclic reverts to its template; sync persists.
+    {
+        assert(slate[flag]);           // set true above
+        assert(slate.roll_frame());
+        assert(!slate[flag]);          // cyclic reverted to initial (false)
+        assert(slate[a4] == 3.0);      // cyclic_no_telem reverted too
+        assert(slate[alt] == 44.25);   // sync persisted across the frame
+    }
+
     std::printf("golden-path L1: OK\n");
     return 0;
 }
