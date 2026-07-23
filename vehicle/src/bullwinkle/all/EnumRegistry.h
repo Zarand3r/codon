@@ -56,22 +56,20 @@ namespace Drone
             }
             else
             {
-                /* Rebuild the table with the prefix stripped from each name. */
-                for (uint v = 0; v < 0xFFFFu; ++v)
-                {
-                    std::string name;
-                    if (!symbol_table.raw_get(v, name))
-                    {
-                        continue;
-                    }
+                /* Rebuild the table with the prefix stripped from each name
+                 * (iterates actual entries — no value range assumed). */
+                bool ok = true;
+                symbol_table.visit([&](uint v, const std::string &n) {
+                    std::string name = n;
                     if (name.compare(0, strip_prefix.size(), strip_prefix) == 0)
                     {
                         name.erase(0, strip_prefix.size());
                     }
-                    if (!e.table.add(name, v))
-                    {
-                        return false;
-                    }
+                    ok = ok && e.table.add(name, v);
+                });
+                if (!ok)
+                {
+                    return false;
                 }
             }
             channels.emplace(channel_name, std::move(e));

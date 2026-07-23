@@ -90,12 +90,16 @@ for src in "${COMPILE_ONLY_RELAXED[@]}"; do
   fi
 done
 
-# Golden-path L1 integration (links + runs the whole Slate stack).
+# Golden-path L1 integration (links + runs the whole Slate stack). Built at full
+# $WARN with only the imported-diagnostic relaxations; run output captured so a
+# failing assert is diagnosable (not swallowed).
 # shellcheck disable=SC2086
-if $CXX $STD -Wno-format -Wno-unused-parameter $INC -o "$TMP/golden" $GOLDEN 2> "$TMP/err" && "$TMP/golden" > /dev/null 2>&1; then
-  golden=1
+if ! $CXX $STD $WARN $RELAX $INC -o "$TMP/golden" $GOLDEN 2> "$TMP/err"; then
+  echo "GOLDEN-PATH COMPILE FAIL"; sed 's/^/    /' "$TMP/err" | head -12; fail=1; golden=0
+elif ! "$TMP/golden" > "$TMP/golden_out" 2>&1; then
+  echo "GOLDEN-PATH RUN FAIL"; sed 's/^/    /' "$TMP/golden_out" | tail -12; fail=1; golden=0
 else
-  echo "GOLDEN-PATH FAIL"; sed 's/^/    /' "$TMP/err" | head -10; fail=1; golden=0
+  golden=1
 fi
 
 n_consumer=$(( ${#COMPILE_ONLY[@]} + ${#COMPILE_ONLY_RELAXED[@]} ))

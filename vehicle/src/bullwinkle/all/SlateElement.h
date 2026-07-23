@@ -46,6 +46,14 @@ namespace Drone
         /** True if this is a view (aliases a region of a parent element). */
         bool is_view_element;
 
+        /**
+         * The element's dense 1-based directory index, assigned by
+         * SlatePathMap::insert (0 = not yet inserted). Deliberately NOT part of
+         * the cross-string layout hash (SlateMemory folds type/offset/size only)
+         * and never memcmp'd — it is directory bookkeeping, not layout.
+         */
+        slate_index_t index = 0;
+
         SlateElementMetadata(const slate_type_t type_id_,
                              const slate_shard_t shard_,
                              const slate_offset_t value_offset_,

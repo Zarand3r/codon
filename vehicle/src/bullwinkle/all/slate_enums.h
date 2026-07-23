@@ -82,7 +82,9 @@ namespace Drone
         case num_slate_shard_t: /* == shard_invalid; not a real shard */
             break;
         }
-        return slate_create_class_open;
+        /* Fail closed: an invalid/garbage shard gets the MOST restrictive class,
+         * so any future caller that skips its own range check still denies. */
+        return slate_create_class_sync;
     }
 
     /**

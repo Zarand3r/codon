@@ -53,8 +53,7 @@ namespace Drone
             {
                 /* 1-based, dense, monotonic: honours the slate_id index>=1 invariant. */
                 by_index.push_back(res.first);
-                ptr_to_index[&res.first->second] =
-                    static_cast<slate_index_t>(by_index.size());
+                res.first->second.index = static_cast<slate_index_t>(by_index.size());
             }
             return std::pair<const_iterator, bool>(res.first, res.second);
         }
@@ -62,12 +61,7 @@ namespace Drone
         /** The 1-based index of the element `it` refers to (0 if `it` is unknown). */
         slate_index_t iterator_to_id(const_iterator it) const
         {
-            if (it == by_path.end())
-            {
-                return 0; // never dereference end()
-            }
-            const auto found = ptr_to_index.find(&it->second);
-            return found == ptr_to_index.end() ? 0 : found->second;
+            return it == by_path.end() ? 0 : it->second.index;
         }
 
         /** The element for a 1-based index, or end() if out of range. */
@@ -84,15 +78,14 @@ namespace Drone
         {
             by_path.clear();
             by_index.clear();
-            ptr_to_index.clear();
         }
 
     private:
         map_t by_path{};
-        /* by_index[idx-1] -> iterator (dense id -> element). map nodes are address-
-         * stable, so storing iterators / node addresses across inserts is safe. */
+        /* by_index[idx-1] -> iterator (dense id -> element). map nodes are
+         * address-stable, so storing iterators across inserts is safe. The
+         * reverse direction (iterator -> id) reads metadata.index directly. */
         std::vector<const_iterator> by_index{};
-        std::map<const SlateElementMetadata *, slate_index_t> ptr_to_index{};
     };
 
 } /* end namespace Drone */

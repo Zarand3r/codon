@@ -82,6 +82,18 @@ namespace Drone
         size_t size() const { return name_to_value.size(); }
 
         /**
+         * Visit every (value, name) pair in ascending value order.
+         */
+        template <typename Fn>
+        void visit(Fn &&fn) const
+        {
+            for (const auto &pair : value_to_name)
+            {
+                fn(pair.first, pair.second);
+            }
+        }
+
+        /**
          * Print the table's contents for diagnostics.
          */
         void dump() const;
