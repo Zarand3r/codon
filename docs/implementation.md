@@ -15,7 +15,7 @@ decisions).
 | Phase | State | Notes |
 |---|---|---|
 | **P0** — L0 core primitives | ✅ done (merged, PR #1) | + naming convention (`fsw`) |
-| **P1** — Slate data model | 🚧 in progress | done: type system (`SymbolTable`, `slate_enums`, `slate_id`, `slate_type`, `slate_info<T>`), fsw logging+verbose layer, `Handle`, `AlignedBuffer`, `SlateElement`+`SlatePathMap`. Next: `slate_accessor`/`Signal`/`slate_validator_t` + `.enum.h` shims → `SlateBuilderStoreInterface` → `SlateMemory` → `EnumRegistry` → `SlateLayout.cc`/`SlateBuilder.cc`/`Slate.cc` compile → golden-path (L1) integration test. **Internals: see [slate-internals.md](slate-internals.md).** |
+| **P1** — Slate data model | 🚧 in progress | **core data model COMPLETE and running**: type system, fsw layer, `Handle`, `AlignedBuffer`, `SlateElement`+`SlatePathMap`, validators/accessor, `.enum.h` shims, `SlateBuilderStore` (interface+concrete), `SlateMemory.{h,cc}`, `EnumRegistry`; `SlateLayout.cc`/`SlateBuilder.cc`/`Slate.cc` compile; **golden-path L1 test links, runs, and PASSES** (all 7 shards, freeze, tokens, hash, deltas, roll_frame). Remaining: `SlateCombiner` (voting) + validated-element E2E. **Internals: [slate-internals.md](slate-internals.md).** |
 | P2+ | ⬜ not started | see ROADMAP |
 
 **Build root:** `vehicle/` — includes resolve as `src/...` (Bazel `strip_include_prefix="/vehicle"`).
@@ -58,11 +58,13 @@ decisions).
 | `SlateBuilderStore.h` (interface) + `EnumRegistry.h` | `SlateBuilderStoreInterface` (19 methods: allocate/bind/scoping/sub_slate/lifecycle/slate()) + `result_t`/`shard_lock_t` typedefs; `EnumRegistry` (register_enum/get_registered_enum/register_auto_enum via ADL hook) | consumer-compiles below | store = where a builder's data lives (builders are copyable subtree views sharing one store); concrete store + `CreateSlateBuilderStore()` land with `SlateMemory.cc` |
 | **`SlateBuilder.cc` + `Slate.cc` compile** (consumer gates) | the two central Slate consumers now type-check end-to-end against the whole foundation | relaxed consumer-compile (§4) | required restoring imported truncation/typo defects: missing `#endif` ×2, **`Slate.h` guard collision** (`SLATE_BUILDER_H` reused → body skipped when included), `shard_delta_t` missing `;`, `WriteTiken`, dup `load_rw`→`load_rwv`, `slate_alidator_t`, `compute_shard_delats`, const-ptr in `load_element_rw`, signature drift in `compute_shard_deltas` |
 | `SlateMemory.cc` | materialize (`build`: clone initial-value templates → live shards, stamp per-shard layout hash over path/type/offset/size in index order), `roll_frame` (cyclic revert), `get/set_shard_memory`, `swap_shard_buffer` (lock+size checked), `compute_shard_deltas` (element-granular diff), `is_shard_empty`, `wipe_memory`; defines `slate_no_validation` | consumer-compile (§4); behavioral coverage lands with the golden-path L1 test | identical layout ⇔ identical hash across strings; deltas pinpoint one element |
-| concrete `SlateBuilderStore` + `CreateSlateBuilderStore()` (link), `SlateCombiner`, golden-path L1 test | — | — | pending (final P1 increments) |
+| concrete `SlateBuilderStore` + `CreateSlateBuilderStore()` | shared `RootState` (layout+memory+accountants) + scoped stores; `build()` = accountant check + materialize; `slate()` vends handles | `slate_golden_path_test.cc` | links the whole stack |
+| **golden-path L1 test** | build→create in all 7 shards→freeze (late create rejected)→token store/load→hash equal/diff→deltas pinpoint one element→roll_frame revert | `slate_golden_path_test.cc` (runs in every gate) | **P1 acceptance gate: GREEN** |
+| `SlateCombiner` (voting) | — | — | pending (last P1 piece) |
 
 ## Verification status (current)
 
-- **g++** `-Wall -Wextra -Werror`: **17 unit tests + 2 consumer-compiles** green (`scripts/run_l0_tests.sh`).
+- **g++** `-Wall -Wextra -Werror`: **18 unit tests + 7 consumer-compiles + the golden-path L1 integration test** green (`scripts/run_l0_tests.sh`).
 - **Bazel**: all green (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`); `slate_tokens_compile` (now incl. `slate_tokens.cc`) is a compile-only `cc_library` consumer gate.
 - **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`, `slate_enums`).
 - **Perf spot-checks**: `static_vector::operator[]` is a single load under `-O2 -DNDEBUG` (bounds check compiles out); `slate_id` breakdown+index resolves in pure `mov`/`shr`/`and`/`add` (0 calls, 0 branches).
