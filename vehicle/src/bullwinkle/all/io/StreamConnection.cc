@@ -29,7 +29,7 @@ namespace Drone
         return true;
     }
     /**
-     * Remove bytes from the front of the channel. Overridden to supress
+     * Remove bytes from the front of the channel. Overridden to suppress
      * write signals.
      *
      * @param bytes Pop this many bytes.
