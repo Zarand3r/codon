@@ -60,7 +60,7 @@ test/PR gates*. Read a skill's `SKILL.md` before acting on its domain.
 
 This codebase descends from a SpaceX/Starlink slice — **no SpaceX/Starlink-alluding
 names**. Flight-software house utilities/macros use the **`fsw`** prefix:
-`FswAbortIfNot`/`FswAssert` (asserts, `core/fsw.h`), `fswtime`/`fswsleep`,
+`FswAbortIfNot` (early-return guards) / `FswAssert` (true assert) — `core/fsw.h`; glossary in `docs/slate-internals.md` §9, `fswtime`/`fswsleep`,
 `FSW_DISALLOW_COPY_AND_ASSIGN`, `fsw_*` socket/perf helpers. **Never reintroduce
 `sx` / `SX` / `Sac` / `noc`.** Satellite-domain terms (`sat*`, `SAPC`, `Ttc`,
 `Cola`, `Satellites::Fleet`) are replaced as the vehicle layer is reimplemented for

@@ -30,12 +30,8 @@
 
 namespace Drone
 {
-    // Bounded formatted write to stderr. `n` caps the emitted length; the buffer is
-    // fixed, so very large `n` is clamped (cold-path diagnostic — never truncates a
-    // correctness signal, only a log line).
-    inline void dbnprintf(int n, const char *fmt, ...)
-        __attribute__((format(printf, 2, 3)));
-    inline void dbnprintf(int n, const char *fmt, ...)
+    // Shared core: bounded (<= n bytes) formatted write to stderr.
+    inline void fsw_vwrite_bounded(int n, const char *fmt, va_list ap)
     {
         char buf[1024];
         size_t cap = sizeof(buf);
@@ -43,38 +39,45 @@ namespace Drone
         {
             cap = static_cast<size_t>(n) + 1; // room for NUL within the cap
         }
-        va_list ap;
-        va_start(ap, fmt);
         std::vsnprintf(buf, cap, fmt, ap);
-        va_end(ap);
         std::fputs(buf, stderr);
         std::fflush(stderr);
     }
 
-    // Verbosity-gated bounded printf: emits only when `level <= verbosity` (verbosity
-    // defaults to 0, so level<=0 prints; higher levels are suppressed unless verbosity
-    // is raised). `n` bounds the emitted length.
+    // Bounded formatted write to stderr. `n` caps the emitted length; the buffer is
+    // fixed, so very large `n` is clamped (cold-path diagnostic — never truncates a
+    // correctness signal, only a log line).
+    inline void dbnprintf(int n, const char *fmt, ...)
+        __attribute__((format(printf, 2, 3)));
+    inline void dbnprintf(int n, const char *fmt, ...)
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        fsw_vwrite_bounded(n, fmt, ap);
+        va_end(ap);
+    }
+
+    // Runtime verbosity threshold for dbvnprintf (settable; default 0).
+    inline int &dbv_verbosity()
+    {
+        static int verbosity = 0;
+        return verbosity;
+    }
+
+    // Verbosity-gated bounded printf: emits only when `level <= dbv_verbosity()`
+    // (default 0, so level<=0 prints; raise dbv_verbosity() to see more).
     inline void dbvnprintf(int level, int n, const char *fmt, ...)
         __attribute__((format(printf, 3, 4)));
     inline void dbvnprintf(int level, int n, const char *fmt, ...)
     {
-        static int verbosity = 0; // raise to see higher-level diagnostics
-        if (level > verbosity)
+        if (level > dbv_verbosity())
         {
             return;
         }
-        char buf[1024];
-        size_t cap = sizeof(buf);
-        if (n > 0 && static_cast<size_t>(n) < cap)
-        {
-            cap = static_cast<size_t>(n) + 1;
-        }
         va_list ap;
         va_start(ap, fmt);
-        std::vsnprintf(buf, cap, fmt, ap);
+        fsw_vwrite_bounded(n, fmt, ap);
         va_end(ap);
-        std::fputs(buf, stderr);
-        std::fflush(stderr);
     }
 
     // Write a literal string (no formatting).
@@ -134,17 +137,12 @@ namespace Drone
         __attribute__((format(printf, 4, 5)));
     inline void fsw_msg(const char *file, int line, int n, const char *fmt, ...)
     {
-        char buf[1024];
-        size_t cap = sizeof(buf);
-        if (n > 0 && static_cast<size_t>(n) < cap)
-        {
-            cap = static_cast<size_t>(n) + 1;
-        }
+        std::fprintf(stderr, "%s:%d|FSW FAILED: ", file, line);
         va_list ap;
         va_start(ap, fmt);
-        std::vsnprintf(buf, cap, fmt, ap);
+        fsw_vwrite_bounded(n, fmt, ap);
         va_end(ap);
-        std::fprintf(stderr, "%s:%d|FSW FAILED: %s\n", file, line, buf);
+        std::fputs("\n", stderr);
         std::fflush(stderr);
     }
 

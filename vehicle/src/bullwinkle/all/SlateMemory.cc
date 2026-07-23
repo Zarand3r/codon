@@ -40,31 +40,35 @@ namespace Drone
 
         for (int s = 0; s < num_slate_shard_t; ++s)
         {
-            const slate_shard_t shard = static_cast<slate_shard_t>(s);
-            const AlignedBuffer &init = layout->get_initial_values(shard);
+            const AlignedBuffer &init =
+                layout->get_initial_values(static_cast<slate_shard_t>(s));
             if (init.size() > 0)
             {
                 shard_table[s] = init.clone();
                 FswAbortIfNot(shard_table[s].size() == init.size(), false);
             }
+        }
 
-            /* Layout hash: fold every element of this shard, in index order. */
-            Hash128 h{};
-            const SlatePathMap &elements = layout->get_elements();
-            for (slate_index_t i = 1; i <= elements.size(); ++i)
+        /* One pass over the directory: fold each element into its shard's layout
+         * hash (index order) and freeze the per-shard dense region lists the
+         * per-cycle delta/hash walks use (offset order = index order per shard,
+         * since the allocator hands out ascending offsets). */
+        const SlatePathMap &elements = layout->get_elements();
+        for (slate_index_t i = 1; i <= elements.size(); ++i)
+        {
+            const auto it = elements.id_to_iterator(i);
+            FswAbortIf(it == elements.end(), false);
+            const SlateElementMetadata &m = it->second;
+            FswAbortIfNot(m.shard < num_slate_shard_t, false);
+            Hash128 &h = shard_layout_hash[m.shard];
+            h = digest_xxh128(it->first.data(), it->first.size(), h);
+            const UINT64 fields[3] = {m.type_id, m.value_offset, m.value_size};
+            h = digest_xxh128(fields, sizeof(fields), h);
+            if (!m.is_view_element)
             {
-                const auto it = elements.id_to_iterator(i);
-                FswAbortIf(it == elements.end(), false);
-                const SlateElementMetadata &m = it->second;
-                if (m.shard != shard)
-                {
-                    continue;
-                }
-                h = digest_xxh128(it->first.data(), it->first.size(), h);
-                const UINT64 fields[3] = {m.type_id, m.value_offset, m.value_size};
-                h = digest_xxh128(fields, sizeof(fields), h);
+                shard_regions[m.shard].push_back(
+                    elem_region_t{m.value_offset, m.value_size});
             }
-            shard_layout_hash[s] = h;
         }
 
         cyclic_mem_template = shard_table[shard_cyclic].clone();
@@ -153,29 +157,29 @@ namespace Drone
         FswAbortIfNot(shard < num_slate_shard_t, false);
         FswAbortIfNot(mem1.len() == mem2.len(), false);
 
-        const SlatePathMap &elements = layout->get_elements();
-        for (slate_index_t i = 1; i <= elements.size(); ++i)
+        /* Steady state every agreeing frame is "no deltas": one whole-shard
+         * memcmp answers that ~90x faster than any per-element walk. */
+        if (mem1.len() == 0 ||
+            std::memcmp(mem1.buf(), mem2.buf(), mem1.len()) == 0)
         {
-            const auto it = elements.id_to_iterator(i);
-            FswAbortIf(it == elements.end(), false);
-            const SlateElementMetadata &m = it->second;
-            if (m.shard != shard || m.is_view_element)
-            {
-                continue;
-            }
-            FswAbortIfNot(m.value_offset + m.value_size <= mem1.len(), false);
-            const char *p1 = static_cast<const char *>(mem1.buf()) + m.value_offset;
-            const char *p2 = static_cast<const char *>(mem2.buf()) + m.value_offset;
-            if (std::memcmp(p1, p2, m.value_size) != 0)
+            return true;
+        }
+
+        for (const elem_region_t &r : shard_regions[shard])
+        {
+            FswAbortIfNot(r.offset + r.size <= mem1.len(), false);
+            const char *p1 = static_cast<const char *>(mem1.buf()) + r.offset;
+            const char *p2 = static_cast<const char *>(mem2.buf()) + r.offset;
+            if (std::memcmp(p1, p2, r.size) != 0)
             {
                 if (deltas.size() >= max_deltas)
                 {
                     return true; /* capped; caller asked for at most this many */
                 }
                 shard_delta_t d;
-                d.offset = m.value_offset;
-                d.raw_data[0] = B2c(p1, m.value_size);
-                d.raw_data[1] = B2c(p2, m.value_size);
+                d.offset = r.offset;
+                d.raw_data[0] = B2c(p1, r.size);
+                d.raw_data[1] = B2c(p2, r.size);
                 deltas.push_back(d);
             }
         }

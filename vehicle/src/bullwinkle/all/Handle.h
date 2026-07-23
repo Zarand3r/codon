@@ -324,38 +324,6 @@ namespace Drone
      * @}
      */
 
-    /**
-     * Neq function for Handle<> used by Fsw(Abort)IfNeq.
-     *
-     * @tparam v1_t The first Handle<>'s type.
-     * @tparam v2_t The second Handle<>'s type.
-     *
-     * @param abort_type String description of the abort type.
-     * @param value_1 The first value.
-     * @param value_2 The second value.
-     * @param str_1 String representation of the first value.
-     * @param str_2 String representation of the second value.
-     * @param file The file the Fsw is in.
-     * @param line The line number of the Fsw.
-     *
-     * @return True if value_1 != value_2.
-     */
-    template <typename v1_t, typename v2_t>
-    inline bool fsw_if_neq(const char *abort_type, const Handle<v1_t> &value_1,
-                           const Handle<v2_t> &value_2, const char *str_1,
-                           const char *str_2, const char *file, int line)
-    {
-        if (value_1 != value_2)
-        {
-            FswOnVerbose(Drone::report_abort(abort_type, str_1, str_2, file,
-                                              line, false));
-            FswOnVerbose(FswArg((UINT64)value_1.get()));
-            FswOnVerbose(FswArg((UINT64)value_2.get()));
-
-            return true;
-        }
-        return false;
-    }
 
 } /* end namespace Drone */
 

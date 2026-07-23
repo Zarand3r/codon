@@ -226,10 +226,16 @@ build fails).
 
 ### 6.2 Freeze + materialize
 
-`builder.slate(...)` → `SlateMemory::build()`: the layout is **frozen** (no more
-`create`; structure/offsets/type tags immutable), and each shard's initial-value
-template is copied into the live `shard_table[shard]` `AlignedBuffer`. The cyclic
-shards also keep a template that `roll_frame()` re-copies every frame.
+Two distinct calls (a common misreading — `slate()` does NOT freeze):
+
+- `builder.slate(validator_fn)` merely **vends a `Slate` handle** over the shared
+  memory (and wires the optional validator signal). Valid to call before build;
+  the handle only works once `build()` succeeds.
+- `builder.build()` → store `finalize()` + token-accountant check +
+  `SlateMemory::build()`: the layout is **frozen** (no more `create`;
+  structure/offsets/type tags immutable), and each shard's initial-value template
+  is copied into the live `shard_table[shard]` `AlignedBuffer`. The cyclic shards
+  also keep a template that `roll_frame()` re-copies every frame.
 
 ### 6.3 Runtime (values mutate, structure does not)
 
@@ -238,8 +244,14 @@ shards also keep a template that `roll_frame()` re-copies every frame.
   **The runtime write.**
 - `slate.load<T>(id)` / `slate[rtoken]` → `slate_info<T>::from_mem(...)` over the
   same address, returning a typed reference into the shard.
-- No allocation, no lookup, no string compare on this path — just the packed-id
-  shifts and a fixed-offset memory access (plan property **P17**, `objdump`-audited).
+- For **unvalidated** elements: no allocation, no lookup, no string compare on
+  this path — just the packed-id shifts and a fixed-offset memory access (plan
+  property **P17**, `objdump`-verified: 0 calls, fully inlined).
+- **Caveat — validated elements** (`WriteValidatorToken`): the current wiring
+  resolves the validator per store (a map lookup + `dynamic_pointer_cast`/RTTI +
+  shared_ptr atomics; measured ~16× an unvalidated store). The bind-time
+  typed-pointer-caching fix is a tracked P1 hot-path item (see the HOT-PATH NOTE
+  in `slate_accessor.h`); no validated element is on a control loop yet.
 
 **All heap allocation happens during build/init only.** At flight time the Slate is a
 pre-allocated (and, at P11, `mlockall`-pinned) arena the control loop reads/writes by
@@ -281,8 +293,39 @@ hash, diff, ship, vote on, and reload — deterministically and without serializ
 | Path interning arena | `core/util.h` (`MonotonicPool`) |
 | Enum reflection | `enum/SymbolTable.{h,cc}` |
 | Smart pointer | `Handle.h` |
-| Layout engine (build/allocate/freeze) | `SlateLayout.{h,cc}` *(in progress)* |
-| Live memory (materialize/hash/deltas/roll) | `SlateMemory.h` *(in progress)* |
-| Typed API surface | `Slate.{h,cc}`, `slate_accessor.h` *(in progress)* |
+| Layout engine (build/allocate/freeze) | `SlateLayout.{h,cc}` |
+| Live memory (materialize/hash/deltas/roll) | `SlateMemory.{h,cc}` |
+| Store (where a builder's data lives) | `SlateBuilderStore.{h,cc}` |
+| Typed API surface | `Slate.{h,cc}`, `slate_accessor.h` (validators/accessor) |
+| Enum registration | `EnumRegistry.h` |
 
 Verified status of each is tracked in [`implementation.md`](implementation.md).
+
+---
+
+## 9. Fsw macro glossary (read before touching call sites)
+
+The `Fsw*` names are pinned by the imported consumers and are **not** all asserts:
+
+| Family | Behavior | Trap to know |
+|---|---|---|
+| `FswAbortIf(cond, ret)` / `FswAbortIfNot` / typed variants (`EqInt`, `NeqUint64`, `OpUint64`, …) | log, then **`return ret;` from the enclosing function** | "Abort" means *abort the function*, not the process — a hidden `return` inside a macro |
+| `FswMsgAbortIf`/`FswMsgAbortIfNot`/`FswMsgAbort` | same hidden `return`, with a bounded formatted message | statement macros; can't be used in expressions |
+| `FswIf(c)` / `FswIfNot(c)` / `FswIfNeq(a,b)` / `FswOutsideRange(x,lo,hi)` | **expressions**: the (unlikely-hinted) condition itself | no side effects; caller does the logging/returning |
+| `FswAssert(cond)` | log + **`std::abort()`** (also in release) | the only genuinely fatal one |
+| `FswDebugAssert(cond)` | `FswAssert` in debug, no-op under `NDEBUG` | never rely on its side effects |
+
+## 10. Imported vs. owned (who is held to what)
+
+The gate (`scripts/run_l0_tests.sh`) encodes three trust tiers:
+
+- **Owned** (written here, full `-Wall -Wextra -Werror`, unit-tested): everything
+  in §8 except the imported files below — the type system, path map, accessor,
+  store, memory impl, fsw layer, tests.
+- **Imported, restored** (reference truth for contracts; compiled with
+  `-Wno-format -Wno-unused-parameter` for pre-existing diagnostic quirks; edited
+  only to fix objective truncation/typo defects, each logged in commits):
+  `Slate.{h,cc}`, `SlateBuilder.{h,cc}`, `SlateLayout.{h,cc}`, `SlateMemory.h`,
+  `slate_tokens.{h,cc}`, `slate_accessor.h` doc block, `Handle.h`, `Signal.h`.
+- **Consumer-compile gates**: imported `.cc` compiled object-only so a
+  mis-inferred contract *fails to build* rather than passing a mirror test.

@@ -7,7 +7,6 @@
 #define SLATE_ACCESSOR_H
 
 #include "src/bullwinkle/all/Handle.h"
-#include "src/bullwinkle/all/Signal.h"
 #include "src/bullwinkle/all/slate_info.h"
 
 #include <functional>
