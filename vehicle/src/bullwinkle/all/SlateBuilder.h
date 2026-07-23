@@ -101,6 +101,9 @@ public:
   /*
    * Get a copy of the run-time interface.
    */
+  /* NOTE: "no validation" is recognized by ADDRESS — pass the canonical
+   * `slate_no_validation` object; an equal-but-distinct empty slot is treated
+   * as a real validator. */
   Slate slate(const slate_validator_fn_t &validator_fn) const;
   bool is_peer(const SlateBuilder b) const;
 

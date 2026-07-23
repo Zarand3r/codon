@@ -8,6 +8,17 @@ it), built with Bazel. Start from [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md) and
 Agent setup (skills library + autonomous harness) is documented in
 [`docs/agent-harness-setup.md`](docs/agent-harness-setup.md).
 
+**Process doctrine — read before implementing:**
+[`docs/engineering-lessons.md`](docs/engineering-lessons.md) codifies the binding
+lessons from this repo's own review findings (each rule cites the real defect that
+motivated it): pin tests to consumer contracts; verify doctrine claims at the API
+boundary with measurement; fail closed in every default branch; prefer
+compiler-enforced invariants; imported code is contract truth, not quality truth
+(check include guards first); design per-cycle ops for the steady state at freeze
+time; docs are load-bearing (drift is a defect); dedupe cold-path scaffolding at
+phase boundaries; edit mechanically + run the gate after every batch; review
+adversarially in parallel axes against the running system.
+
 ## Skills — use these automatically
 
 The skills below come from the **`eng-skills`** plugin (the `claude-skills`

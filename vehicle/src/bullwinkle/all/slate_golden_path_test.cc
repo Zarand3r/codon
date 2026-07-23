@@ -24,6 +24,15 @@ int main()
     assert(builder.create("nav.ticks", (INT64)0, shard_nonsync, slate_read_write, ticks));
     assert(builder.create("ctrl.reset", false, shard_cyclic, slate_read_write, flag));
     assert(builder.create("cfg.version", (INT32)7, shard_static, slate_read_only, constant));
+    // A validated element: only non-negative values are accepted.
+    WriteValidatorToken<INT32> gain;
+    assert(builder.create("ctrl.gain", (INT32)10, shard_sync, slate_read_write,
+                          function_validator<INT32>([](const INT32 &nv, INT32 &v) {
+                              if (nv < 0) return false;
+                              v = nv;
+                              return true;
+                          }),
+                          gain));
     WriteToken<double> a2, a3, a4;
     assert(builder.create("t.sync_nt", 1.0, shard_sync_no_telem, slate_read_write, a2));
     assert(builder.create("t.nonsync_nt", 2.0, shard_nonsync_no_telem, slate_read_write, a3));
@@ -46,6 +55,20 @@ int main()
     assert(slate[ticks] == (INT64)-9);
     slate[flag] = true;
     assert(slate[flag]);
+
+    // Validated element end-to-end: accept updates the value; reject leaves it
+    // unchanged and store() reports it; operator= swallows rejection silently.
+    {
+        assert((INT32)slate[gain] == 10);          // initial value passed the validator
+        assert(slate[gain].store(25));             // accepted
+        assert((INT32)slate[gain] == 25);
+        assert(!slate[gain].store(-3));            // rejected: value unchanged
+        assert((INT32)slate[gain] == 25);
+        slate[gain] = -7;                          // fire-and-forget: silently dropped
+        assert((INT32)slate[gain] == 25);
+        slate[gain] = 30;                          // fire-and-forget: accepted
+        assert((INT32)slate[gain] == 30);
+    }
 
     // P4: hash equal for identical state; delta pinpoints one mutation.
     UINT64 h1 = 0, h2 = 0;
