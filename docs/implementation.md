@@ -15,7 +15,7 @@ decisions).
 | Phase | State | Notes |
 |---|---|---|
 | **P0** — L0 core primitives | ✅ done (merged, PR #1) | + naming convention (`fsw`) |
-| **P1** — Slate data model | 🚧 in progress | done: `core/util.h`, `AlignedBuffer`, `enum/SymbolTable`, `slate_enums`, `slate_id` (packed element ID). Next: `slate_type` (`slate_type_id<T>` name-hash + `slate_type_info_t`) → `slate_info<T>` trait → `SlateElement` → `SlatePathMap` (indices start at 1) → `SlateBuilderStore` → `SlateMemory` → compile `Slate`/`SlateCombiner` → golden-path integration test |
+| **P1** — Slate data model | 🚧 in progress | done: type system (`SymbolTable`, `slate_enums`, `slate_id`, `slate_type`, `slate_info<T>`), fsw logging+verbose layer, `Handle`, `AlignedBuffer`, `SlateElement`+`SlatePathMap`. Next: `slate_accessor`/`Signal`/`slate_validator_t` + `.enum.h` shims → `SlateBuilderStoreInterface` → `SlateMemory` → `EnumRegistry` → `SlateLayout.cc`/`SlateBuilder.cc`/`Slate.cc` compile → golden-path (L1) integration test. **Internals: see [slate-internals.md](slate-internals.md).** |
 | P2+ | ⬜ not started | see ROADMAP |
 
 **Build root:** `vehicle/` — includes resolve as `src/...` (Bazel `strip_include_prefix="/vehicle"`).
@@ -28,7 +28,8 @@ decisions).
 | Component | Contract (what it is) | Test | Notes |
 |---|---|---|---|
 | `core/drone_types.h` | fixed-width `UINT8..64`/`INT8..64`/`uint` + `FSW_DISALLOW_COPY_AND_ASSIGN` | `drone_types_test.cc` | global scope; **64-bit types are the `long long` family** (`static_assert` sizeof==8) so imported `%llx`/`%lld` format specifiers are warning-clean |
-| `core/fsw.h` + `core/fsw_log.h` | asserts (`FswAbortIfNot`/`FswAbortIf`/`FswAssert`/`FswDebugAssert` + `fsw_report`); **logging/context layer** (`dbnprintf`/`dbstring`/`FswPrefix`/`FswStackFrame`, typed `FswAbortIfEqInt/EqUint64/Neq/NeqInt/NeqInt64/NeqDouble/OpUint64`, `FswMsgAbortIf`/`FswMsgAbortIfNot`, `FswIf`/`FswIfNot`/`FswIfNeq`) | `fsw_test.cc`, `fsw_log_test.cc` | `fsw.h` includes `fsw_log.h`; split keeps `<string>`/`<cstdarg>` out of the assert core. `FswStackFrame::get_current_stack_frame()` returns null (no producer yet — documented). **D24** still open |
+| `core/fsw.h` + `core/fsw_log.h` | asserts (`FswAbortIfNot`/`FswAbortIf`/`FswAssert`/`FswDebugAssert` + `fsw_report`); **logging/context layer** (`dbnprintf`/`dbstring`/`FswPrefix`/`FswStackFrame`, typed `FswAbortIfEqInt/EqUint64/Neq/NeqInt/NeqInt64/NeqDouble/OpUint64`, `FswMsgAbortIf`/`FswMsgAbortIfNot`, `FswIf`/`FswIfNot`/`FswIfNeq`); **verbose diagnostics** (`report_abort`, `FswArg`, `FswOnVerbose`, `fsw_verbose` gate) | `fsw_test.cc`, `fsw_log_test.cc` | `fsw.h` includes `fsw_log.h`; split keeps `<string>`/`<cstdarg>` out of the assert core. `FswStackFrame::get_current_stack_frame()` returns null (no producer yet). **D24** still open |
+| `Handle.h` (imported) | `Handle<T>` shared-ownership smart pointer (`std::shared_ptr`-backed): ctor/`assume_ownership`/`get`/explicit `bool`/`*`/`->`/`is_unique`/compare/`assign_casted` | `handle_test.cc` | now compiles (needed the verbose fsw primitives above); used everywhere (`Handle<SlateMemory>`, `Handle<SlateBuilderStoreInterface>`, …) |
 | `core/fswtime.h` | `nano_t`, `nano_t_min/max`, `billion`, `get_rel_time`, `fswsleep` | `fswtime_test.cc` | |
 | `core/util.h` | `str_v`/`str_s`/`str_v_v`, `join`, `MonotonicPool` (bump arena `allocate(size,align)`+`release()`) | `util_test.cc` | `std::set/string` are **cold build-phase only** — keep out of hot paths |
 | `hash/Hash128.h` + `hash/xxh.h` | `Hash128{u64[2]}`; `digest_xxh128(buf,len,seed)` deterministic 128-bit | `hash_test.cc` (determinism, sensitivity, avalanche) | impl is MurmurHash3-x64-128; **D23**: benchmark vs XXH3 before P7 per-cycle shard hashing |
@@ -53,7 +54,7 @@ decisions).
 
 ## Verification status (current)
 
-- **g++** `-Wall -Wextra -Werror`: **16 unit tests + 2 consumer-compiles** green (`scripts/run_l0_tests.sh`).
+- **g++** `-Wall -Wextra -Werror`: **17 unit tests + 2 consumer-compiles** green (`scripts/run_l0_tests.sh`).
 - **Bazel**: all green (`//vehicle/src/bullwinkle/all:all`, `//vehicle/src/hash:all`, `//vehicle/src/bullwinkle/all/enum:all`); `slate_tokens_compile` (now incl. `slate_tokens.cc`) is a compile-only `cc_library` consumer gate.
 - **valgrind**: leak/UB-clean on the memory-touching tests (`hash`, `b2`, `static_vector`, `util`/arena, `aligned_buffer`, `symbol_table`, `slate_enums`).
 - **Perf spot-checks**: `static_vector::operator[]` is a single load under `-O2 -DNDEBUG` (bounds check compiles out); `slate_id` breakdown+index resolves in pure `mov`/`shr`/`and`/`add` (0 calls, 0 branches).

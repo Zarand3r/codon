@@ -103,6 +103,20 @@ int main()
     assert(FswIfNeq(3, 4));
     assert(!FswIfNeq(4, 4));
 
+    // Verbose-gated diagnostics: off by default (FswOnVerbose runs nothing), on when
+    // enabled. report_abort (non-fatal) and FswArg are the verbose helpers.
+    {
+        int ran = 0;
+        FswOnVerbose(ran = 1);
+        assert(ran == 0); // verbose off -> body skipped
+        Drone::fsw_verbose_flag() = true;
+        FswOnVerbose(ran = 1);
+        assert(ran == 1); // verbose on -> body runs
+        FswOnVerbose(Drone::report_abort("TEST", "a", "b", __FILE__, __LINE__, false));
+        FswOnVerbose(FswArg((UINT64)123));
+        Drone::fsw_verbose_flag() = false;
+    }
+
     // dbnprintf bounds output; dbstring writes a literal; FswPrefix + FswStackFrame
     // are exercised for compile + runtime safety.
     dbnprintf(8, "truncated to eight bytes but the format is much longer %d\n", 7);
