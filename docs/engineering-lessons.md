@@ -120,3 +120,17 @@ file), demand measured evidence over opinion, and land fixes as separate
 gate-verified commits: measured performance batch, simplification batch,
 doc-reconciliation batch. Defer explicitly (with a tracking note) rather than
 silently dropping findings whose consumers haven't landed.
+
+## 11. The loop itself: review → extract → codify → apply (meta-rule)
+
+The loop's full process spec now lives in the **`review-codify-loop` skill**
+(eng-skills plugin) so every project inherits it; run that skill. This repo's
+bindings, which the skill's bootstrap step established here:
+
+- **Lessons** land in this file — incident-cited, falsifiable, strengthened in
+  place on recurrence (never near-duplicated).
+- **Tree sweeps** for mechanical defect signatures are recorded in
+  [`import-audit.md`](import-audit.md).
+- **Triggers are bound** in `CLAUDE.md` (standing obligation) and
+  `IMPLEMENTATION_PLAN.md` §3/§5b (phase acceptance requires one loop run).
+- The lessons amendment ships in the same PR series as the fixes, gate green.

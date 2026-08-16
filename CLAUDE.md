@@ -8,6 +8,15 @@ it), built with Bazel. Start from [`SYSTEM_DESIGN.md`](SYSTEM_DESIGN.md) and
 Agent setup (skills library + autonomous harness) is documented in
 [`docs/agent-harness-setup.md`](docs/agent-harness-setup.md).
 
+**Review→codify loop (standing obligation):** at every phase boundary, after any
+significant post-merge defect, and on any review with ≥3 findings, run the
+**`review-codify-loop` skill** (the process lives there). This repo's bindings:
+lessons land in [`docs/engineering-lessons.md`](docs/engineering-lessons.md)
+(incident-cited; strengthen-don't-duplicate), tree sweeps are recorded in
+[`docs/import-audit.md`](docs/import-audit.md), and phase acceptance requires one
+loop run (IMPLEMENTATION_PLAN §3/§5b). Keep this paragraph in sync when rules
+change.
+
 **Process doctrine — read before implementing:**
 [`docs/engineering-lessons.md`](docs/engineering-lessons.md) codifies the binding
 lessons from this repo's own review findings (each rule cites the real defect that
@@ -42,6 +51,7 @@ rest.
 | **cpp-systems-internals** | Writing or reviewing C++ where hardware behavior, codegen cost, ownership vocabulary, API style, or kernel paging matters (lambdas, templates, cache lines, vtables, smart pointers/spans/arenas, `mmap`/`madvise`, AoS/SoA). Load only the relevant topic file. **This repo is exactly that kind of C++** — reach for it often. |
 | **data-oriented-design** | **The mandatory coding-style doctrine for this repo.** Load it for *any* implementation here — this is a hard-real-time, triple-redundant flight controller whose Slate is a pointer-free, fixed-layout, byte-comparable model. Enforces: all state in the Slate, no pointers in the model, no hidden allocation/throwing/blocking/dispatch in `RUNTIME` hot-path methods, fixed-capacity/SoA/dense layout, branchless hot paths, ownership-in-types, and measure-first verification. Routes into `cpp-systems-internals` for C++ mechanism depth. See `ROADMAP.md` §1 and `IMPLEMENTATION_PLAN.md` §0 for how it binds here. |
 | **auto-research** | Iteratively optimizing a measurable outcome unattended/overnight — loss, latency (p50/p95/p99), throughput, MFU, memory/binary size, compile time. Enforces a fixed eval harness, append-only results log, keep-on-improvement / reset-on-regression. |
+| **review-codify-loop** | At every phase/milestone boundary (mandatory — plan §3), after any post-merge defect the lessons should have caught, on any review with ≥3 findings, and for "review the codebase"/retrospectives. The standing review→codify iteration loop; this repo's lessons live in `docs/engineering-lessons.md`. |
 | **elves** | Executing a *development plan* unattended/overnight — "run overnight," "implement this plan," "keep going without me," "I'll be back in the morning." Breaks the plan into sprint-sized batches, implements with tests + PR-based review, keeps durable memory for compaction recovery. Requires `git` + `gh`. |
 
 **How to apply:** for a non-trivial task, the default flow is
